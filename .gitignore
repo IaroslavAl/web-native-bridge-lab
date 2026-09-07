@@ -1,0 +1,13 @@
+.DS_Store
+.worktrees/
+.artifacts/
+.runtime/
+node_modules/
+dist/
+.build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+.env
+.env.*
+!.env.example
