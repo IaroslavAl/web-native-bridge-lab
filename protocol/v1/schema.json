@@ -1,0 +1,318 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Web\u2013Native Bridge Lab v1 envelope",
+  "description": "Structural constraints only. protocol/v1/README.md defines normative semantic constraints.",
+  "oneOf": [
+    { "$ref": "#/definitions/hello" },
+    { "$ref": "#/definitions/helloAck" },
+    {
+      "$ref": "#/definitions/request"
+    },
+    {
+      "$ref": "#/definitions/cancel"
+    },
+    {
+      "$ref": "#/definitions/response"
+    },
+    {
+      "$ref": "#/definitions/error"
+    },
+    {
+      "$ref": "#/definitions/cancelAck"
+    }
+  ],
+  "definitions": {
+    "session": { "type": "string", "pattern": "^[0-9a-f]{32}$" },
+    "hello": {
+      "type": "object", "additionalProperties": false,
+      "required": ["v", "type"],
+      "properties": { "v": { "const": 1 }, "type": { "const": "hello" } }
+    },
+    "helloAck": {
+      "type": "object", "additionalProperties": false,
+      "required": ["v", "type", "session"],
+      "properties": { "v": { "const": 1 }, "type": { "const": "helloAck" }, "session": { "$ref": "#/definitions/session" } }
+    },
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "v",
+        "type",
+        "id",
+        "method",
+        "session",
+        "url",
+        "headers",
+        "body",
+        "timeoutMs"
+      ],
+      "properties": {
+        "v": {
+          "const": 1
+        },
+        "type": {
+          "const": "request"
+        },
+        "session": { "$ref": "#/definitions/session" },
+        "id": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "method": {
+          "enum": [
+            "GET",
+            "POST"
+          ]
+        },
+        "url": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 8192
+        },
+        "headers": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "accept": {
+              "enum": [
+                "application/json",
+                "text/plain",
+                "*/*"
+              ]
+            },
+            "content-type": {
+              "enum": [
+                "application/json",
+                "text/plain"
+              ]
+            },
+            "x-lab-tag": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[ -~]+$"
+            }
+          }
+        },
+        "body": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "timeoutMs": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 30000
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "method": {
+                "const": "GET"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "body": {
+                "type": "null"
+              },
+              "headers": {
+                "type": "object",
+                "not": {
+                  "type": "object",
+                  "properties": { "content-type": {} },
+                  "required": [
+                    "content-type"
+                  ]
+                }
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "body": {
+                "type": "string"
+              },
+              "headers": {
+                "type": "object",
+                "properties": { "content-type": {} },
+                "required": [
+                  "content-type"
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+    "cancel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "v",
+        "type",
+        "id",
+        "session"
+      ],
+      "properties": {
+        "v": {
+          "const": 1
+        },
+        "type": {
+          "const": "cancel"
+        },
+        "session": { "$ref": "#/definitions/session" },
+        "id": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        }
+      }
+    },
+    "response": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "v",
+        "type",
+        "id",
+        "status",
+        "headers",
+        "body"
+      ],
+      "properties": {
+        "v": {
+          "const": 1
+        },
+        "type": {
+          "const": "response"
+        },
+        "id": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "status": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 599,
+          "not": {
+            "enum": [
+              301,
+              302,
+              303,
+              307,
+              308
+            ]
+          }
+        },
+        "headers": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "content-type": {
+              "type": "string",
+              "maxLength": 8192,
+              "pattern": "^[ -~]*$"
+            },
+            "x-lab-tag": {
+              "type": "string",
+              "maxLength": 8192,
+              "pattern": "^[ -~]*$"
+            }
+          }
+        },
+        "body": {
+          "type": "string",
+          "maxLength": 1048576
+        }
+      }
+    },
+    "error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "v",
+        "type",
+        "id",
+        "code",
+        "message"
+      ],
+      "properties": {
+        "v": {
+          "const": 1
+        },
+        "type": {
+          "const": "error"
+        },
+        "id": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "code": {
+          "enum": [
+            "ORIGIN_DENIED",
+            "MESSAGE_TOO_LARGE",
+            "UNSUPPORTED_VERSION",
+            "INVALID_REQUEST",
+            "URL_DENIED",
+            "REQUEST_TOO_LARGE",
+            "BUSY",
+            "REDIRECT_DENIED",
+            "RESPONSE_TOO_LARGE",
+            "UNSUPPORTED_RESPONSE",
+            "RESPONSE_ENCODING",
+            "TIMEOUT",
+            "CANCELLED",
+            "NETWORK_ERROR"
+          ]
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      }
+    },
+    "cancelAck": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "v",
+        "type",
+        "id",
+        "cancelled"
+      ],
+      "properties": {
+        "v": {
+          "const": 1
+        },
+        "type": {
+          "const": "cancelAck"
+        },
+        "id": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "cancelled": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

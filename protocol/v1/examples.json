@@ -1,0 +1,560 @@
+{
+  "valid": [
+    {
+      "name": "catalog-get",
+      "envelope": {
+        "v": 1,
+        "type": "request",
+        "id": 1,
+        "method": "GET",
+        "url": "http://127.0.0.1:8788/api/catalog?category=books",
+        "headers": {
+          "accept": "application/json",
+          "x-lab-tag": "scenario-a"
+        },
+        "body": null,
+        "timeoutMs": 5000,
+        "session": "0123456789abcdef0123456789abcdef"
+      }
+    },
+    {
+      "name": "quote-post",
+      "envelope": {
+        "v": 1,
+        "type": "request",
+        "id": 2,
+        "method": "POST",
+        "url": "http://127.0.0.1:8788/api/quote",
+        "headers": {
+          "accept": "application/json",
+          "content-type": "application/json",
+          "x-lab-tag": "scenario-b"
+        },
+        "body": "{\"sku\":\"notebook\",\"quantity\":2}",
+        "timeoutMs": 5000,
+        "session": "0123456789abcdef0123456789abcdef"
+      }
+    },
+    {
+      "name": "text-post",
+      "envelope": {
+        "v": 1,
+        "type": "request",
+        "id": 2,
+        "method": "POST",
+        "url": "http://127.0.0.1:8788/api/quote",
+        "headers": {
+          "content-type": "text/plain"
+        },
+        "body": "opaque text",
+        "timeoutMs": 5000,
+        "session": "0123456789abcdef0123456789abcdef"
+      }
+    },
+    {
+      "name": "cancel",
+      "envelope": {
+        "v": 1,
+        "type": "cancel",
+        "id": 2,
+        "session": "0123456789abcdef0123456789abcdef"
+      }
+    },
+    {
+      "name": "cancel-ack",
+      "envelope": {
+        "v": 1,
+        "type": "cancelAck",
+        "id": 2,
+        "cancelled": true
+      }
+    },
+    {
+      "name": "catalog-response",
+      "envelope": {
+        "v": 1,
+        "type": "response",
+        "id": 1,
+        "status": 200,
+        "headers": {
+          "content-type": "application/json",
+          "x-lab-tag": "scenario-a"
+        },
+        "body": "{\"items\":[{\"sku\":\"notebook\",\"title\":\"Notebook\"}],\"total\":1}"
+      }
+    },
+    {
+      "name": "quote-response",
+      "envelope": {
+        "v": 1,
+        "type": "response",
+        "id": 2,
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"quote\":{\"sku\":\"notebook\",\"quantity\":2,\"totalMinor\":1200,\"currency\":\"USD\"}}"
+      }
+    },
+    {
+      "name": "http-error",
+      "envelope": {
+        "v": 1,
+        "type": "response",
+        "id": 3,
+        "status": 422,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"error\":{\"code\":\"INVALID_QUANTITY\",\"message\":\"Quantity must be 1 to 5\"}}"
+      }
+    },
+    {
+      "name": "malformed-business-json-is-transport-success",
+      "envelope": {
+        "v": 1,
+        "type": "response",
+        "id": 4,
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"broken\":"
+      }
+    },
+    {
+      "name": "timeout",
+      "envelope": {
+        "v": 1,
+        "type": "error",
+        "id": 5,
+        "code": "TIMEOUT",
+        "message": "Native request deadline exceeded"
+      }
+    },
+    {
+      "name": "unrecoverable-id",
+      "envelope": {
+        "v": 1,
+        "type": "error",
+        "id": null,
+        "code": "INVALID_REQUEST",
+        "message": "Invalid envelope"
+      }
+    },
+    {
+      "name": "empty-204",
+      "envelope": {
+        "v": 1,
+        "type": "response",
+        "id": 6,
+        "status": 204,
+        "headers": {},
+        "body": ""
+      }
+    },
+    {
+      "name": "hello",
+      "envelope": {
+        "v": 1,
+        "type": "hello"
+      }
+    },
+    {
+      "name": "hello-ack",
+      "envelope": {
+        "v": 1,
+        "type": "helloAck",
+        "session": "0123456789abcdef0123456789abcdef"
+      }
+    }
+  ],
+  "invalid": [
+    {
+      "name": "unsupported-version",
+      "envelope": {
+        "v": 2,
+        "type": "request",
+        "id": 1,
+        "method": "GET",
+        "url": "http://127.0.0.1:8788/api/catalog?category=books",
+        "headers": {
+          "accept": "application/json",
+          "x-lab-tag": "scenario-a"
+        },
+        "body": null,
+        "timeoutMs": 5000,
+        "session": "0123456789abcdef0123456789abcdef"
+      }
+    },
+    {
+      "name": "get-body",
+      "envelope": {
+        "v": 1,
+        "type": "request",
+        "id": 1,
+        "method": "GET",
+        "url": "http://127.0.0.1:8788/api/catalog?category=books",
+        "headers": {
+          "accept": "application/json",
+          "x-lab-tag": "scenario-a"
+        },
+        "body": "x",
+        "timeoutMs": 5000,
+        "session": "0123456789abcdef0123456789abcdef"
+      }
+    },
+    {
+      "name": "post-no-content-type",
+      "envelope": {
+        "v": 1,
+        "type": "request",
+        "id": 2,
+        "method": "POST",
+        "url": "http://127.0.0.1:8788/api/quote",
+        "headers": {},
+        "body": "{\"sku\":\"notebook\",\"quantity\":2}",
+        "timeoutMs": 5000,
+        "session": "0123456789abcdef0123456789abcdef"
+      }
+    },
+    {
+      "name": "object-body",
+      "envelope": {
+        "v": 1,
+        "type": "request",
+        "id": 2,
+        "method": "POST",
+        "url": "http://127.0.0.1:8788/api/quote",
+        "headers": {
+          "accept": "application/json",
+          "content-type": "application/json",
+          "x-lab-tag": "scenario-b"
+        },
+        "body": {
+          "x": 1
+        },
+        "timeoutMs": 5000,
+        "session": "0123456789abcdef0123456789abcdef"
+      }
+    },
+    {
+      "name": "unknown-field",
+      "envelope": {
+        "v": 1,
+        "type": "request",
+        "id": 1,
+        "method": "GET",
+        "url": "http://127.0.0.1:8788/api/catalog?category=books",
+        "headers": {
+          "accept": "application/json",
+          "x-lab-tag": "scenario-a"
+        },
+        "body": null,
+        "timeoutMs": 5000,
+        "domain": "catalog",
+        "session": "0123456789abcdef0123456789abcdef"
+      }
+    },
+    {
+      "name": "authorization",
+      "envelope": {
+        "v": 1,
+        "type": "request",
+        "id": 1,
+        "method": "GET",
+        "url": "http://127.0.0.1:8788/api/catalog?category=books",
+        "headers": {
+          "authorization": "synthetic"
+        },
+        "body": null,
+        "timeoutMs": 5000,
+        "session": "0123456789abcdef0123456789abcdef"
+      }
+    },
+    {
+      "name": "mixed-case-header",
+      "envelope": {
+        "v": 1,
+        "type": "request",
+        "id": 1,
+        "method": "GET",
+        "url": "http://127.0.0.1:8788/api/catalog?category=books",
+        "headers": {
+          "Accept": "application/json"
+        },
+        "body": null,
+        "timeoutMs": 5000,
+        "session": "0123456789abcdef0123456789abcdef"
+      }
+    },
+    {
+      "name": "header-crlf",
+      "envelope": {
+        "v": 1,
+        "type": "request",
+        "id": 1,
+        "method": "GET",
+        "url": "http://127.0.0.1:8788/api/catalog?category=books",
+        "headers": {
+          "x-lab-tag": "a\r\nb"
+        },
+        "body": null,
+        "timeoutMs": 5000,
+        "session": "0123456789abcdef0123456789abcdef"
+      }
+    },
+    {
+      "name": "zero-id",
+      "envelope": {
+        "v": 1,
+        "type": "request",
+        "id": 0,
+        "method": "GET",
+        "url": "http://127.0.0.1:8788/api/catalog?category=books",
+        "headers": {
+          "accept": "application/json",
+          "x-lab-tag": "scenario-a"
+        },
+        "body": null,
+        "timeoutMs": 5000,
+        "session": "0123456789abcdef0123456789abcdef"
+      }
+    },
+    {
+      "name": "fraction-id",
+      "envelope": {
+        "v": 1,
+        "type": "request",
+        "id": 1.5,
+        "method": "GET",
+        "url": "http://127.0.0.1:8788/api/catalog?category=books",
+        "headers": {
+          "accept": "application/json",
+          "x-lab-tag": "scenario-a"
+        },
+        "body": null,
+        "timeoutMs": 5000,
+        "session": "0123456789abcdef0123456789abcdef"
+      }
+    },
+    {
+      "name": "zero-timeout",
+      "envelope": {
+        "v": 1,
+        "type": "request",
+        "id": 1,
+        "method": "GET",
+        "url": "http://127.0.0.1:8788/api/catalog?category=books",
+        "headers": {
+          "accept": "application/json",
+          "x-lab-tag": "scenario-a"
+        },
+        "body": null,
+        "timeoutMs": 0,
+        "session": "0123456789abcdef0123456789abcdef"
+      }
+    },
+    {
+      "name": "large-timeout",
+      "envelope": {
+        "v": 1,
+        "type": "request",
+        "id": 1,
+        "method": "GET",
+        "url": "http://127.0.0.1:8788/api/catalog?category=books",
+        "headers": {
+          "accept": "application/json",
+          "x-lab-tag": "scenario-a"
+        },
+        "body": null,
+        "timeoutMs": 30001,
+        "session": "0123456789abcdef0123456789abcdef"
+      }
+    },
+    {
+      "name": "unsupported-method",
+      "envelope": {
+        "v": 1,
+        "type": "request",
+        "id": 1,
+        "method": "DELETE",
+        "url": "http://127.0.0.1:8788/api/catalog?category=books",
+        "headers": {
+          "accept": "application/json",
+          "x-lab-tag": "scenario-a"
+        },
+        "body": null,
+        "timeoutMs": 5000,
+        "session": "0123456789abcdef0123456789abcdef"
+      }
+    },
+    {
+      "name": "missing-session",
+      "envelope": {
+        "v": 1,
+        "type": "request",
+        "id": 1,
+        "method": "GET",
+        "url": "http://127.0.0.1:8788/api/catalog?category=books",
+        "headers": {
+          "accept": "application/json",
+          "x-lab-tag": "scenario-a"
+        },
+        "body": null,
+        "timeoutMs": 5000
+      }
+    },
+    {
+      "name": "malformed-session",
+      "envelope": {
+        "v": 1,
+        "type": "request",
+        "id": 1,
+        "method": "GET",
+        "url": "http://127.0.0.1:8788/api/catalog?category=books",
+        "headers": {
+          "accept": "application/json",
+          "x-lab-tag": "scenario-a"
+        },
+        "body": null,
+        "timeoutMs": 5000,
+        "session": "not-a-session"
+      }
+    }
+  ],
+  "semanticOnly": [
+    {
+      "name": "wrong-port",
+      "envelope": {
+        "v": 1,
+        "type": "request",
+        "id": 1,
+        "method": "GET",
+        "url": "http://127.0.0.1:8787/api/catalog",
+        "headers": {
+          "accept": "application/json",
+          "x-lab-tag": "scenario-a"
+        },
+        "body": null,
+        "timeoutMs": 5000,
+        "session": "0123456789abcdef0123456789abcdef"
+      },
+      "expectedCode": "URL_DENIED"
+    },
+    {
+      "name": "userinfo",
+      "envelope": {
+        "v": 1,
+        "type": "request",
+        "id": 1,
+        "method": "GET",
+        "url": "http://user@127.0.0.1:8788/api/catalog",
+        "headers": {
+          "accept": "application/json",
+          "x-lab-tag": "scenario-a"
+        },
+        "body": null,
+        "timeoutMs": 5000,
+        "session": "0123456789abcdef0123456789abcdef"
+      },
+      "expectedCode": "INVALID_REQUEST"
+    },
+    {
+      "name": "relative-url",
+      "envelope": {
+        "v": 1,
+        "type": "request",
+        "id": 1,
+        "method": "GET",
+        "url": "/api/catalog",
+        "headers": {
+          "accept": "application/json",
+          "x-lab-tag": "scenario-a"
+        },
+        "body": null,
+        "timeoutMs": 5000,
+        "session": "0123456789abcdef0123456789abcdef"
+      },
+      "expectedCode": "INVALID_REQUEST"
+    },
+    {
+      "name": "unicode-body-byte-limit",
+      "baseEnvelope": {
+        "v": 1,
+        "type": "request",
+        "id": 2,
+        "method": "POST",
+        "url": "http://127.0.0.1:8788/api/quote",
+        "headers": {
+          "accept": "application/json",
+          "content-type": "application/json",
+          "x-lab-tag": "scenario-b"
+        },
+        "body": "{\"sku\":\"notebook\",\"quantity\":2}",
+        "timeoutMs": 5000,
+        "session": "0123456789abcdef0123456789abcdef"
+      },
+      "bodyRecipe": {
+        "text": "é",
+        "repeat": 32769
+      },
+      "expectedCode": "REQUEST_TOO_LARGE"
+    },
+    {
+      "name": "localhost",
+      "envelope": {
+        "v": 1,
+        "type": "request",
+        "id": 1,
+        "method": "GET",
+        "url": "http://localhost:8788/api/catalog",
+        "headers": {
+          "accept": "application/json",
+          "x-lab-tag": "scenario-a"
+        },
+        "body": null,
+        "timeoutMs": 5000,
+        "session": "0123456789abcdef0123456789abcdef"
+      },
+      "expectedCode": "URL_DENIED"
+    },
+    {
+      "name": "fragment",
+      "envelope": {
+        "v": 1,
+        "type": "request",
+        "id": 1,
+        "method": "GET",
+        "url": "http://127.0.0.1:8788/api/catalog?category=books#",
+        "headers": {
+          "accept": "application/json",
+          "x-lab-tag": "scenario-a"
+        },
+        "body": null,
+        "timeoutMs": 5000,
+        "session": "0123456789abcdef0123456789abcdef"
+      },
+      "expectedCode": "INVALID_REQUEST"
+    },
+    {
+      "name": "stale-session",
+      "envelope": {
+        "v": 1,
+        "type": "request",
+        "id": 1,
+        "method": "GET",
+        "url": "http://127.0.0.1:8788/api/catalog?category=books",
+        "headers": {
+          "accept": "application/json",
+          "x-lab-tag": "scenario-a"
+        },
+        "body": null,
+        "timeoutMs": 5000,
+        "session": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "expectedCode": "ORIGIN_DENIED",
+      "precondition": "The live document session is 0123456789abcdef0123456789abcdef."
+    }
+  ]
+}
