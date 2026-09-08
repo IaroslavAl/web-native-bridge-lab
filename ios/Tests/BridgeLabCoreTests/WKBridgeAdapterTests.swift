@@ -149,7 +149,35 @@ final class WKBridgeAdapterTests: XCTestCase {
         XCTAssertEqual(requestCount, 0)
     }
 
-    func testDelayedOldCompletionCannotDeliverResponseAfterReloadAndFreshIDOneSucceeds() async {
+    func testReloadSettlesAdmittedOldRequestAsCancelledAndFreshIDOneSucceeds() async {
+        let executor = AdapterExecutor(suspendRequests: true, cancelPendingRequests: true)
+        let adapter = makeAdapter(executor: executor)
+        let oldSession = await activate(adapter)
+        let oldReply = ReplyCapture()
+
+        adapter.receive(.trusted(requestJSON(session: oldSession, id: 1)), replyHandler: oldReply.record)
+        await executor.waitForRequestCount(1)
+        XCTAssertEqual(adapter.navigationPolicy(for: trustedURL, targetIsMainFrame: true), .allow)
+        adapter.navigationDidCommit(url: trustedURL)
+        await executor.waitForCancelAllCount(1)
+
+        let retired = await oldReply.value()
+        let freshSession = await hello(adapter)
+        let freshReply = ReplyCapture()
+        adapter.receive(.trusted(requestJSON(session: freshSession, id: 1)), replyHandler: freshReply.record)
+        await executor.waitForRequestCount(2)
+        await executor.resolve(id: 1, with: .response(.init(id: 1, status: 200, headers: [:], body: "fresh")))
+        let fresh = await freshReply.value()
+
+        XCTAssertEqual(retired["type"] as? String, "error")
+        XCTAssertEqual(retired["id"] as? Int, 1)
+        XCTAssertEqual(retired["code"] as? String, "CANCELLED")
+        XCTAssertEqual(fresh["type"] as? String, "response")
+        XCTAssertEqual(fresh["id"] as? Int, 1)
+        XCTAssertEqual(fresh["body"] as? String, "fresh")
+    }
+
+    func testLateSuccessAfterReloadIsRetiredAsCancelledWithoutAffectingFreshIDOne() async {
         let executor = AdapterExecutor(suspendRequests: true)
         let adapter = makeAdapter(executor: executor)
         let oldSession = await activate(adapter)
@@ -170,7 +198,9 @@ final class WKBridgeAdapterTests: XCTestCase {
         await executor.resolve(id: 1, with: .response(.init(id: 1, status: 200, headers: [:], body: "fresh")))
         let fresh = await freshReply.value()
 
-        XCTAssertEqual(retired["code"] as? String, "ORIGIN_DENIED")
+        XCTAssertEqual(retired["type"] as? String, "error")
+        XCTAssertEqual(retired["id"] as? Int, 1)
+        XCTAssertEqual(retired["code"] as? String, "CANCELLED")
         XCTAssertEqual(fresh["type"] as? String, "response")
         XCTAssertEqual(fresh["id"] as? Int, 1)
         XCTAssertEqual(fresh["body"] as? String, "fresh")
@@ -246,10 +276,12 @@ private actor AdapterExecutor: HTTPExecuting {
     private(set) var requests: [HTTPRequest] = []
     private(set) var cancelAllCount = 0
     private let suspendRequests: Bool
+    private let cancelPendingRequests: Bool
     private var pending: [Int: [CheckedContinuation<HTTPResult, Never>]] = [:]
 
-    init(suspendRequests: Bool = false) {
+    init(suspendRequests: Bool = false, cancelPendingRequests: Bool = false) {
         self.suspendRequests = suspendRequests
+        self.cancelPendingRequests = cancelPendingRequests
     }
 
     var requestCount: Int { requests.count }
@@ -268,6 +300,18 @@ private actor AdapterExecutor: HTTPExecuting {
 
     func cancelAll() async {
         cancelAllCount += 1
+        guard cancelPendingRequests else { return }
+        let cancelled = pending
+        pending.removeAll()
+        for (id, continuations) in cancelled {
+            for continuation in continuations {
+                continuation.resume(returning: .failure(.init(
+                    id: id,
+                    code: "CANCELLED",
+                    message: "Request was cancelled"
+                )))
+            }
+        }
     }
 
     func resolve(id: Int, with result: HTTPResult) {

@@ -151,7 +151,7 @@ final class WKBridgeAdapter: NSObject {
             }
             let result = await engine.handle(incoming)
             guard self?.isCurrentInvocation(invocationLifecycleID) == true else {
-                reply.call(Self.originDeniedReply, nil)
+                reply.call(Self.replyForRetiredInvocation(result), nil)
                 return
             }
             reply.call(result.webObject, nil)
@@ -184,6 +184,20 @@ final class WKBridgeAdapter: NSObject {
 
     private func isCurrentInvocation(_ invocationLifecycleID: UInt64) -> Bool {
         !didClose && documentIsActive && lifecycleID == invocationLifecycleID
+    }
+
+    private static func replyForRetiredInvocation(_ result: BridgeReply) -> [String: Any] {
+        if case let .error(id, code, _) = result, id != nil, code == "CANCELLED" {
+            return result.webObject
+        }
+        if case let .response(response) = result {
+            return BridgeReply.error(
+                id: response.id,
+                code: "CANCELLED",
+                message: "Request was cancelled"
+            ).webObject
+        }
+        return originDeniedReply
     }
 
     private static let originDeniedReply = BridgeReply.error(
