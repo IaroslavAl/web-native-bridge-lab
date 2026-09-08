@@ -1,0 +1,33 @@
+schema: spec-driven
+
+context: |
+  Language: English
+  All artifacts must be written in English.
+  Keep OpenSpec structural headings and SHALL/MUST keywords in English.
+  PER-85 is the approved Simulator-only Web–Native Bridge Lab mission.
+  Native transports opaque text; React alone owns business endpoints and JSON models.
+  Canonical wire semantics are in protocol/v1/README.md and schema.json.
+  Module ownership and test obligations are in docs/architecture.md and docs/verification-plan.md.
+  No implementation before independent same-card foundation review; no early archive.
+
+# Per-artifact rules (optional)
+# Add custom rules for specific artifacts.
+# Example:
+#   rules:
+#     proposal:
+#       - Keep proposals under 500 words
+#       - Always include a "Non-goals" section
+#     tasks:
+#       - Break tasks into chunks of max 2 hours
+
+# Per-operation guidance (optional)
+# Add advisory guidance for how apply and archive work should be conducted.
+# This is separate from artifact rules above.
+# Example:
+#   operations:
+#     apply:
+#       guidance:
+#         - Keep test summaries concise
+#     archive:
+#       guidance:
+#         - Summarize the archive outcome before finishing
