@@ -14,6 +14,7 @@ final class WKBridgeAdapter: NSObject {
     private var lifecycleTask: Task<Void, Never>?
     private var lifecycleID: UInt64 = 0
     private var onLoadFailure: ((String?) -> Void)?
+    private var didClose = false
 
     init(engine: BridgeEngine, policy: TrustedPagePolicy) {
         self.engine = engine
@@ -21,6 +22,16 @@ final class WKBridgeAdapter: NSObject {
     }
 
     deinit {
+        let retainedWebView = webView
+        if retainedWebView != nil {
+            Task { @MainActor in
+                retainedWebView?.configuration.userContentController.removeScriptMessageHandler(
+                    forName: "nativeHTTP",
+                    contentWorld: .page
+                )
+            }
+        }
+        guard !didClose else { return }
         let engine = engine
         Task {
             await engine.revokeDocument()
@@ -41,21 +52,27 @@ final class WKBridgeAdapter: NSObject {
     }
 
     func close() {
-        guard let webView else { return }
+        guard !didClose else { return }
+        didClose = true
         documentIsActive = false
         committedURL = nil
         lifecycleID &+= 1
-        webView.configuration.userContentController.removeScriptMessageHandler(
-            forName: Self.handlerName,
-            contentWorld: .page
-        )
-        webView.navigationDelegate = nil
+        if let webView {
+            webView.configuration.userContentController.removeScriptMessageHandler(
+                forName: Self.handlerName,
+                contentWorld: .page
+            )
+            if webView.navigationDelegate === self {
+                webView.navigationDelegate = nil
+            }
+        }
         self.webView = nil
         proxy = nil
         chainRevocation()
     }
 
     private func prepareForAllowedNavigation() {
+        guard !didClose else { return }
         documentIsActive = false
         committedURL = nil
         lifecycleID &+= 1
@@ -72,6 +89,7 @@ final class WKBridgeAdapter: NSObject {
     }
 
     private func activateCommittedDocument(_ url: URL?) {
+        guard !didClose else { return }
         committedURL = url
         documentIsActive = true
         let currentID = lifecycleID
@@ -85,6 +103,7 @@ final class WKBridgeAdapter: NSObject {
     }
 
     private func failDocumentLoad(_ message: String) {
+        guard !didClose else { return }
         documentIsActive = false
         committedURL = nil
         lifecycleID &+= 1
@@ -113,15 +132,65 @@ final class WKBridgeAdapter: NSObject {
             incoming = .trustedNonString
         }
 
+        receive(incoming, replyHandler: replyHandler)
+    }
+
+    func receive(
+        _ incoming: BridgeIncoming,
+        replyHandler: @escaping (Any?, String?) -> Void
+    ) {
+        let invocationLifecycleID = lifecycleID
         let activation = lifecycleTask
         let engine = engine
         let reply = ReplyOnce(replyHandler)
-        Task {
+        Task { [weak self] in
             await activation?.value
+            guard self?.isCurrentInvocation(invocationLifecycleID) == true else {
+                reply.call(Self.originDeniedReply, nil)
+                return
+            }
             let result = await engine.handle(incoming)
+            guard self?.isCurrentInvocation(invocationLifecycleID) == true else {
+                reply.call(Self.originDeniedReply, nil)
+                return
+            }
             reply.call(result.webObject, nil)
         }
     }
+
+    func navigationPolicy(for url: URL?, targetIsMainFrame: Bool?) -> WKNavigationActionPolicy {
+        guard !didClose, policy.allowsMainNavigation(to: url, targetIsMainFrame: targetIsMainFrame) else {
+            return .cancel
+        }
+        prepareForAllowedNavigation()
+        return .allow
+    }
+
+    func navigationDidCommit(url: URL?) {
+        activateCommittedDocument(url)
+    }
+
+    func provisionalNavigationFailed() {
+        failDocumentLoad("Local web content is unavailable")
+    }
+
+    func navigationFailed() {
+        failDocumentLoad("Local web content failed to load")
+    }
+
+    func webContentProcessTerminated() {
+        failDocumentLoad("Web content process terminated")
+    }
+
+    private func isCurrentInvocation(_ invocationLifecycleID: UInt64) -> Bool {
+        !didClose && documentIsActive && lifecycleID == invocationLifecycleID
+    }
+
+    private static let originDeniedReply = BridgeReply.error(
+        id: nil,
+        code: "ORIGIN_DENIED",
+        message: "Bridge origin denied"
+    ).webObject
 }
 
 extension WKBridgeAdapter: WKNavigationDelegate {
@@ -131,16 +200,11 @@ extension WKBridgeAdapter: WKNavigationDelegate {
         decisionHandler: @escaping (WKNavigationActionPolicy) -> Void
     ) {
         let targetIsMainFrame = navigationAction.targetFrame?.isMainFrame
-        guard policy.allowsMainNavigation(to: navigationAction.request.url, targetIsMainFrame: targetIsMainFrame) else {
-            decisionHandler(.cancel)
-            return
-        }
-        prepareForAllowedNavigation()
-        decisionHandler(.allow)
+        decisionHandler(navigationPolicy(for: navigationAction.request.url, targetIsMainFrame: targetIsMainFrame))
     }
 
     func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
-        activateCommittedDocument(webView.url)
+        navigationDidCommit(url: webView.url)
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
@@ -152,15 +216,15 @@ extension WKBridgeAdapter: WKNavigationDelegate {
         didFailProvisionalNavigation navigation: WKNavigation!,
         withError error: Error
     ) {
-        failDocumentLoad("Local web content is unavailable")
+        provisionalNavigationFailed()
     }
 
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
-        failDocumentLoad("Local web content failed to load")
+        navigationFailed()
     }
 
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
-        failDocumentLoad("Web content process terminated")
+        webContentProcessTerminated()
     }
 }
 
@@ -192,7 +256,7 @@ private final class WeakReplyMessageHandler: NSObject, WKScriptMessageHandlerWit
     }
 }
 
-private final class ReplyOnce: @unchecked Sendable {
+final class ReplyOnce: @unchecked Sendable {
     private let lock = NSLock()
     private var didReply = false
     private let handler: (Any?, String?) -> Void
