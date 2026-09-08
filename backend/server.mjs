@@ -410,6 +410,8 @@ async function handleWeb(request, response, webRoot, log) {
       sendWebError(request, response, url, log, 403, 'PATH_DENIED', 'Asset path denied');
       return;
     }
+    // The response may close while the asynchronous path checks are in flight.
+    if (response.destroyed) return;
     const contentType = MIME_TYPES.get(path.extname(resolved).toLowerCase()) ?? 'application/octet-stream';
     response.writeHead(200, responseHeaders(request, contentType, {
       'content-security-policy': CSP,
@@ -420,6 +422,14 @@ async function handleWeb(request, response, webRoot, log) {
       return;
     }
     const stream = createReadStream(resolved);
+    const destroySource = () => stream.destroy();
+    response.once('close', destroySource);
+    response.once('error', destroySource);
+    const sourceClosed = new Promise((resolve) => stream.once('close', () => {
+      response.off('close', destroySource);
+      response.off('error', destroySource);
+      resolve();
+    }));
     stream.once('error', () => {
       if (!response.headersSent) {
         sendWebError(request, response, url, log, 500, 'ASSET_READ_FAILED', 'Asset read failed');
@@ -429,6 +439,7 @@ async function handleWeb(request, response, webRoot, log) {
     });
     stream.once('end', () => logResult(log, request, url, 200));
     stream.pipe(response);
+    await sourceClosed;
   } catch {
     sendWebError(request, response, url, log, 404, 'NOT_FOUND', 'Asset not found');
   }
@@ -443,12 +454,15 @@ export function createLabServer({
 }) {
   if (host !== HOST) throw new Error(`host must be ${HOST}`);
   const delayTimers = new Set();
+  const webHandlers = new Set();
   let actualWebPort = webPort;
   const webServer = http.createServer((request, response) => {
-    handleWeb(request, response, webRoot, log).catch((error) => {
+    const handler = handleWeb(request, response, webRoot, log).catch((error) => {
       log(`web handler error: ${error.message}`);
       response.destroy();
     });
+    webHandlers.add(handler);
+    handler.finally(() => webHandlers.delete(handler));
   });
   const apiServer = http.createServer((request, response) => {
     handleApi(request, response, actualWebPort, log, delayTimers).catch((error) => {
@@ -480,6 +494,8 @@ export function createLabServer({
       for (const timer of delayTimers) clearTimeout(timer);
       delayTimers.clear();
       await Promise.all([closeServer(webServer), closeServer(apiServer)]);
+      // Socket closure initiates source destruction; wait for filesystem closure too.
+      await Promise.all(webHandlers);
     },
   };
 }

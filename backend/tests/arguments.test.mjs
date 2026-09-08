@@ -10,18 +10,21 @@ const execFileAsync = promisify(execFile);
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const script = path.join(repo, 'backend/server.mjs');
 
-async function freePort() {
+async function reservedPort(t) {
   const server = net.createServer();
-  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  await new Promise((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', resolve);
+  });
   const port = server.address().port;
-  await new Promise((resolve) => server.close(resolve));
+  // Invalid arguments must fail before listening: keep reservations throughout.
+  t.after(() => new Promise((resolve) => server.close(resolve)));
   return port;
 }
 
 test('server rejects invalid ports and ownership bindings before listening', async (t) => {
-  const webPort = await freePort();
-  let apiPort = await freePort();
-  while (apiPort === webPort) apiPort = await freePort();
+  const webPort = await reservedPort(t);
+  const apiPort = await reservedPort(t);
   const defaults = {
     '--web-port': String(webPort), '--api-port': String(apiPort),
     '--web-root': path.join(repo, '.artifacts/argument-tests/dist'),

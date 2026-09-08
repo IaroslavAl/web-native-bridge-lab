@@ -10,6 +10,7 @@ import test from 'node:test';
 import { promisify } from 'node:util';
 
 import { createLabServer } from '../server.mjs';
+import { retryBindConflicts } from './support/port-retry.mjs';
 
 const execFileAsync = promisify(execFile);
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -17,6 +18,66 @@ const LAB_SCRIPT = path.join(REPO_ROOT, 'scripts/lab');
 const SERVER_SCRIPT = path.join(REPO_ROOT, 'backend', 'server.mjs');
 const TEST_ROOT = path.join(REPO_ROOT, '.artifacts', 'backend-tests');
 await mkdir(TEST_ROOT, { recursive: true });
+
+// Retry only confirmed bind failures; every invocation creates fresh state/assets/ports.
+const isolatedTest = (name, run) => test(name, () => retryBindConflicts(run));
+
+async function startLab(options) {
+  const result = await runLab('start', options);
+  if (result.code !== 1) return result;
+  const preflight = /^(web|API) port \d+ is occupied; foreign process left untouched\s*$/.test(result.stderr);
+  let childBind = false;
+  if (/^failed to start lab:/.test(result.stderr)) {
+    const log = await readFile(path.join(options.stateDir, 'server.log'), 'utf8').catch(() => '');
+    childBind = /listen EADDRINUSE: address already in use 127\.0\.0\.1:\d+/.test(log);
+  }
+  if (preflight || childBind) {
+    options.bindConflict = true;
+    throw Object.assign(new Error(result.stderr), { code: 'EADDRINUSE', syscall: 'listen' });
+  }
+  return result;
+}
+
+test('CLI harness retries a confirmed foreign bind conflict with fresh resources and bounds exhaustion', async () => {
+  const foreign = http.createServer((_request, response) => response.end('foreign-alive'));
+  const occupied = await listen(foreign);
+  try {
+    for (const exhaust of [false, true]) {
+      const roots = [];
+      const run = retryBindConflicts(async (attempt) => {
+        const root = await mkdtemp(path.join(TEST_ROOT, 'forced-collision-'));
+        roots.push(root);
+        const options = await isolatedOptions(root);
+        if (exhaust || attempt === 1) options.webPort = occupied;
+        let pid;
+        try {
+          const start = await startLab(options);
+          assert.equal(start.code, 0, start.stderr);
+          const status = await runLab('status', options);
+          assert.equal(status.code, 0, status.stderr);
+          pid = JSON.parse(status.stdout).processes[0].pid;
+        } finally {
+          const stop = await runLab('stop', options);
+          if (pid) {
+            assert.equal(stop.code, 0, stop.stderr);
+            assert.throws(() => process.kill(pid, 0), { code: 'ESRCH' });
+            assert.equal(await portIsFree(options.webPort), true);
+            assert.equal(await portIsFree(options.apiPort), true);
+          }
+          await rm(root, { recursive: true, force: true });
+          assert.equal(await (await fetch(`http://127.0.0.1:${occupied}`)).text(), 'foreign-alive');
+        }
+      });
+      if (exhaust) await assert.rejects(run, /bind conflicts exhausted after 3 attempts/);
+      else await run;
+      assert.equal(roots.length, exhaust ? 3 : 2, 'bounded attempt count');
+      assert.equal(new Set(roots).size, roots.length, 'each retry has a fresh resource root');
+      for (const root of roots) await assert.rejects(readFile(path.join(root, 'state/state.json')), { code: 'ENOENT' });
+    }
+  } finally {
+    await close(foreign);
+  }
+});
 
 async function runLab(command, options) {
   const args = [
@@ -104,14 +165,14 @@ test('status from another cwd reports stopped state as JSON', async () => {
   }
 });
 
-test('start, status, and stop are idempotent and stop active delayed work', async () => {
+isolatedTest('start, status, and stop are idempotent and stop active delayed work', async () => {
   const root = await mkdtemp(path.join(TEST_ROOT, 'lifecycle-'));
   const options = await isolatedOptions(root);
   await mkdir(options.webRoot);
   await writeFile(path.join(options.webRoot, 'index.html'), '<h1>lab</h1>');
 
   try {
-    const started = await runLab('start', options);
+    const started = await startLab(options);
     assert.equal(started.code, 0, `start stderr: ${started.stderr}`);
     const repeatedStart = await runLab('start', options);
     assert.equal(repeatedStart.code, 0, `repeated start stderr: ${repeatedStart.stderr}`);
@@ -150,14 +211,17 @@ test('start, status, and stop are idempotent and stop active delayed work', asyn
   }
 });
 
-test('concurrent lifecycle calls serialize and preserve an unrelated listener', async () => {
+isolatedTest('concurrent lifecycle calls serialize and preserve an unrelated listener', async () => {
   const root = await mkdtemp(path.join(TEST_ROOT, 'lifecycle-'));
   const options = await isolatedOptions(root);
   const foreign = http.createServer((_request, response) => response.end('foreign-alive'));
   const foreignPort = await listen(foreign);
 
   try {
-    const starts = await Promise.all([runLab('start', options), runLab('start', options)]);
+    const outcomes = await Promise.allSettled([startLab(options), startLab(options)]);
+    const failure = outcomes.find((outcome) => outcome.status === 'rejected');
+    if (failure) throw failure.reason;
+    const starts = outcomes.map((outcome) => outcome.value);
     assert.deepEqual(starts.map((result) => result.code), [0, 0], 'concurrent start exit codes');
 
     const status = await runLab('status', options);
@@ -175,13 +239,12 @@ test('concurrent lifecycle calls serialize and preserve an unrelated listener', 
   }
 });
 
-test('foreign port conflict fails without signalling the foreign process', async () => {
+isolatedTest('foreign port conflict fails without signalling the foreign process', async () => {
   const root = await mkdtemp(path.join(TEST_ROOT, 'lifecycle-'));
   const options = await isolatedOptions(root);
   const foreign = http.createServer((_request, response) => response.end('still-owned-elsewhere'));
-  await listen(foreign, options.webPort);
-
   try {
+    await listen(foreign, options.webPort);
     const start = await runLab('start', options);
     assert.equal(start.code, 1, `start conflict exit code; stderr: ${start.stderr}`);
     assert.match(start.stderr, /web port.*occupied/i);
@@ -198,17 +261,17 @@ test('foreign port conflict fails without signalling the foreign process', async
     const response = await fetch(`http://127.0.0.1:${options.webPort}/`);
     assert.equal(await response.text(), 'still-owned-elsewhere');
   } finally {
-    await close(foreign);
+    if (foreign.listening) await close(foreign);
     await rm(root, { recursive: true, force: true });
   }
 });
 
-test('stale PID-reuse state is never treated as owned or signalled', async () => {
+isolatedTest('stale PID-reuse state is never treated as owned or signalled', async () => {
   const root = await mkdtemp(path.join(TEST_ROOT, 'lifecycle-'));
   const options = await isolatedOptions(root);
 
   try {
-    const start = await runLab('start', options);
+    const start = await startLab(options);
     assert.equal(start.code, 0, `start stderr: ${start.stderr}`);
     const statePath = path.join(options.stateDir, 'state.json');
     const previous = JSON.parse(await readFile(statePath, 'utf8'));
@@ -237,7 +300,7 @@ test('stale PID-reuse state is never treated as owned or signalled', async () =>
   }
 });
 
-test('direct server startup rolls back its first listener when the second bind fails', async () => {
+isolatedTest('direct server startup rolls back its first listener when the second bind fails', async () => {
   const root = await mkdtemp(path.join(TEST_ROOT, 'lifecycle-'));
   const webPort = await getFreePort();
   const occupiedApi = http.createServer((_request, response) => response.end('foreign-api'));
@@ -249,7 +312,12 @@ test('direct server startup rolls back its first listener when the second bind f
   });
 
   try {
-    await assert.rejects(lab.start(), { code: 'EADDRINUSE' });
+    await assert.rejects(lab.start(), (error) => {
+      if (error.code === 'EADDRINUSE' && error.port === webPort) throw error;
+      assert.equal(error.code, 'EADDRINUSE', 'second bind error.code');
+      assert.equal(error.port, apiPort, 'second bind error.port');
+      return true;
+    });
     assert.equal(await portIsFree(webPort), true, 'partially started web listener released');
     const response = await fetch(`http://127.0.0.1:${apiPort}/`);
     assert.equal(await response.text(), 'foreign-api');
@@ -288,13 +356,13 @@ test('direct server startup rejects invalid lifecycle ownership arguments', asyn
   }
 });
 
-test('ownership requires an exact token, command and start identity, not a PID or substring', async () => {
+isolatedTest('ownership requires an exact token, command and start identity, not a PID or substring', async () => {
   const root = await mkdtemp(path.join(TEST_ROOT, 'lifecycle-'));
   const options = await isolatedOptions(root);
   const statePath = path.join(options.stateDir, 'state.json');
   let original;
   try {
-    const started = await runLab('start', options);
+    const started = await startLab(options);
     assert.equal(started.code, 0, started.stderr);
     original = await readFile(statePath, 'utf8');
     const state = JSON.parse(original);
@@ -317,19 +385,19 @@ test('ownership requires an exact token, command and start identity, not a PID o
   } finally {
     if (original) await writeFile(statePath, original);
     const stop = await runLab('stop', options);
-    assert.equal(stop.code, 0, stop.stderr);
+    if (!options.bindConflict) assert.equal(stop.code, 0, stop.stderr);
     await rm(root, { recursive: true, force: true });
   }
 });
 
-test('stale files recover and a live configuration mismatch fails safely', async () => {
+isolatedTest('stale files recover and a live configuration mismatch fails safely', async () => {
   const root = await mkdtemp(path.join(TEST_ROOT, 'lifecycle-'));
   const options = await isolatedOptions(root);
   try {
     await mkdir(path.join(options.stateDir, '.lock'), { recursive: true });
     await writeFile(path.join(options.stateDir, '.lock/owner.json'), JSON.stringify({ pid: process.pid, startIdentity: 'stale' }));
     await writeFile(path.join(options.stateDir, 'state.json'), '{malformed');
-    const start = await runLab('start', options);
+    const start = await startLab(options);
     assert.equal(start.code, 0, start.stderr);
     const mismatch = { ...options, webRoot: path.join(root, 'different-dist') };
     for (const command of ['start', 'status', 'stop']) {
@@ -338,9 +406,12 @@ test('stale files recover and a live configuration mismatch fails safely', async
     }
     assert.equal((await runLab('status', options)).code, 0, 'original configuration stays healthy');
   } finally {
-    assert.equal((await runLab('stop', options)).code, 0, 'cleanup stop');
-    assert.equal(await portIsFree(options.webPort), true, 'cleanup web port');
-    assert.equal(await portIsFree(options.apiPort), true, 'cleanup API port');
+    const stop = await runLab('stop', options);
+    if (!options.bindConflict) {
+      assert.equal(stop.code, 0, 'cleanup stop');
+      assert.equal(await portIsFree(options.webPort), true, 'cleanup web port');
+      assert.equal(await portIsFree(options.apiPort), true, 'cleanup API port');
+    }
     await rm(root, { recursive: true, force: true });
   }
 });
