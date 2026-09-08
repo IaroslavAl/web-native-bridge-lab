@@ -83,6 +83,18 @@ class EvidenceTests(unittest.TestCase):
             with self.subTest(extra=extra), self.assertRaises(AssertionError):
                 check('\n'.join(lines + [extra]))
 
+    def test_stage4_events_reject_leaks_late_success_and_forbidden_destinations(self):
+        check = self.helper('require_stage4_events')
+        events = [dict(path='/delay', tag=tag, event=event) for tag in
+                  ('reload', 'navigation', 'close', 'destruction') for event in ('request', 'connection-close')]
+        events += [dict(path='/inspect', tag='privacy-first', event='request', cookie=False, authorization=False)]
+        check(events)
+        for mutation in [events[:-2], events + [dict(path='/forbidden-frame', event='request')],
+                         events + [dict(path='/delay', tag='reload', event='finished')],
+                         events + [dict(path='/challenge', tag='privacy-auth-4', event='request', authorization=True)]]:
+            with self.assertRaises(AssertionError):
+                check(mutation)
+
     def test_same_app_rejects_container_change_and_non_executable_change(self):
         same = self.helper('require_same_app')
         first = {'udid': 'device', 'container': '/app/one', 'files': {'BridgeLab': 'exe', 'Info.plist': 'plist'}}

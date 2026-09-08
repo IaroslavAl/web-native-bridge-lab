@@ -58,6 +58,24 @@ This mode does not repeat Stage2 outcome probes; both commands remain available.
 Full provenance, privacy, document revocation, production Diagnostics and adversarial
 runner cleanup gates remain pending. This is not a final RC or security acceptance.
 
+## Real WebKit component trust/lifetime/privacy (Stage4)
+
+    scripts/verify simulator-stage4-webkit-privacy
+
+Runs eight live WebKit/network component tests plus42 existing Simulator tests on
+a newly created dedicated Simulator. The opt-in fixture has no CSP so actual
+same/foreign iframe messages reach the unchanged production adapter. This is NOT
+the installed React E2E layer. It checks real navigation, reload, provisional
+failure, close/destruction socket cancellation and fresh-id isolation, plus strictly
+synthetic native/WK cookies, cache and authentication challenges. The actual
+production model's nonpersistent WK store is also exercised. No real credentials
+or host keychain are read. Owned fixture ports8787/8788 and the device are cleaned
+on success or handled failure. Run fixed-port modes serially.
+
+See [Stage4 evidence and explicit framework seams](docs/integration/STAGE4_WEBKIT_PRIVACY.md).
+Production Diagnostics, adverse runner lifecycle and final reconciliation/review
+remain pending; none of these commands constitutes final acceptance.
+
 ## Manual demonstration
 
     npm ci --prefix web

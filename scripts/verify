@@ -84,6 +84,18 @@ def require_stage3_events(text):
     return expected
 
 
+def require_stage4_events(events):
+    for tag in ('reload', 'navigation', 'close', 'destruction'):
+        actual = [e['event'] for e in events if e.get('path') == '/delay' and e.get('tag') == tag]
+        assert actual == ['request', 'connection-close'], f'{tag} live socket events: {actual}'
+    for event in events:
+        path = event.get('path', '')
+        assert not path.startswith(('/forbidden-', '/denied-')), f'forbidden destination: {path}'
+        if event.get('event') == 'request' and event.get('tag', '').startswith('privacy-'):
+            assert event.get('cookie') is False, f'ambient cookie: {event.get("tag")}'
+            assert event.get('authorization') is False, f'ambient authorization: {event.get("tag")}'
+
+
 def require_free_ports():
     sockets = []
     try:
@@ -200,7 +212,7 @@ class Run:
             # Unit tests inject bundles into their host app. Keep that build tree separate
             # so the A/B application is the uninstrumented production shell.
             unit_base = [str(self.out / 'unit-derived') if arg == str(self.out / 'derived') else arg for arg in base]
-            self.command('ios-simulator-tests', unit_base + ['-scheme', 'BridgeLab', '-resultBundlePath', self.out / 'unit.xcresult', 'test'], timeout=900)
+            self.command('ios-simulator-tests', unit_base + ['-scheme', 'BridgeLab', '-skip-testing:BridgeLabTests/LiveWebKitTests', '-resultBundlePath', self.out / 'unit.xcresult', 'test'], timeout=900)
             self.command('acceptance-build', base + ['-scheme', 'BridgeLabAcceptance', 'build-for-testing'], timeout=600)
             app = self.out / 'derived/Build/Products/Debug-iphonesimulator/BridgeLab.app'
             # Simulator replacement installs can retain the earlier unit-host PlugIns.
@@ -339,9 +351,80 @@ class Run:
         save(self.out / 'result.json', result)
 
 
+    def webkit(self):
+        # Same runner/resource ownership, component host rather than installed React.
+        import urllib.request
+        require_free_ports()
+        udid = None
+        fixture = None
+        cleanup_errors = []
+        try:
+            with (self.out / 'fixture.log').open('w') as log:
+                fixture = subprocess.Popen(['node', str(ROOT / 'scripts/tests/webkit-fixture.mjs'),
+                                            str(self.out / 'events.json')], cwd=ROOT, stdout=log, stderr=subprocess.STDOUT)
+            self.children.append(fixture)
+            deadline = time.monotonic() + 10
+            while True:
+                assert fixture.poll() is None, 'owned fixture exited before readiness'
+                try:
+                    with urllib.request.urlopen('http://127.0.0.1:8787/__state', timeout=1) as response:
+                        assert json.load(response)['fixture'] == 'PER85-Stage4', 'fixture identity'
+                    break
+                except OSError:
+                    if time.monotonic() >= deadline:
+                        raise RuntimeError('fixture readiness deadline')
+                    time.sleep(0.05)
+            runtimes = json.loads(self.capture(['xcrun', 'simctl', 'list', 'runtimes', '-j']))['runtimes']
+            runtime = next(r for r in runtimes if r['isAvailable'] and r['name'].startswith('iOS'))
+            device = next(d for d in runtime['supportedDeviceTypes'] if d['productFamily'] == 'iPhone')
+            udid = self.capture(['xcrun', 'simctl', 'create', 'PER85-Stage4-' + uuid.uuid4().hex[:8], device['identifier'], runtime['identifier']])
+            save(self.out / 'simulator.json', {'udid': udid, 'runtime': runtime['identifier'], 'device': device['identifier'], 'fixture_pid': fixture.pid})
+            self.command('boot', ['xcrun', 'simctl', 'boot', udid])
+            self.command('boot-ready', ['xcrun', 'simctl', 'bootstatus', udid, '-b'])
+            self.command('webkit-tests', ['xcodebuild', '-project', 'ios/BridgeLab.xcodeproj', '-scheme', 'BridgeLab',
+                         '-destination', 'platform=iOS Simulator,id=' + udid, '-derivedDataPath', self.out / 'derived',
+                         '-resultBundlePath', self.out / 'webkit.xcresult', 'CODE_SIGNING_ALLOWED=NO',
+                         '-parallel-testing-enabled', 'NO', 'test'], timeout=900)
+            summary = json.loads(self.capture(['xcrun', 'xcresulttool', 'get', 'test-results', 'summary', '--path', str(self.out / 'webkit.xcresult'), '--format', 'json']))
+            save(self.out / 'webkit-summary.json', summary)
+            assert summary['failedTests'] == 0, f'webkit failedTests={summary["failedTests"]}'
+            assert summary['skippedTests'] == 0, f'webkit skippedTests={summary["skippedTests"]}'
+            assert summary['passedTests'] == 50, f'webkit passedTests={summary["passedTests"]}, expected 42 regression + 8 live tests'
+            require_stage4_events(json.loads((self.out / 'events.json').read_text()))
+        finally:
+            if fixture:
+                if fixture.poll() is None:
+                    fixture.terminate()
+                    try:
+                        fixture.wait(timeout=10)
+                    except subprocess.TimeoutExpired:
+                        fixture.kill(); fixture.wait()
+                self.children.remove(fixture)
+                try:
+                    require_free_ports()
+                except Exception as error:
+                    cleanup_errors.append(str(error))
+            if udid:
+                try:
+                    states = json.loads(self.capture(['xcrun', 'simctl', 'list', 'devices', '-j']))['devices']
+                    current = next(d for group in states.values() for d in group if d['udid'] == udid)
+                    if current['state'] != 'Shutdown':
+                        self.command('simulator-shutdown', ['xcrun', 'simctl', 'shutdown', udid])
+                    self.command('simulator-delete', ['xcrun', 'simctl', 'delete', udid])
+                    states = json.loads(self.capture(['xcrun', 'simctl', 'list', 'devices', '-j']))['devices']
+                    assert all(d['udid'] != udid for group in states.values() for d in group), 'owned Simulator remains'
+                except Exception as error:
+                    cleanup_errors.append(str(error))
+            save(self.out / 'cleanup.json', {'errors': cleanup_errors, 'owned_fixture_stopped': fixture is not None and fixture.poll() is not None,
+                                            'owned_simulator_removed': bool(udid) and not cleanup_errors})
+            if cleanup_errors:
+                raise RuntimeError('cleanup failed: ' + '; '.join(cleanup_errors))
+        save(self.out / 'result.json', {'stage4_webkit_privacy': 'PASS', 'layer': 'real WebKit component + real native network', 'final_acceptance': False})
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('mode', choices=['unit', 'simulator-stage1', 'simulator-stage2-outcomes', 'simulator-stage3-trust-limits'])
+    parser.add_argument('mode', choices=['unit', 'simulator-stage1', 'simulator-stage2-outcomes', 'simulator-stage3-trust-limits', 'simulator-stage4-webkit-privacy'])
     args = parser.parse_args()
     def interrupted(signum, frame):
         raise KeyboardInterrupt(f'signal {signum}')
@@ -351,6 +434,8 @@ def main():
     try:
         if args.mode == 'unit':
             run.unit()
+        elif args.mode == 'simulator-stage4-webkit-privacy':
+            run.webkit()
         else:
             run.simulator(stage2=args.mode == 'simulator-stage2-outcomes', stage3=args.mode == 'simulator-stage3-trust-limits')
         print(f'PASS {args.mode}; not final product acceptance. Evidence: {run.out}', flush=True)

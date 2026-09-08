@@ -36,6 +36,8 @@
 
 Stage3 bounded evidence: `scripts/verify simulator-stage3-trust-limits` adds actual installed-shell raw wire/session/id, origin URL/header policy, same/cross/loop redirect zero-destination-hit, Unicode/raw/chunked/media limits and8/ninth BUSY probes. See docs/integration/STAGE3_TRUST_LIMITS.md for exact layer distinctions and gaps. CSP-denied iframe loading is NOT real iframe handler-provenance proof. Task6.3 and independent review/acceptance remain unchecked.
 
+Stage4 component evidence: `scripts/verify simulator-stage4-webkit-privacy` runs actual WebKit frame provenance (test-only outer navigation bypass, no production CSP relaxation), navigation/reload/provisional failure/close/destruction with real socket cancellation, fresh-id isolation and synthetic native/WK cookie/cache/challenge isolation. See docs/integration/STAGE4_WEBKIT_PRIVACY.md for observed layers, mutation checks and irreducible/deferred gaps. No installed-React or actual OS process-termination claim;6.3 remains unchecked.
+
 ## 7. Independent product acceptance and closure
 
 - [ ] 7.1 Independent verifier repeats exact-RC real Simulator/security/lifecycle/same-binary gates and reports passed/failed/skipped plus limits.

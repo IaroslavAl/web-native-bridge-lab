@@ -13,7 +13,13 @@ From the repository root:
 
 For Simulator XCTest, replace `<UDID>` with a task-owned or dedicated available iOS Simulator:
 
-    xcodebuild -project ios/BridgeLab.xcodeproj -scheme BridgeLab -destination 'platform=iOS Simulator,id=<UDID>' -derivedDataPath "$PWD/.artifacts/ios-derived" CODE_SIGNING_ALLOWED=NO test
+    xcodebuild -project ios/BridgeLab.xcodeproj -scheme BridgeLab -destination 'platform=iOS Simulator,id=<UDID>' -derivedDataPath "$PWD/.artifacts/ios-derived" CODE_SIGNING_ALLOWED=NO -skip-testing:BridgeLabTests/LiveWebKitTests test
+
+The eight opt-in `LiveWebKitTests` require a separate loopback fixture and a fresh
+Simulator sandbox for strictly synthetic store seeding. Run them plus the42
+regressions through `scripts/verify simulator-stage4-webkit-privacy`; do not point
+these privacy tests at an existing personal Simulator. See
+[Stage4 layer-specific evidence](../docs/integration/STAGE4_WEBKIT_PRIVACY.md).
 
 The app's compiler-checked `isolated deinit` uses the current Swift toolchain (verified with Apple Swift 6.3.3 and iOS 26.5 Simulator); older Swift compilers are not a supported build claim. Deployment target remains iOS 17 Simulator, without signing.
 
