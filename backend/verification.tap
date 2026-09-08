@@ -1,0 +1,221 @@
+TAP version 13
+# Subtest: server rejects invalid ports and ownership bindings before listening
+    # Subtest: web port "-1"
+    ok 1 - web port "-1"
+      ---
+      duration_ms: 39.513
+      type: 'test'
+      ...
+    # Subtest: web port "65536"
+    ok 2 - web port "65536"
+      ---
+      duration_ms: 36.84
+      type: 'test'
+      ...
+    # Subtest: web port "0"
+    ok 3 - web port "0"
+      ---
+      duration_ms: 36.638958
+      type: 'test'
+      ...
+    # Subtest: web port "1.5"
+    ok 4 - web port "1.5"
+      ---
+      duration_ms: 36.535833
+      type: 'test'
+      ...
+    # Subtest: web port "NaN"
+    ok 5 - web port "NaN"
+      ---
+      duration_ms: 34.649833
+      type: 'test'
+      ...
+    # Subtest: web port ""
+    ok 6 - web port ""
+      ---
+      duration_ms: 34.437792
+      type: 'test'
+      ...
+    # Subtest: same ports
+    ok 7 - same ports
+      ---
+      duration_ms: 35.161125
+      type: 'test'
+      ...
+    # Subtest: foreign repository
+    ok 8 - foreign repository
+      ---
+      duration_ms: 34.601833
+      type: 'test'
+      ...
+    # Subtest: missing repository
+    ok 9 - missing repository
+      ---
+      duration_ms: 36.986542
+      type: 'test'
+      ...
+    # Subtest: invalid token
+    ok 10 - invalid token
+      ---
+      duration_ms: 47.296541
+      type: 'test'
+      ...
+    # Subtest: relative state
+    ok 11 - relative state
+      ---
+      duration_ms: 45.043667
+      type: 'test'
+      ...
+    # Subtest: relative assets
+    ok 12 - relative assets
+      ---
+      duration_ms: 37.555792
+      type: 'test'
+      ...
+    # Subtest: duplicate option
+    ok 13 - duplicate option
+      ---
+      duration_ms: 35.377458
+      type: 'test'
+      ...
+    # Subtest: unknown option
+    ok 14 - unknown option
+      ---
+      duration_ms: 36.622584
+      type: 'test'
+      ...
+    1..14
+ok 1 - server rejects invalid ports and ownership bindings before listening
+  ---
+  duration_ms: 535.203125
+  type: 'test'
+  ...
+# Subtest: serves deterministic catalog data from an isolated API listener
+ok 2 - serves deterministic catalog data from an isolated API listener
+  ---
+  duration_ms: 18.932125
+  type: 'test'
+  ...
+# Subtest: reports listener health independently from web asset availability
+ok 3 - reports listener health independently from web asset availability
+  ---
+  duration_ms: 5.812875
+  type: 'test'
+  ...
+# Subtest: serves current static files with safe paths, MIME types, and CSP
+ok 4 - serves current static files with safe paths, MIME types, and CSP
+  ---
+  duration_ms: 14.360334
+  type: 'test'
+  ...
+# Subtest: implements catalog and quote success and validation contracts
+ok 5 - implements catalog and quote success and validation contracts
+  ---
+  duration_ms: 14.5915
+  type: 'test'
+  ...
+# Subtest: returns exact echo, HTTP, business, and malformed JSON fixtures
+ok 6 - returns exact echo, HTTP, business, and malformed JSON fixtures
+  ---
+  duration_ms: 5.106916
+  type: 'test'
+  ...
+# Subtest: bounds request bodies and distinguishes unknown routes from wrong methods
+ok 7 - bounds request bodies and distinguishes unknown routes from wrong methods
+  ---
+  duration_ms: 5.191375
+  type: 'test'
+  ...
+# Subtest: validates delay input and clears delayed work when the client cancels
+ok 8 - validates delay input and clears delayed work when the client cancels
+  ---
+  duration_ms: 69.11575
+  type: 'test'
+  ...
+# Subtest: returns redirect fixtures without following them server-side
+ok 9 - returns redirect fixtures without following them server-side
+  ---
+  duration_ms: 3.205334
+  type: 'test'
+  ...
+# Subtest: streams bounded large fixture without Content-Length
+ok 10 - streams bounded large fixture without Content-Length
+  ---
+  duration_ms: 5.275333
+  type: 'test'
+  ...
+# Subtest: returns invalid UTF-8, binary, and filtered-header test inputs exactly
+ok 11 - returns invalid UTF-8, binary, and filtered-header test inputs exactly
+  ---
+  duration_ms: 3.0055
+  type: 'test'
+  ...
+# Subtest: echoes only valid x-lab-tag values and never grants CORS
+ok 12 - echoes only valid x-lab-tag values and never grants CORS
+  ---
+  duration_ms: 1.106292
+  type: 'test'
+  ...
+# Subtest: status from another cwd reports stopped state as JSON
+ok 13 - status from another cwd reports stopped state as JSON
+  ---
+  duration_ms: 52.862875
+  type: 'test'
+  ...
+# Subtest: start, status, and stop are idempotent and stop active delayed work
+ok 14 - start, status, and stop are idempotent and stop active delayed work
+  ---
+  duration_ms: 452.058667
+  type: 'test'
+  ...
+# Subtest: concurrent lifecycle calls serialize and preserve an unrelated listener
+ok 15 - concurrent lifecycle calls serialize and preserve an unrelated listener
+  ---
+  duration_ms: 384.526583
+  type: 'test'
+  ...
+# Subtest: foreign port conflict fails without signalling the foreign process
+ok 16 - foreign port conflict fails without signalling the foreign process
+  ---
+  duration_ms: 124.702042
+  type: 'test'
+  ...
+# Subtest: stale PID-reuse state is never treated as owned or signalled
+ok 17 - stale PID-reuse state is never treated as owned or signalled
+  ---
+  duration_ms: 298.413166
+  type: 'test'
+  ...
+# Subtest: direct server startup rolls back its first listener when the second bind fails
+ok 18 - direct server startup rolls back its first listener when the second bind fails
+  ---
+  duration_ms: 1.640333
+  type: 'test'
+  ...
+# Subtest: direct server startup rejects invalid lifecycle ownership arguments
+ok 19 - direct server startup rejects invalid lifecycle ownership arguments
+  ---
+  duration_ms: 35.295917
+  type: 'test'
+  ...
+# Subtest: ownership requires an exact token, command and start identity, not a PID or substring
+ok 20 - ownership requires an exact token, command and start identity, not a PID or substring
+  ---
+  duration_ms: 520.355
+  type: 'test'
+  ...
+# Subtest: stale files recover and a live configuration mismatch fails safely
+ok 21 - stale files recover and a live configuration mismatch fails safely
+  ---
+  duration_ms: 368.028708
+  type: 'test'
+  ...
+1..21
+# tests 35
+# suites 0
+# pass 35
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2284.554375
