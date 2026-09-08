@@ -40,6 +40,24 @@ The UI test asserts preserved HTTP 503/422 bodies, business and JSON-parse class
 
 This is a bounded outcome checkpoint, NOT the complete security/lifecycle matrix or an approved RC. Remaining proof includes real iframe/foreign-origin provenance, redirect destination non-delivery, synthetic credential isolation, bounds/adversarial wire inputs and live document-revocation races. See [Stage2 outcome evidence and gaps](docs/integration/STAGE2_OUTCOMES.md). `final_acceptance` remains false.
 
+## Actual Simulator trust/limits slice (Stage 3, incomplete matrix)
+
+    scripts/verify simulator-stage3-trust-limits
+
+Repeats production A/B, then exercises raw closed/version/session/id validation,
+exact raw/Unicode request and chunked response size boundaries, URL/header policy,
+same/cross/loop redirects with zero destination hits, media/encoding rejection,
+inert hostile response text, and eight native admissions/ninth BUSY through the
+unchanged installed shell. Host logs corroborate actual request outcomes and reject
+forbidden effects. Same/foreign frame attempts are blocked by the unchanged
+production CSP BEFORE bridge execution; this is not handler-provenance proof.
+The test-only raw probes intentionally bypass TS validation, never native policy.
+
+See [Stage3 evidence and remaining obligations](docs/integration/STAGE3_TRUST_LIMITS.md).
+This mode does not repeat Stage2 outcome probes; both commands remain available.
+Full provenance, privacy, document revocation, production Diagnostics and adversarial
+runner cleanup gates remain pending. This is not a final RC or security acceptance.
+
 ## Manual demonstration
 
     npm ci --prefix web

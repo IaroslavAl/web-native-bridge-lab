@@ -2,6 +2,7 @@
 // Uses the exact production client and business interpreters in the installed shell.
 import { useState } from "react";
 import ReactDOM from "react-dom/client";
+import { trustMatrix } from "./trust";
 import { BridgeClient, createWebKitNativeBoundary, TransportError, type BridgeResponse } from "../src/bridgeClient";
 import { buildFixtureRequest, buildQuoteRequest, interpretCatalog, interpretBusinessFixture,
   interpretQuote, interpretDelay, ResponseInterpretationError } from "../src/scenarios";
@@ -110,6 +111,7 @@ function Page() {
   return <main>
     <h1>Stage2 test-only outcomes</h1>
     <button disabled={running} onClick={() => void matrix().catch(fail)}>Run outcome probes</button>
+    <button disabled={running} onClick={() => { setRunning(true); void trustMatrix(record).catch(fail); }}>Run trust probes</button>
     <button disabled={!complete} onClick={() => void networkOff().catch(fail)}>Probe stopped backend</button>
     {lines.map((line, index) => <p key={index}>{line}</p>)}
   </main>;

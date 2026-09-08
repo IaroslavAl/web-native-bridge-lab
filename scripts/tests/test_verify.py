@@ -60,6 +60,29 @@ class EvidenceTests(unittest.TestCase):
         with self.assertRaisesRegex(AssertionError, 's2-fast'):
             check('\n'.join(lines + [lines[-2]]))
 
+    def test_stage3_log_rejects_redirect_destinations_and_unadmitted_requests(self):
+        check = self.helper('require_stage3_events')
+        lines = [
+            'GET /fixtures/redirect-same 302 tag=s3-redirect-same',
+            'GET /fixtures/redirect-cross 302 tag=s3-redirect-cross',
+            'GET /fixtures/redirect-loop 307 tag=s3-redirect-loop',
+            'POST /fixtures/echo 200 tag=s3-body-limit',
+            'POST /fixtures/echo 200 tag=s3-hostile',
+            'GET /fixtures/large 200 tag=s3-response-limit',
+            'GET /fixtures/binary 200 tag=s3-binary',
+            'GET /fixtures/invalid-utf8 200 tag=s3-encoding',
+        ] + [f'GET /fixtures/delay 200 tag=s3-slot-{i}' for i in range(8)]
+        self.assertEqual(check('\n'.join(lines)), lines)
+        for index in range(len(lines)):
+            with self.subTest(missing=lines[index]), self.assertRaises(AssertionError):
+                check('\n'.join(lines[:index] + lines[index + 1:]))
+        for extra in ['GET /api/catalog 200 tag=-', 'GET /healthz 200 tag=-',
+                      'GET /fixtures/delay 200 tag=s3-busy', lines[2],
+                      'POST /fixtures/echo 200 tag=s3-denied-body',
+                      'GET /stage3-frame-same.html 404 tag=-']:
+            with self.subTest(extra=extra), self.assertRaises(AssertionError):
+                check('\n'.join(lines + [extra]))
+
     def test_same_app_rejects_container_change_and_non_executable_change(self):
         same = self.helper('require_same_app')
         first = {'udid': 'device', 'container': '/app/one', 'files': {'BridgeLab': 'exe', 'Info.plist': 'plist'}}

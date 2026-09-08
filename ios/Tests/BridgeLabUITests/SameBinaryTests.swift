@@ -67,6 +67,25 @@ final class SameBinaryTests: XCTestCase {
         if try await control("diagnostics-enabled") {
             app.buttons["lab.reload"].tap()
             try requireText("Stage2 test-only outcomes", in: app)
+            if try await control("trust-enabled") {
+                app.webViews.buttons["Run trust probes"].tap()
+                for result in ["Closed wire, numeric/session validation and high-water PASS",
+                               "Raw 131072/+1 and Unicode body 65536/+1 PASS",
+                               "API origin, URL/header denial and redirects PASS",
+                               "Hostile response rendered as inert text PASS",
+                               "Chunked response 1048576/+1, binary and UTF-8 PASS",
+                               "Eight admitted, ninth BUSY, active duplicate isolated PASS",
+                               "Same/foreign frames blocked by production CSP before bridge PASS",
+                               "Trust and limits matrix PASS"] {
+                    try requireText(result, in: app)
+                }
+                let trust = XCTAttachment(string: app.debugDescription)
+                trust.name = "Actual installed-shell Stage3 trust and limits"
+                trust.lifetime = .keepAlways
+                add(trust)
+                try await waitForHost("matrix-observed")
+                return
+            }
             app.webViews.buttons["Run outcome probes"].tap()
             for result in ["HTTP 503 preserved", "HTTP 422 preserved", "Business error interpreted",
                            "Malformed JSON preserved", "Native TIMEOUT", "Explicit CANCELLED",

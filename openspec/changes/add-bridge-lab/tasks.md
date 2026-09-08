@@ -34,6 +34,8 @@
 - [ ] 6.3 Exercise real error/JSON/timeout/cancel/concurrency/origin/iframe/redirect/navigation/size gates and preserve durable evidence, not just temporary log paths. Stage2 outcome slice implements `scripts/verify simulator-stage2-outcomes` for real HTTP503/422/business/JSON/native timeout/explicit cancel/concurrency/backend-off errors; see docs/integration/STAGE2_OUTCOMES.md. Remaining security/bounds/revocation matrix is explicitly pending; this item is NOT complete.
 - [ ] 6.4 Stop owned servers/Simulator session, verify released ports/foreign-process preservation and request independent same-card RC review.
 
+Stage3 bounded evidence: `scripts/verify simulator-stage3-trust-limits` adds actual installed-shell raw wire/session/id, origin URL/header policy, same/cross/loop redirect zero-destination-hit, Unicode/raw/chunked/media limits and8/ninth BUSY probes. See docs/integration/STAGE3_TRUST_LIMITS.md for exact layer distinctions and gaps. CSP-denied iframe loading is NOT real iframe handler-provenance proof. Task6.3 and independent review/acceptance remain unchecked.
+
 ## 7. Independent product acceptance and closure
 
 - [ ] 7.1 Independent verifier repeats exact-RC real Simulator/security/lifecycle/same-binary gates and reports passed/failed/skipped plus limits.

@@ -57,6 +57,33 @@ def require_stage2_events(text):
     return expected
 
 
+def require_stage3_events(text):
+    # Only the interval after B and before stop/status health checks is supplied.
+    # Inspect destinations even when a redirected request drops its original tag.
+    expected = [
+        'GET /fixtures/redirect-same 302 tag=s3-redirect-same',
+        'GET /fixtures/redirect-cross 302 tag=s3-redirect-cross',
+        'GET /fixtures/redirect-loop 307 tag=s3-redirect-loop',
+        'POST /fixtures/echo 200 tag=s3-body-limit',
+        'POST /fixtures/echo 200 tag=s3-hostile',
+        'GET /fixtures/large 200 tag=s3-response-limit',
+        'GET /fixtures/binary 200 tag=s3-binary',
+        'GET /fixtures/invalid-utf8 200 tag=s3-encoding',
+    ] + [f'GET /fixtures/delay 200 tag=s3-slot-{i}' for i in range(8)]
+    lines = text.splitlines()
+    for event in expected:
+        tag = event.split('tag=')[1]
+        actual = [line for line in lines if line.endswith('tag=' + tag)]
+        assert actual == [event], f'{tag} events: {actual}, expected exactly {event}'
+    for line in lines:
+        assert not any(path in line for path in (' /api/catalog ', ' /healthz ', ' /stage3-')), f'forbidden destination hit: {line}'
+        if ' /fixtures/redirect-' in line:
+            assert line in expected and lines.count(line) == 1, f'redirect hop/repeat: {line}'
+        if 'tag=s3-' in line:
+            assert line in expected or line == 'GET /fixtures/large 200 tag=s3-response-over', f'unadmitted request hit: {line}'
+    return expected
+
+
 def require_free_ports():
     sockets = []
     try:
@@ -152,7 +179,7 @@ class Run:
         self.command('diff-check', ['git', 'diff', '--check'])
         save(self.out / 'result.json', {'unit': 'PASS', 'final_acceptance': False})
 
-    def simulator(self, stage2=False):
+    def simulator(self, stage2=False, stage3=False):
         require_free_ports() # before creating resources; never steal existing lab services
         udid = None
         started = False
@@ -225,7 +252,8 @@ class Run:
             after_b = self.installed(udid, 'installed-after-B')
             require_same_app(before, after_b)
             assert 'POST /api/quote 200 tag=scenario-b' in server_log.read_text(), 'backend quote attribution missing'
-            if stage2:
+            trust_offset = len(server_log.read_text())
+            if stage2 or stage3:
                 self.command('web-build-diagnostics', ['web/node_modules/.bin/vite', 'build', 'web',
                              '--config', 'web/vite.acceptance.config.ts', '--outDir', self.out / 'web', '--emptyOutDir'])
                 (self.out / 'web/acceptance/index.html').replace(self.out / 'web/index.html')
@@ -233,11 +261,19 @@ class Run:
                 control.mkdir()
                 for name in ('diagnostics-enabled', 'matrix-observed'):
                     (control / (name + '.txt')).write_text(name)
+                if stage3:
+                    (control / 'trust-enabled.txt').write_text('test-only trust probes')
             (control / 'finish.txt').write_text('release')
-            if stage2:
+            if stage2 or stage3:
                 wait_event('matrix-observed')
-                events = require_stage2_events(server_log.read_text())
-                save(self.out / 'stage2-events.json', events)
+                if stage3:
+                    trust_log = server_log.read_text()[trust_offset:]
+                    (self.out / 'stage3-backend.log').write_text(trust_log)
+                    events = require_stage3_events(trust_log)
+                    save(self.out / 'stage3-events.json', events)
+                else:
+                    events = require_stage2_events(server_log.read_text())
+                    save(self.out / 'stage2-events.json', events)
                 require_same_app(before, self.installed(udid, 'installed-after-diagnostics'))
                 # Only now stop our actual backend. The already-loaded test React page
                 # submits one more native request while both ports are demonstrably off.
@@ -260,6 +296,10 @@ class Run:
             if stage2:
                 result['stage2_outcomes'] = 'PASS'
                 result['stage2_events'] = events
+                result['full_security_lifecycle_matrix'] = 'PENDING'
+            if stage3:
+                result['stage3_trust_limits'] = 'PASS'
+                result['stage3_events'] = events
                 result['full_security_lifecycle_matrix'] = 'PENDING'
         finally:
             cleanup_errors = []
@@ -301,7 +341,7 @@ class Run:
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('mode', choices=['unit', 'simulator-stage1', 'simulator-stage2-outcomes'])
+    parser.add_argument('mode', choices=['unit', 'simulator-stage1', 'simulator-stage2-outcomes', 'simulator-stage3-trust-limits'])
     args = parser.parse_args()
     def interrupted(signum, frame):
         raise KeyboardInterrupt(f'signal {signum}')
@@ -312,7 +352,7 @@ def main():
         if args.mode == 'unit':
             run.unit()
         else:
-            run.simulator(stage2=args.mode == 'simulator-stage2-outcomes')
+            run.simulator(stage2=args.mode == 'simulator-stage2-outcomes', stage3=args.mode == 'simulator-stage3-trust-limits')
         print(f'PASS {args.mode}; not final product acceptance. Evidence: {run.out}', flush=True)
     except BaseException as error:
         save(run.out / 'failure.json', {'error': str(error), 'type': type(error).__name__})
