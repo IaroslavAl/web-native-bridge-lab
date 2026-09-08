@@ -30,6 +30,16 @@ The runner refuses occupied ports without killing foreign listeners. It stops it
 
 Stage 1 is a coordinator checkpoint, not final acceptance. Full real error/security/lifecycle matrix, same-card independent integration review and separate exact-RC product acceptance are still required. No generic `simulator` command is advertised as a full gate until that matrix is implemented. See [Stage 1 evidence](docs/integration/STAGE1.md), [verification obligations](docs/verification-plan.md), and active [OpenSpec tasks](openspec/changes/add-bridge-lab/tasks.md).
 
+## Actual Simulator outcome slice (Stage 2, incomplete matrix)
+
+    scripts/verify simulator-stage2-outcomes
+
+Includes the complete Stage1 regression, then replaces only served assets with an opt-in test-only React page (`web/acceptance/`). It imports the production bridge client and business interpreters and runs inside the same clean installed shell through real WebKit and native URLSession. Neither normal A/B build includes this entry; no native test bypass or browser fetch is used. This proves the integrated transport/interpreter path, not the production Diagnostics layout or accessibility.
+
+The UI test asserts preserved HTTP 503/422 bodies, business and JSON-parse classification, native timeout, explicit cancellation and acknowledgements, out-of-order concurrent correlation, and NETWORK_ERROR after actually stopping the backend. The host requires matching backend events, connection-close for timeout/cancel with no late success, unchanged installed app files, released ports and removed owned Simulator. All failure categories are assertions, not skipped tests. Test-runner synchronization remains restricted to static web-port control files.
+
+This is a bounded outcome checkpoint, NOT the complete security/lifecycle matrix or an approved RC. Remaining proof includes real iframe/foreign-origin provenance, redirect destination non-delivery, synthetic credential isolation, bounds/adversarial wire inputs and live document-revocation races. See [Stage2 outcome evidence and gaps](docs/integration/STAGE2_OUTCOMES.md). `final_acceptance` remains false.
+
 ## Manual demonstration
 
     npm ci --prefix web

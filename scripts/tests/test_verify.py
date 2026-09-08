@@ -37,6 +37,29 @@ class EvidenceTests(unittest.TestCase):
             with self.assertRaisesRegex(AssertionError, 'symlink'):
                 manifest(root)
 
+    def test_stage2_log_requires_socket_closes_and_out_of_order_completion(self):
+        check = self.helper('require_stage2_events')
+        lines = [
+            'GET /fixtures/http-error 503 tag=s2-http',
+            'POST /api/quote 422 tag=s2-quote',
+            'GET /fixtures/business-error 200 tag=s2-business',
+            'GET /fixtures/malformed-json 200 tag=s2-json',
+            'GET /fixtures/delay connection-close tag=s2-timeout',
+            'GET /fixtures/delay connection-close tag=s2-cancel',
+            'GET /fixtures/delay 200 tag=s2-fast',
+            'GET /fixtures/delay 200 tag=s2-slow',
+        ]
+        self.assertEqual(check('\n'.join(lines)), lines)
+        for index in range(len(lines)):
+            with self.subTest(missing=lines[index]), self.assertRaisesRegex(AssertionError, 's2-'):
+                check('\n'.join(lines[:index] + lines[index + 1:]))
+        with self.assertRaisesRegex(AssertionError, 'order'):
+            check('\n'.join(lines[:-2] + list(reversed(lines[-2:]))))
+        with self.assertRaisesRegex(AssertionError, 's2-cancel'):
+            check('\n'.join(lines + ['GET /fixtures/delay 200 tag=s2-cancel']))
+        with self.assertRaisesRegex(AssertionError, 's2-fast'):
+            check('\n'.join(lines + [lines[-2]]))
+
     def test_same_app_rejects_container_change_and_non_executable_change(self):
         same = self.helper('require_same_app')
         first = {'udid': 'device', 'container': '/app/one', 'files': {'BridgeLab': 'exe', 'Info.plist': 'plist'}}

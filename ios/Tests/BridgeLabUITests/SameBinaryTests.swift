@@ -64,5 +64,32 @@ final class SameBinaryTests: XCTestCase {
         b.name = "Actual React quote B"; b.lifetime = .keepAlways; add(b)
         try await waitForHost("b-observed")
         try await waitForHost("finish") // host hashes B before test runner terminates the app
+        if try await control("diagnostics-enabled") {
+            app.buttons["lab.reload"].tap()
+            try requireText("Stage2 test-only outcomes", in: app)
+            app.webViews.buttons["Run outcome probes"].tap()
+            for result in ["HTTP 503 preserved", "HTTP 422 preserved", "Business error interpreted",
+                           "Malformed JSON preserved", "Native TIMEOUT", "Explicit CANCELLED",
+                           "Concurrent fast then slow", "Outcome matrix PASS"] {
+                try requireText(result, in: app)
+            }
+            try await waitForHost("matrix-observed")
+            // The host stops its owned services after observing the complete matrix.
+            // This control request is web-port-only, never an API replacement.
+            let deadline = Date().addingTimeInterval(30)
+            var stopped = false
+            while Date() < deadline {
+                do { _ = try await control("matrix-observed") }
+                catch { stopped = true; break }
+                try await Task.sleep(nanoseconds: 250_000_000)
+            }
+            XCTAssertTrue(stopped, "Owned web service still reachable before network-error probe")
+            app.webViews.buttons["Probe stopped backend"].tap()
+            try requireText("NETWORK_ERROR after backend stop", in: app)
+            let outcomes = XCTAttachment(string: app.debugDescription)
+            outcomes.name = "Actual installed-shell Stage2 outcomes"
+            outcomes.lifetime = .keepAlways
+            add(outcomes)
+        }
     }
 }

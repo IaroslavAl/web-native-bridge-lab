@@ -37,6 +37,26 @@ def save(path, value):
     path.write_text(json.dumps(value, indent=2, sort_keys=True) + '\n')
 
 
+def require_stage2_events(text):
+    expected = [
+        'GET /fixtures/http-error 503 tag=s2-http',
+        'POST /api/quote 422 tag=s2-quote',
+        'GET /fixtures/business-error 200 tag=s2-business',
+        'GET /fixtures/malformed-json 200 tag=s2-json',
+        'GET /fixtures/delay connection-close tag=s2-timeout',
+        'GET /fixtures/delay connection-close tag=s2-cancel',
+        'GET /fixtures/delay 200 tag=s2-fast',
+        'GET /fixtures/delay 200 tag=s2-slow',
+    ]
+    lines = text.splitlines()
+    for event in expected:
+        tag = event.split('tag=')[1]
+        actual = [line for line in lines if line.endswith('tag=' + tag)]
+        assert actual == [event], f'{tag} events: {actual}, expected exactly {event}'
+    assert lines.index(expected[-2]) < lines.index(expected[-1]), 'concurrent completion order must be fast then slow'
+    return expected
+
+
 def require_free_ports():
     sockets = []
     try:
@@ -124,13 +144,15 @@ class Run:
         self.command('ios-package', ['swift', 'test', '--package-path', 'ios', '-Xswiftc', '-warnings-as-errors'])
         self.command('web-tests', ['npm', '--prefix', 'web', 'test', '--', '--run'])
         self.command('web-types', ['npm', '--prefix', 'web', 'run', 'typecheck'])
+        self.command('web-build-diagnostics', ['web/node_modules/.bin/vite', 'build', 'web',
+                     '--config', 'web/vite.acceptance.config.ts', '--outDir', self.out / 'diagnostics-web', '--emptyOutDir'])
         a = self.web('A')
         b = self.web('B')
         assert a != b, 'web variants have identical file manifests'
         self.command('diff-check', ['git', 'diff', '--check'])
         save(self.out / 'result.json', {'unit': 'PASS', 'final_acceptance': False})
 
-    def simulator(self):
+    def simulator(self, stage2=False):
         require_free_ports() # before creating resources; never steal existing lab services
         udid = None
         started = False
@@ -203,7 +225,25 @@ class Run:
             after_b = self.installed(udid, 'installed-after-B')
             require_same_app(before, after_b)
             assert 'POST /api/quote 200 tag=scenario-b' in server_log.read_text(), 'backend quote attribution missing'
+            if stage2:
+                self.command('web-build-diagnostics', ['web/node_modules/.bin/vite', 'build', 'web',
+                             '--config', 'web/vite.acceptance.config.ts', '--outDir', self.out / 'web', '--emptyOutDir'])
+                (self.out / 'web/acceptance/index.html').replace(self.out / 'web/index.html')
+                save(self.out / 'web-diagnostics.json', manifest(self.out / 'web'))
+                control.mkdir()
+                for name in ('diagnostics-enabled', 'matrix-observed'):
+                    (control / (name + '.txt')).write_text(name)
             (control / 'finish.txt').write_text('release')
+            if stage2:
+                wait_event('matrix-observed')
+                events = require_stage2_events(server_log.read_text())
+                save(self.out / 'stage2-events.json', events)
+                require_same_app(before, self.installed(udid, 'installed-after-diagnostics'))
+                # Only now stop our actual backend. The already-loaded test React page
+                # submits one more native request while both ports are demonstrably off.
+                self.command('network-off', lab + ['stop'] + options)
+                require_free_ports()
+                self.command('network-off-status', lab + ['status'] + options, allowed=(1,))
             code = tester.wait(timeout=120)
             record['exit_code'] = code; save(self.out / 'commands.json', self.commands)
             assert code == 0, f'UI test exit_code={code}; see ab-ui.log'
@@ -217,6 +257,10 @@ class Run:
                  'executable_sha256': before['files']['BridgeLab'], 'manifest_sha256': hashlib.sha256(json.dumps(before['files'], sort_keys=True).encode()).hexdigest(),
                  'installed_files': len(before['files']), 'same_container': True, 'same_manifest': True,
                  'web_A': a_web, 'web_B': b_web}
+            if stage2:
+                result['stage2_outcomes'] = 'PASS'
+                result['stage2_events'] = events
+                result['full_security_lifecycle_matrix'] = 'PENDING'
         finally:
             cleanup_errors = []
             if tester is not None:
@@ -257,7 +301,7 @@ class Run:
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('mode', choices=['unit', 'simulator-stage1'])
+    parser.add_argument('mode', choices=['unit', 'simulator-stage1', 'simulator-stage2-outcomes'])
     args = parser.parse_args()
     def interrupted(signum, frame):
         raise KeyboardInterrupt(f'signal {signum}')
@@ -268,7 +312,7 @@ def main():
         if args.mode == 'unit':
             run.unit()
         else:
-            run.simulator()
+            run.simulator(stage2=args.mode == 'simulator-stage2-outcomes')
         print(f'PASS {args.mode}; not final product acceptance. Evidence: {run.out}', flush=True)
     except BaseException as error:
         save(run.out / 'failure.json', {'error': str(error), 'type': type(error).__name__})

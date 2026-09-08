@@ -31,7 +31,7 @@
 
 - [x] 6.1 Merge all reviewed module heads preserving identities; implement scripts/verify and top-level reproducibility instructions. Stage1 checkpoint evidence: docs/integration/STAGE1.md; full Simulator failure matrix command remains Stage2.
 - [x] 6.2 Run unit/build/schema/lifecycle suites and actual WKWebView catalog A → web-only build B → quote acceptance with unchanged installed executable/bundle hashes. Stage1 actual Simulator42 + UI1 PASS, clean three-file installed shell unchanged; docs/integration/stage1-evidence.json. This is implementation evidence, not independent final acceptance.
-- [ ] 6.3 Exercise real error/JSON/timeout/cancel/concurrency/origin/iframe/redirect/navigation/size gates and preserve durable evidence, not just temporary log paths.
+- [ ] 6.3 Exercise real error/JSON/timeout/cancel/concurrency/origin/iframe/redirect/navigation/size gates and preserve durable evidence, not just temporary log paths. Stage2 outcome slice implements `scripts/verify simulator-stage2-outcomes` for real HTTP503/422/business/JSON/native timeout/explicit cancel/concurrency/backend-off errors; see docs/integration/STAGE2_OUTCOMES.md. Remaining security/bounds/revocation matrix is explicitly pending; this item is NOT complete.
 - [ ] 6.4 Stop owned servers/Simulator session, verify released ports/foreign-process preservation and request independent same-card RC review.
 
 ## 7. Independent product acceptance and closure
