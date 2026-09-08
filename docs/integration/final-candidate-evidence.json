@@ -1,0 +1,2637 @@
+{
+  "status": "Implementation gates passed; independent review and final acceptance pending",
+  "tested_source_head": "be46ee45f2fa2c0e3b2789fbbeebe5aadbc1da8a",
+  "branch": "web-native-bridge-lab/t_9d8fd391-per-85-integration-implementer",
+  "source_git_trees": {
+    "ios": "6ab5710a0a81a3367cae6ccc8d75bdae86ea9370",
+    "native": "7baa145dc873b95669996f4ab7e1e9c36308ad93",
+    "web": "261d3e02d4789d5c3602d26a6468e3885e2b1dcd",
+    "backend": "ba4bab45982d42213aed97df2cc194b84d2056d0",
+    "scripts": "3804d403114560d9968bf09a7f462b79a4db21ba",
+    "protocol": "b53aa6604f97f3eb4d643f67afddeffa7342f8fb",
+    "openspec/tooling": "efd8836c98b2a7b3f41f98d11cddb8d0974264b4"
+  },
+  "runs": {
+    "unit": {
+      "directory": "verify-unit-ef379cb430",
+      "source": {
+        "branch": "web-native-bridge-lab/t_9d8fd391-per-85-integration-implementer",
+        "head_sha": "be46ee45f2fa2c0e3b2789fbbeebe5aadbc1da8a",
+        "working_diff": ""
+      },
+      "result": {
+        "final_acceptance": false,
+        "unit": "PASS"
+      },
+      "commands": [
+        {
+          "argv": [
+            "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+            "-m",
+            "unittest",
+            "discover",
+            "-s",
+            "scripts/tests",
+            "-v"
+          ],
+          "exit_code": 0,
+          "log": "runner-tests.log",
+          "name": "runner-tests"
+        },
+        {
+          "argv": [
+            "npm",
+            "ci",
+            "--prefix",
+            "openspec/tooling",
+            "--ignore-scripts",
+            "--no-audit",
+            "--no-fund"
+          ],
+          "exit_code": 0,
+          "log": "spec-install.log",
+          "name": "spec-install"
+        },
+        {
+          "argv": [
+            "npm",
+            "ci",
+            "--prefix",
+            "web",
+            "--no-audit",
+            "--no-fund"
+          ],
+          "exit_code": 0,
+          "log": "web-install.log",
+          "name": "web-install"
+        },
+        {
+          "argv": [
+            "npm",
+            "audit",
+            "--prefix",
+            "web",
+            "--audit-level=high"
+          ],
+          "exit_code": 0,
+          "log": "web-audit.log",
+          "name": "web-audit"
+        },
+        {
+          "argv": [
+            "node",
+            "protocol/v1/validate.cjs"
+          ],
+          "exit_code": 0,
+          "log": "protocol.log",
+          "name": "protocol"
+        },
+        {
+          "argv": [
+            "openspec/tooling/node_modules/.bin/openspec",
+            "validate",
+            "--all",
+            "--strict",
+            "--no-interactive",
+            "--json"
+          ],
+          "exit_code": 0,
+          "log": "openspec.log",
+          "name": "openspec"
+        },
+        {
+          "argv": [
+            "node",
+            "--test",
+            "backend/tests/arguments.test.mjs",
+            "backend/tests/fixtures.test.mjs",
+            "backend/tests/lifecycle.test.mjs",
+            "backend/tests/port-retry.test.mjs",
+            "backend/tests/static-cleanup.test.mjs"
+          ],
+          "exit_code": 0,
+          "log": "backend.log",
+          "name": "backend"
+        },
+        {
+          "argv": [
+            "swift",
+            "test",
+            "--package-path",
+            "native/TransportPackage",
+            "-Xswiftc",
+            "-warnings-as-errors"
+          ],
+          "exit_code": 0,
+          "log": "native.log",
+          "name": "native"
+        },
+        {
+          "argv": [
+            "swift",
+            "test",
+            "--package-path",
+            "ios",
+            "-Xswiftc",
+            "-warnings-as-errors"
+          ],
+          "exit_code": 0,
+          "log": "ios-package.log",
+          "name": "ios-package"
+        },
+        {
+          "argv": [
+            "npm",
+            "--prefix",
+            "web",
+            "test",
+            "--",
+            "--run"
+          ],
+          "exit_code": 0,
+          "log": "web-tests.log",
+          "name": "web-tests"
+        },
+        {
+          "argv": [
+            "npm",
+            "--prefix",
+            "web",
+            "run",
+            "typecheck"
+          ],
+          "exit_code": 0,
+          "log": "web-types.log",
+          "name": "web-types"
+        },
+        {
+          "argv": [
+            "web/node_modules/.bin/vite",
+            "build",
+            "web",
+            "--config",
+            "web/vite.acceptance.config.ts",
+            "--outDir",
+            "<workspace>/.artifacts/verify-unit-ef379cb430/diagnostics-web",
+            "--emptyOutDir"
+          ],
+          "exit_code": 0,
+          "log": "web-build-diagnostics.log",
+          "name": "web-build-diagnostics"
+        },
+        {
+          "argv": [
+            "npm",
+            "--prefix",
+            "web",
+            "run",
+            "build:a",
+            "--",
+            "--outDir",
+            "<workspace>/.artifacts/verify-unit-ef379cb430/web",
+            "--emptyOutDir"
+          ],
+          "exit_code": 0,
+          "log": "web-build-A.log",
+          "name": "web-build-A"
+        },
+        {
+          "argv": [
+            "npm",
+            "--prefix",
+            "web",
+            "run",
+            "build:b",
+            "--",
+            "--outDir",
+            "<workspace>/.artifacts/verify-unit-ef379cb430/web",
+            "--emptyOutDir"
+          ],
+          "exit_code": 0,
+          "log": "web-build-B.log",
+          "name": "web-build-B"
+        },
+        {
+          "argv": [
+            "git",
+            "diff",
+            "--check"
+          ],
+          "exit_code": 0,
+          "log": "diff-check.log",
+          "name": "diff-check"
+        }
+      ],
+      "test_summary": {
+        "runner-tests": [
+          "Ran 8 tests in 10.430s",
+          "OK"
+        ],
+        "native": [
+          "Executed 4 tests, with 0 failures (0 unexpected) in 0.005 (0.006) seconds",
+          "Executed 7 tests, with 0 failures (0 unexpected) in 0.032 (0.033) seconds",
+          "Executed 4 tests, with 0 failures (0 unexpected) in 0.007 (0.007) seconds",
+          "Executed 4 tests, with 0 failures (0 unexpected) in 0.044 (0.044) seconds",
+          "Executed 2 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds",
+          "Executed 4 tests, with 0 failures (0 unexpected) in 1.038 (1.039) seconds",
+          "Executed 8 tests, with 0 failures (0 unexpected) in 0.013 (0.016) seconds",
+          "Executed 5 tests, with 0 failures (0 unexpected) in 0.014 (0.015) seconds",
+          "Executed 39 tests, with 0 failures (0 unexpected) in 1.154 (1.161) seconds",
+          "Executed 39 tests, with 0 failures (0 unexpected) in 1.154 (1.163) seconds"
+        ],
+        "ios-package": [
+          "Executed 15 tests, with 0 failures (0 unexpected) in 0.005 (0.006) seconds",
+          "Executed 2 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds",
+          "Executed 2 tests, with 0 failures (0 unexpected) in 0.000 (0.000) seconds",
+          "Executed 19 tests, with 0 failures (0 unexpected) in 0.006 (0.008) seconds",
+          "Executed 19 tests, with 0 failures (0 unexpected) in 0.006 (0.008) seconds"
+        ],
+        "web-tests": [
+          "Tests  26 passed (26)"
+        ],
+        "backend": [
+          "ℹ tests 41",
+          "ℹ pass 41",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0"
+        ],
+        "web-audit": [
+          "found 0 vulnerabilities"
+        ]
+      }
+    },
+    "operations": {
+      "directory": "verify-stage5-operations-55e8f4f3ed",
+      "source": {
+        "branch": "web-native-bridge-lab/t_9d8fd391-per-85-integration-implementer",
+        "head_sha": "be46ee45f2fa2c0e3b2789fbbeebe5aadbc1da8a",
+        "working_diff": ""
+      },
+      "result": {
+        "final_acceptance": false,
+        "observations": [
+          {
+            "cleanup": {
+              "errors": [],
+              "owned_services_stopped": false,
+              "owned_simulator_removed": true
+            },
+            "evidence": "<workspace>/.artifacts/verify-simulator-stage1-664bd50785",
+            "exit_code": 1,
+            "failure": {
+              "error": "signal 2",
+              "type": "KeyboardInterrupt"
+            },
+            "name": "interrupt-before-services",
+            "ports_released": true,
+            "runner_pid": 10263,
+            "signal": 2,
+            "simulator": {
+              "device": "com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro",
+              "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-5",
+              "udid": "E69553D4-1C72-4CEE-AE0C-E7871D69DC43"
+            }
+          },
+          {
+            "cleanup": {
+              "errors": [],
+              "owned_fixture_stopped": true,
+              "owned_simulator_removed": true
+            },
+            "evidence": "<workspace>/.artifacts/verify-simulator-stage4-webkit-privacy-165e2b7748",
+            "exit_code": 1,
+            "failure": {
+              "error": "signal 15",
+              "type": "KeyboardInterrupt"
+            },
+            "name": "terminate-with-services",
+            "ports_released": true,
+            "runner_pid": 10473,
+            "signal": 15,
+            "simulator": {
+              "device": "com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro",
+              "fixture_pid": 10477,
+              "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-5",
+              "udid": "767E556A-635C-4F98-ACFA-84E65B9052EC"
+            }
+          },
+          {
+            "cleanup": {
+              "errors": [],
+              "owned_fixture_stopped": true,
+              "owned_simulator_removed": true
+            },
+            "evidence": "<workspace>/.artifacts/verify-simulator-stage4-webkit-privacy-cd5725cb51",
+            "exit_code": 1,
+            "failure": {
+              "error": "webkit-tests exit 7; see <workspace>/.artifacts/verify-simulator-stage4-webkit-privacy-cd5725cb51/webkit-tests.log",
+              "type": "RuntimeError"
+            },
+            "name": "command-failure-with-services",
+            "ports_released": true,
+            "runner_pid": 10707,
+            "signal": null,
+            "simulator": {
+              "device": "com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro",
+              "fixture_pid": 10711,
+              "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-5",
+              "udid": "14999AA5-8423-47C7-8B04-6EDEB713210F"
+            }
+          },
+          {
+            "active_socket_closed": true,
+            "name": "lab-service-signal",
+            "pid": 11274,
+            "repeat_start_stop": true,
+            "signal": 2,
+            "stopped": {
+              "apiPort": 8788,
+              "assetsAvailable": false,
+              "processes": [],
+              "state": "stopped",
+              "webPort": 8787
+            }
+          },
+          {
+            "active_socket_closed": true,
+            "name": "lab-service-signal",
+            "pid": 11338,
+            "repeat_start_stop": true,
+            "signal": 15,
+            "stopped": {
+              "apiPort": 8788,
+              "assetsAvailable": false,
+              "processes": [],
+              "state": "stopped",
+              "webPort": 8787
+            }
+          },
+          {
+            "name": "foreign-port-preservation",
+            "no_device_created": true,
+            "pid": 11399,
+            "same_identity": true,
+            "same_response": true
+          }
+        ],
+        "stage5_operations": "PASS"
+      },
+      "commands": [
+        {
+          "argv": [
+            "node",
+            "<workspace>/scripts/lab",
+            "start",
+            "--state-dir",
+            "<workspace>/.artifacts/verify-stage5-operations-55e8f4f3ed/lab-Signals.SIGINT",
+            "--web-root",
+            "<workspace>/.artifacts/verify-stage5-operations-55e8f4f3ed/unused-web"
+          ],
+          "exit_code": 0,
+          "log": "lab-start-Signals.SIGINT.log",
+          "name": "lab-start-Signals.SIGINT"
+        },
+        {
+          "argv": [
+            "node",
+            "<workspace>/scripts/lab",
+            "start",
+            "--state-dir",
+            "<workspace>/.artifacts/verify-stage5-operations-55e8f4f3ed/lab-Signals.SIGINT",
+            "--web-root",
+            "<workspace>/.artifacts/verify-stage5-operations-55e8f4f3ed/unused-web"
+          ],
+          "exit_code": 0,
+          "log": "lab-repeat-start-Signals.SIGINT.log",
+          "name": "lab-repeat-start-Signals.SIGINT"
+        },
+        {
+          "argv": [
+            "node",
+            "<workspace>/scripts/lab",
+            "stop",
+            "--state-dir",
+            "<workspace>/.artifacts/verify-stage5-operations-55e8f4f3ed/lab-Signals.SIGINT",
+            "--web-root",
+            "<workspace>/.artifacts/verify-stage5-operations-55e8f4f3ed/unused-web"
+          ],
+          "exit_code": 0,
+          "log": "lab-stop-Signals.SIGINT.log",
+          "name": "lab-stop-Signals.SIGINT"
+        },
+        {
+          "argv": [
+            "node",
+            "<workspace>/scripts/lab",
+            "stop",
+            "--state-dir",
+            "<workspace>/.artifacts/verify-stage5-operations-55e8f4f3ed/lab-Signals.SIGINT",
+            "--web-root",
+            "<workspace>/.artifacts/verify-stage5-operations-55e8f4f3ed/unused-web"
+          ],
+          "exit_code": 0,
+          "log": "lab-repeat-stop-Signals.SIGINT.log",
+          "name": "lab-repeat-stop-Signals.SIGINT"
+        },
+        {
+          "argv": [
+            "node",
+            "<workspace>/scripts/lab",
+            "status",
+            "--state-dir",
+            "<workspace>/.artifacts/verify-stage5-operations-55e8f4f3ed/lab-Signals.SIGINT",
+            "--web-root",
+            "<workspace>/.artifacts/verify-stage5-operations-55e8f4f3ed/unused-web"
+          ],
+          "exit_code": 1,
+          "log": "lab-stopped-Signals.SIGINT.log",
+          "name": "lab-stopped-Signals.SIGINT"
+        },
+        {
+          "argv": [
+            "node",
+            "<workspace>/scripts/lab",
+            "stop",
+            "--state-dir",
+            "<workspace>/.artifacts/verify-stage5-operations-55e8f4f3ed/lab-Signals.SIGINT",
+            "--web-root",
+            "<workspace>/.artifacts/verify-stage5-operations-55e8f4f3ed/unused-web"
+          ],
+          "exit_code": 0,
+          "log": "lab-final-stop-Signals.SIGINT.log",
+          "name": "lab-final-stop-Signals.SIGINT"
+        },
+        {
+          "argv": [
+            "node",
+            "<workspace>/scripts/lab",
+            "start",
+            "--state-dir",
+            "<workspace>/.artifacts/verify-stage5-operations-55e8f4f3ed/lab-Signals.SIGTERM",
+            "--web-root",
+            "<workspace>/.artifacts/verify-stage5-operations-55e8f4f3ed/unused-web"
+          ],
+          "exit_code": 0,
+          "log": "lab-start-Signals.SIGTERM.log",
+          "name": "lab-start-Signals.SIGTERM"
+        },
+        {
+          "argv": [
+            "node",
+            "<workspace>/scripts/lab",
+            "start",
+            "--state-dir",
+            "<workspace>/.artifacts/verify-stage5-operations-55e8f4f3ed/lab-Signals.SIGTERM",
+            "--web-root",
+            "<workspace>/.artifacts/verify-stage5-operations-55e8f4f3ed/unused-web"
+          ],
+          "exit_code": 0,
+          "log": "lab-repeat-start-Signals.SIGTERM.log",
+          "name": "lab-repeat-start-Signals.SIGTERM"
+        },
+        {
+          "argv": [
+            "node",
+            "<workspace>/scripts/lab",
+            "stop",
+            "--state-dir",
+            "<workspace>/.artifacts/verify-stage5-operations-55e8f4f3ed/lab-Signals.SIGTERM",
+            "--web-root",
+            "<workspace>/.artifacts/verify-stage5-operations-55e8f4f3ed/unused-web"
+          ],
+          "exit_code": 0,
+          "log": "lab-stop-Signals.SIGTERM.log",
+          "name": "lab-stop-Signals.SIGTERM"
+        },
+        {
+          "argv": [
+            "node",
+            "<workspace>/scripts/lab",
+            "stop",
+            "--state-dir",
+            "<workspace>/.artifacts/verify-stage5-operations-55e8f4f3ed/lab-Signals.SIGTERM",
+            "--web-root",
+            "<workspace>/.artifacts/verify-stage5-operations-55e8f4f3ed/unused-web"
+          ],
+          "exit_code": 0,
+          "log": "lab-repeat-stop-Signals.SIGTERM.log",
+          "name": "lab-repeat-stop-Signals.SIGTERM"
+        },
+        {
+          "argv": [
+            "node",
+            "<workspace>/scripts/lab",
+            "status",
+            "--state-dir",
+            "<workspace>/.artifacts/verify-stage5-operations-55e8f4f3ed/lab-Signals.SIGTERM",
+            "--web-root",
+            "<workspace>/.artifacts/verify-stage5-operations-55e8f4f3ed/unused-web"
+          ],
+          "exit_code": 1,
+          "log": "lab-stopped-Signals.SIGTERM.log",
+          "name": "lab-stopped-Signals.SIGTERM"
+        },
+        {
+          "argv": [
+            "node",
+            "<workspace>/scripts/lab",
+            "stop",
+            "--state-dir",
+            "<workspace>/.artifacts/verify-stage5-operations-55e8f4f3ed/lab-Signals.SIGTERM",
+            "--web-root",
+            "<workspace>/.artifacts/verify-stage5-operations-55e8f4f3ed/unused-web"
+          ],
+          "exit_code": 0,
+          "log": "lab-final-stop-Signals.SIGTERM.log",
+          "name": "lab-final-stop-Signals.SIGTERM"
+        },
+        {
+          "argv": [
+            "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+            "<workspace>/scripts/verify",
+            "simulator-stage1"
+          ],
+          "exit_code": 1,
+          "log": "foreign-simulator-stage1.log",
+          "name": "foreign-simulator-stage1"
+        },
+        {
+          "argv": [
+            "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+            "<workspace>/scripts/verify",
+            "simulator-stage4-webkit-privacy"
+          ],
+          "exit_code": 1,
+          "log": "foreign-simulator-stage4-webkit-privacy.log",
+          "name": "foreign-simulator-stage4-webkit-privacy"
+        }
+      ]
+    },
+    "I2": {
+      "directory": "verify-simulator-stage2-outcomes-31acc1c679",
+      "source": {
+        "branch": "web-native-bridge-lab/t_9d8fd391-per-85-integration-implementer",
+        "head_sha": "be46ee45f2fa2c0e3b2789fbbeebe5aadbc1da8a",
+        "working_diff": ""
+      },
+      "result": {
+        "executable_sha256": "63294d2c4cf6dd0c17ca7e77ad13faf8b12a3a42f45bcc1b709ed4944a140786",
+        "final_acceptance": false,
+        "full_security_lifecycle_matrix": "PENDING",
+        "installed_files": 3,
+        "manifest_sha256": "1613af49c6e3876c58e958703b5682015ea077e52e0621c573d403344ef31541",
+        "same_container": true,
+        "same_manifest": true,
+        "stage1": "PASS",
+        "stage2_events": [
+          "GET /fixtures/http-error 503 tag=s2-http",
+          "POST /api/quote 422 tag=s2-quote",
+          "GET /fixtures/business-error 200 tag=s2-business",
+          "GET /fixtures/malformed-json 200 tag=s2-json",
+          "GET /fixtures/delay connection-close tag=s2-timeout",
+          "GET /fixtures/delay connection-close tag=s2-cancel",
+          "GET /fixtures/delay 200 tag=s2-fast",
+          "GET /fixtures/delay 200 tag=s2-slow"
+        ],
+        "stage2_outcomes": "PASS",
+        "udid": "8C4F30F1-334B-4EEB-BF32-08ABFB8C09E0",
+        "web_A": {
+          "assets/index-CKnUoMD9.css": "a30a77bb4e9fd5ecba1aba59f1d5c63488938cfa1c9530d5bd2064925273d6b2",
+          "assets/index-PGX1ZbLf.js": "98e198228c32df698918b5c56c9bf05b3217952f8d176f039ccb1b662e16b230",
+          "index.html": "a50bec4b6a49f7197b0aeaf6ab198e8e1af6bcd8e2373b8dce0ed5478e941197"
+        },
+        "web_B": {
+          "assets/index-B7akWnGE.js": "faac69b4dcb03973e7847222a4cbb06568706af9a38a0e7447371b7dc6fd3c0f",
+          "assets/index-CKnUoMD9.css": "a30a77bb4e9fd5ecba1aba59f1d5c63488938cfa1c9530d5bd2064925273d6b2",
+          "index.html": "dda7efb95e45de4b2b6dd2d86414236ca32188b66459db1536d9ce6d174a6d86"
+        }
+      },
+      "commands": [
+        {
+          "argv": [
+            "xcrun",
+            "simctl",
+            "boot",
+            "8C4F30F1-334B-4EEB-BF32-08ABFB8C09E0"
+          ],
+          "exit_code": 0,
+          "log": "boot.log",
+          "name": "boot"
+        },
+        {
+          "argv": [
+            "xcrun",
+            "simctl",
+            "bootstatus",
+            "8C4F30F1-334B-4EEB-BF32-08ABFB8C09E0",
+            "-b"
+          ],
+          "exit_code": 0,
+          "log": "boot-ready.log",
+          "name": "boot-ready"
+        },
+        {
+          "argv": [
+            "xcodebuild",
+            "-project",
+            "ios/BridgeLab.xcodeproj",
+            "-destination",
+            "platform=iOS Simulator,id=8C4F30F1-334B-4EEB-BF32-08ABFB8C09E0",
+            "-derivedDataPath",
+            "<workspace>/.artifacts/verify-simulator-stage2-outcomes-31acc1c679/unit-derived",
+            "CODE_SIGNING_ALLOWED=NO",
+            "-parallel-testing-enabled",
+            "NO",
+            "-scheme",
+            "BridgeLab",
+            "-skip-testing:BridgeLabTests/LiveWebKitTests",
+            "-resultBundlePath",
+            "<workspace>/.artifacts/verify-simulator-stage2-outcomes-31acc1c679/unit.xcresult",
+            "test"
+          ],
+          "exit_code": 0,
+          "log": "ios-simulator-tests.log",
+          "name": "ios-simulator-tests"
+        },
+        {
+          "argv": [
+            "xcodebuild",
+            "-project",
+            "ios/BridgeLab.xcodeproj",
+            "-destination",
+            "platform=iOS Simulator,id=8C4F30F1-334B-4EEB-BF32-08ABFB8C09E0",
+            "-derivedDataPath",
+            "<workspace>/.artifacts/verify-simulator-stage2-outcomes-31acc1c679/derived",
+            "CODE_SIGNING_ALLOWED=NO",
+            "-parallel-testing-enabled",
+            "NO",
+            "-scheme",
+            "BridgeLabAcceptance",
+            "build-for-testing"
+          ],
+          "exit_code": 0,
+          "log": "acceptance-build.log",
+          "name": "acceptance-build"
+        },
+        {
+          "argv": [
+            "xcrun",
+            "simctl",
+            "uninstall",
+            "8C4F30F1-334B-4EEB-BF32-08ABFB8C09E0",
+            "lab.webnative.BridgeLab"
+          ],
+          "exit_code": 0,
+          "log": "remove-unit-host.log",
+          "name": "remove-unit-host"
+        },
+        {
+          "argv": [
+            "xcrun",
+            "simctl",
+            "install",
+            "8C4F30F1-334B-4EEB-BF32-08ABFB8C09E0",
+            "<workspace>/.artifacts/verify-simulator-stage2-outcomes-31acc1c679/derived/Build/Products/Debug-iphonesimulator/BridgeLab.app"
+          ],
+          "exit_code": 0,
+          "log": "install.log",
+          "name": "install"
+        },
+        {
+          "argv": [
+            "npm",
+            "--prefix",
+            "web",
+            "run",
+            "build:a",
+            "--",
+            "--outDir",
+            "<workspace>/.artifacts/verify-simulator-stage2-outcomes-31acc1c679/web",
+            "--emptyOutDir"
+          ],
+          "exit_code": 0,
+          "log": "web-build-A.log",
+          "name": "web-build-A"
+        },
+        {
+          "argv": [
+            "node",
+            "<workspace>/scripts/lab",
+            "start",
+            "--state-dir",
+            "<workspace>/.artifacts/verify-simulator-stage2-outcomes-31acc1c679/lab",
+            "--web-root",
+            "<workspace>/.artifacts/verify-simulator-stage2-outcomes-31acc1c679/web"
+          ],
+          "exit_code": 0,
+          "log": "lab-start.log",
+          "name": "lab-start"
+        },
+        {
+          "argv": [
+            "node",
+            "<workspace>/scripts/lab",
+            "status",
+            "--state-dir",
+            "<workspace>/.artifacts/verify-simulator-stage2-outcomes-31acc1c679/lab",
+            "--web-root",
+            "<workspace>/.artifacts/verify-simulator-stage2-outcomes-31acc1c679/web"
+          ],
+          "exit_code": 0,
+          "log": "lab-status.log",
+          "name": "lab-status"
+        },
+        {
+          "argv": [
+            "xcodebuild",
+            "-project",
+            "ios/BridgeLab.xcodeproj",
+            "-destination",
+            "platform=iOS Simulator,id=8C4F30F1-334B-4EEB-BF32-08ABFB8C09E0",
+            "-derivedDataPath",
+            "<workspace>/.artifacts/verify-simulator-stage2-outcomes-31acc1c679/derived",
+            "CODE_SIGNING_ALLOWED=NO",
+            "-parallel-testing-enabled",
+            "NO",
+            "-scheme",
+            "BridgeLabAcceptance",
+            "-resultBundlePath",
+            "<workspace>/.artifacts/verify-simulator-stage2-outcomes-31acc1c679/ab.xcresult",
+            "test-without-building"
+          ],
+          "exit_code": 0,
+          "log": "ab-ui.log",
+          "name": "ab-ui"
+        },
+        {
+          "argv": [
+            "npm",
+            "--prefix",
+            "web",
+            "run",
+            "build:b",
+            "--",
+            "--outDir",
+            "<workspace>/.artifacts/verify-simulator-stage2-outcomes-31acc1c679/web",
+            "--emptyOutDir"
+          ],
+          "exit_code": 0,
+          "log": "web-build-B.log",
+          "name": "web-build-B"
+        },
+        {
+          "argv": [
+            "web/node_modules/.bin/vite",
+            "build",
+            "web",
+            "--config",
+            "web/vite.acceptance.config.ts",
+            "--outDir",
+            "<workspace>/.artifacts/verify-simulator-stage2-outcomes-31acc1c679/web",
+            "--emptyOutDir"
+          ],
+          "exit_code": 0,
+          "log": "web-build-diagnostics.log",
+          "name": "web-build-diagnostics"
+        },
+        {
+          "argv": [
+            "node",
+            "<workspace>/scripts/lab",
+            "stop",
+            "--state-dir",
+            "<workspace>/.artifacts/verify-simulator-stage2-outcomes-31acc1c679/lab",
+            "--web-root",
+            "<workspace>/.artifacts/verify-simulator-stage2-outcomes-31acc1c679/web"
+          ],
+          "exit_code": 0,
+          "log": "network-off.log",
+          "name": "network-off"
+        },
+        {
+          "argv": [
+            "node",
+            "<workspace>/scripts/lab",
+            "status",
+            "--state-dir",
+            "<workspace>/.artifacts/verify-simulator-stage2-outcomes-31acc1c679/lab",
+            "--web-root",
+            "<workspace>/.artifacts/verify-simulator-stage2-outcomes-31acc1c679/web"
+          ],
+          "exit_code": 1,
+          "log": "network-off-status.log",
+          "name": "network-off-status"
+        },
+        {
+          "argv": [
+            "node",
+            "<workspace>/scripts/lab",
+            "stop",
+            "--state-dir",
+            "<workspace>/.artifacts/verify-simulator-stage2-outcomes-31acc1c679/lab",
+            "--web-root",
+            "<workspace>/.artifacts/verify-simulator-stage2-outcomes-31acc1c679/web"
+          ],
+          "exit_code": 0,
+          "log": "lab-stop.log",
+          "name": "lab-stop"
+        },
+        {
+          "argv": [
+            "node",
+            "<workspace>/scripts/lab",
+            "status",
+            "--state-dir",
+            "<workspace>/.artifacts/verify-simulator-stage2-outcomes-31acc1c679/lab",
+            "--web-root",
+            "<workspace>/.artifacts/verify-simulator-stage2-outcomes-31acc1c679/web"
+          ],
+          "exit_code": 1,
+          "log": "lab-stopped-status.log",
+          "name": "lab-stopped-status"
+        },
+        {
+          "argv": [
+            "xcrun",
+            "simctl",
+            "shutdown",
+            "8C4F30F1-334B-4EEB-BF32-08ABFB8C09E0"
+          ],
+          "exit_code": 0,
+          "log": "simulator-shutdown.log",
+          "name": "simulator-shutdown"
+        },
+        {
+          "argv": [
+            "xcrun",
+            "simctl",
+            "delete",
+            "8C4F30F1-334B-4EEB-BF32-08ABFB8C09E0"
+          ],
+          "exit_code": 0,
+          "log": "simulator-delete.log",
+          "name": "simulator-delete"
+        }
+      ],
+      "cleanup": {
+        "errors": [],
+        "owned_services_stopped": true,
+        "owned_simulator_removed": true
+      },
+      "simulator": {
+        "device": "com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro",
+        "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-5",
+        "udid": "8C4F30F1-334B-4EEB-BF32-08ABFB8C09E0"
+      },
+      "unit-summary": {
+        "passedTests": 42,
+        "failedTests": 0,
+        "skippedTests": 0
+      },
+      "ab-summary": {
+        "passedTests": 1,
+        "failedTests": 0,
+        "skippedTests": 0
+      },
+      "installed_before_A": {
+        "container": "/Users/agent/Library/Developer/CoreSimulator/Devices/8C4F30F1-334B-4EEB-BF32-08ABFB8C09E0/data/Containers/Bundle/Application/80F6A5A5-6722-4946-89D6-BB4F0CAF13E3/BridgeLab.app",
+        "files": {
+          "BridgeLab": "63294d2c4cf6dd0c17ca7e77ad13faf8b12a3a42f45bcc1b709ed4944a140786",
+          "Info.plist": "6b1a2db1c8fda820ef31bbf2327adc6c165e4c7687eee09efcb7ad16ead4226a",
+          "PkgInfo": "82502191c9484b04d685374f9879a0066069c49b8acae7a04b01d38d07e8eca0"
+        },
+        "udid": "8C4F30F1-334B-4EEB-BF32-08ABFB8C09E0"
+      },
+      "equal_snapshots": [
+        "installed-after-B",
+        "installed-after-diagnostics",
+        "installed-before-A",
+        "installed-after-A"
+      ],
+      "before_ui_runner_note": "Identical file hashes; Xcode test setup relocated container before A. No relocation/install/rebuild between A and B or diagnostics.",
+      "actual_ui_assertions": [
+        "Test Case '-[BridgeLabUITests.SameBinaryTests testWebOnlyUpdateOnSameInstalledApplication]' started.",
+        "Test Case '-[BridgeLabUITests.SameBinaryTests testWebOnlyUpdateOnSameInstalledApplication]' passed (42.943 seconds)."
+      ]
+    },
+    "I3": {
+      "directory": "verify-simulator-stage3-trust-limits-431191e8e9",
+      "source": {
+        "branch": "web-native-bridge-lab/t_9d8fd391-per-85-integration-implementer",
+        "head_sha": "be46ee45f2fa2c0e3b2789fbbeebe5aadbc1da8a",
+        "working_diff": ""
+      },
+      "result": {
+        "executable_sha256": "bd7be1a918964dd630a5a78c5ddf47a4271a257492b77384bee1adc0338f12b9",
+        "final_acceptance": false,
+        "full_security_lifecycle_matrix": "PENDING",
+        "installed_files": 3,
+        "manifest_sha256": "fa74849358d7cbbc91fb834d5ae0981ba1633a42a82784e37f8d8a843dfb3772",
+        "same_container": true,
+        "same_manifest": true,
+        "stage1": "PASS",
+        "stage3_events": [
+          "GET /fixtures/redirect-same 302 tag=s3-redirect-same",
+          "GET /fixtures/redirect-cross 302 tag=s3-redirect-cross",
+          "GET /fixtures/redirect-loop 307 tag=s3-redirect-loop",
+          "POST /fixtures/echo 200 tag=s3-body-limit",
+          "POST /fixtures/echo 200 tag=s3-hostile",
+          "GET /fixtures/large 200 tag=s3-response-limit",
+          "GET /fixtures/binary 200 tag=s3-binary",
+          "GET /fixtures/invalid-utf8 200 tag=s3-encoding",
+          "GET /fixtures/delay 200 tag=s3-slot-0",
+          "GET /fixtures/delay 200 tag=s3-slot-1",
+          "GET /fixtures/delay 200 tag=s3-slot-2",
+          "GET /fixtures/delay 200 tag=s3-slot-3",
+          "GET /fixtures/delay 200 tag=s3-slot-4",
+          "GET /fixtures/delay 200 tag=s3-slot-5",
+          "GET /fixtures/delay 200 tag=s3-slot-6",
+          "GET /fixtures/delay 200 tag=s3-slot-7"
+        ],
+        "stage3_trust_limits": "PASS",
+        "udid": "2001BD8C-65A1-415A-AE66-382FD3AF0041",
+        "web_A": {
+          "assets/index-CKnUoMD9.css": "a30a77bb4e9fd5ecba1aba59f1d5c63488938cfa1c9530d5bd2064925273d6b2",
+          "assets/index-PGX1ZbLf.js": "98e198228c32df698918b5c56c9bf05b3217952f8d176f039ccb1b662e16b230",
+          "index.html": "a50bec4b6a49f7197b0aeaf6ab198e8e1af6bcd8e2373b8dce0ed5478e941197"
+        },
+        "web_B": {
+          "assets/index-B7akWnGE.js": "faac69b4dcb03973e7847222a4cbb06568706af9a38a0e7447371b7dc6fd3c0f",
+          "assets/index-CKnUoMD9.css": "a30a77bb4e9fd5ecba1aba59f1d5c63488938cfa1c9530d5bd2064925273d6b2",
+          "index.html": "dda7efb95e45de4b2b6dd2d86414236ca32188b66459db1536d9ce6d174a6d86"
+        }
+      },
+      "commands": [
+        {
+          "argv": [
+            "xcrun",
+            "simctl",
+            "boot",
+            "2001BD8C-65A1-415A-AE66-382FD3AF0041"
+          ],
+          "exit_code": 0,
+          "log": "boot.log",
+          "name": "boot"
+        },
+        {
+          "argv": [
+            "xcrun",
+            "simctl",
+            "bootstatus",
+            "2001BD8C-65A1-415A-AE66-382FD3AF0041",
+            "-b"
+          ],
+          "exit_code": 0,
+          "log": "boot-ready.log",
+          "name": "boot-ready"
+        },
+        {
+          "argv": [
+            "xcodebuild",
+            "-project",
+            "ios/BridgeLab.xcodeproj",
+            "-destination",
+            "platform=iOS Simulator,id=2001BD8C-65A1-415A-AE66-382FD3AF0041",
+            "-derivedDataPath",
+            "<workspace>/.artifacts/verify-simulator-stage3-trust-limits-431191e8e9/unit-derived",
+            "CODE_SIGNING_ALLOWED=NO",
+            "-parallel-testing-enabled",
+            "NO",
+            "-scheme",
+            "BridgeLab",
+            "-skip-testing:BridgeLabTests/LiveWebKitTests",
+            "-resultBundlePath",
+            "<workspace>/.artifacts/verify-simulator-stage3-trust-limits-431191e8e9/unit.xcresult",
+            "test"
+          ],
+          "exit_code": 0,
+          "log": "ios-simulator-tests.log",
+          "name": "ios-simulator-tests"
+        },
+        {
+          "argv": [
+            "xcodebuild",
+            "-project",
+            "ios/BridgeLab.xcodeproj",
+            "-destination",
+            "platform=iOS Simulator,id=2001BD8C-65A1-415A-AE66-382FD3AF0041",
+            "-derivedDataPath",
+            "<workspace>/.artifacts/verify-simulator-stage3-trust-limits-431191e8e9/derived",
+            "CODE_SIGNING_ALLOWED=NO",
+            "-parallel-testing-enabled",
+            "NO",
+            "-scheme",
+            "BridgeLabAcceptance",
+            "build-for-testing"
+          ],
+          "exit_code": 0,
+          "log": "acceptance-build.log",
+          "name": "acceptance-build"
+        },
+        {
+          "argv": [
+            "xcrun",
+            "simctl",
+            "uninstall",
+            "2001BD8C-65A1-415A-AE66-382FD3AF0041",
+            "lab.webnative.BridgeLab"
+          ],
+          "exit_code": 0,
+          "log": "remove-unit-host.log",
+          "name": "remove-unit-host"
+        },
+        {
+          "argv": [
+            "xcrun",
+            "simctl",
+            "install",
+            "2001BD8C-65A1-415A-AE66-382FD3AF0041",
+            "<workspace>/.artifacts/verify-simulator-stage3-trust-limits-431191e8e9/derived/Build/Products/Debug-iphonesimulator/BridgeLab.app"
+          ],
+          "exit_code": 0,
+          "log": "install.log",
+          "name": "install"
+        },
+        {
+          "argv": [
+            "npm",
+            "--prefix",
+            "web",
+            "run",
+            "build:a",
+            "--",
+            "--outDir",
+            "<workspace>/.artifacts/verify-simulator-stage3-trust-limits-431191e8e9/web",
+            "--emptyOutDir"
+          ],
+          "exit_code": 0,
+          "log": "web-build-A.log",
+          "name": "web-build-A"
+        },
+        {
+          "argv": [
+            "node",
+            "<workspace>/scripts/lab",
+            "start",
+            "--state-dir",
+            "<workspace>/.artifacts/verify-simulator-stage3-trust-limits-431191e8e9/lab",
+            "--web-root",
+            "<workspace>/.artifacts/verify-simulator-stage3-trust-limits-431191e8e9/web"
+          ],
+          "exit_code": 0,
+          "log": "lab-start.log",
+          "name": "lab-start"
+        },
+        {
+          "argv": [
+            "node",
+            "<workspace>/scripts/lab",
+            "status",
+            "--state-dir",
+            "<workspace>/.artifacts/verify-simulator-stage3-trust-limits-431191e8e9/lab",
+            "--web-root",
+            "<workspace>/.artifacts/verify-simulator-stage3-trust-limits-431191e8e9/web"
+          ],
+          "exit_code": 0,
+          "log": "lab-status.log",
+          "name": "lab-status"
+        },
+        {
+          "argv": [
+            "xcodebuild",
+            "-project",
+            "ios/BridgeLab.xcodeproj",
+            "-destination",
+            "platform=iOS Simulator,id=2001BD8C-65A1-415A-AE66-382FD3AF0041",
+            "-derivedDataPath",
+            "<workspace>/.artifacts/verify-simulator-stage3-trust-limits-431191e8e9/derived",
+            "CODE_SIGNING_ALLOWED=NO",
+            "-parallel-testing-enabled",
+            "NO",
+            "-scheme",
+            "BridgeLabAcceptance",
+            "-resultBundlePath",
+            "<workspace>/.artifacts/verify-simulator-stage3-trust-limits-431191e8e9/ab.xcresult",
+            "test-without-building"
+          ],
+          "exit_code": 0,
+          "log": "ab-ui.log",
+          "name": "ab-ui"
+        },
+        {
+          "argv": [
+            "npm",
+            "--prefix",
+            "web",
+            "run",
+            "build:b",
+            "--",
+            "--outDir",
+            "<workspace>/.artifacts/verify-simulator-stage3-trust-limits-431191e8e9/web",
+            "--emptyOutDir"
+          ],
+          "exit_code": 0,
+          "log": "web-build-B.log",
+          "name": "web-build-B"
+        },
+        {
+          "argv": [
+            "web/node_modules/.bin/vite",
+            "build",
+            "web",
+            "--config",
+            "web/vite.acceptance.config.ts",
+            "--outDir",
+            "<workspace>/.artifacts/verify-simulator-stage3-trust-limits-431191e8e9/web",
+            "--emptyOutDir"
+          ],
+          "exit_code": 0,
+          "log": "web-build-diagnostics.log",
+          "name": "web-build-diagnostics"
+        },
+        {
+          "argv": [
+            "node",
+            "<workspace>/scripts/lab",
+            "stop",
+            "--state-dir",
+            "<workspace>/.artifacts/verify-simulator-stage3-trust-limits-431191e8e9/lab",
+            "--web-root",
+            "<workspace>/.artifacts/verify-simulator-stage3-trust-limits-431191e8e9/web"
+          ],
+          "exit_code": 0,
+          "log": "network-off.log",
+          "name": "network-off"
+        },
+        {
+          "argv": [
+            "node",
+            "<workspace>/scripts/lab",
+            "status",
+            "--state-dir",
+            "<workspace>/.artifacts/verify-simulator-stage3-trust-limits-431191e8e9/lab",
+            "--web-root",
+            "<workspace>/.artifacts/verify-simulator-stage3-trust-limits-431191e8e9/web"
+          ],
+          "exit_code": 1,
+          "log": "network-off-status.log",
+          "name": "network-off-status"
+        },
+        {
+          "argv": [
+            "node",
+            "<workspace>/scripts/lab",
+            "stop",
+            "--state-dir",
+            "<workspace>/.artifacts/verify-simulator-stage3-trust-limits-431191e8e9/lab",
+            "--web-root",
+            "<workspace>/.artifacts/verify-simulator-stage3-trust-limits-431191e8e9/web"
+          ],
+          "exit_code": 0,
+          "log": "lab-stop.log",
+          "name": "lab-stop"
+        },
+        {
+          "argv": [
+            "node",
+            "<workspace>/scripts/lab",
+            "status",
+            "--state-dir",
+            "<workspace>/.artifacts/verify-simulator-stage3-trust-limits-431191e8e9/lab",
+            "--web-root",
+            "<workspace>/.artifacts/verify-simulator-stage3-trust-limits-431191e8e9/web"
+          ],
+          "exit_code": 1,
+          "log": "lab-stopped-status.log",
+          "name": "lab-stopped-status"
+        },
+        {
+          "argv": [
+            "xcrun",
+            "simctl",
+            "shutdown",
+            "2001BD8C-65A1-415A-AE66-382FD3AF0041"
+          ],
+          "exit_code": 0,
+          "log": "simulator-shutdown.log",
+          "name": "simulator-shutdown"
+        },
+        {
+          "argv": [
+            "xcrun",
+            "simctl",
+            "delete",
+            "2001BD8C-65A1-415A-AE66-382FD3AF0041"
+          ],
+          "exit_code": 0,
+          "log": "simulator-delete.log",
+          "name": "simulator-delete"
+        }
+      ],
+      "cleanup": {
+        "errors": [],
+        "owned_services_stopped": true,
+        "owned_simulator_removed": true
+      },
+      "simulator": {
+        "device": "com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro",
+        "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-5",
+        "udid": "2001BD8C-65A1-415A-AE66-382FD3AF0041"
+      },
+      "unit-summary": {
+        "passedTests": 42,
+        "failedTests": 0,
+        "skippedTests": 0
+      },
+      "ab-summary": {
+        "passedTests": 1,
+        "failedTests": 0,
+        "skippedTests": 0
+      },
+      "installed_before_A": {
+        "container": "/Users/agent/Library/Developer/CoreSimulator/Devices/2001BD8C-65A1-415A-AE66-382FD3AF0041/data/Containers/Bundle/Application/08400455-15DD-416D-A0A0-239DFF4EFCC0/BridgeLab.app",
+        "files": {
+          "BridgeLab": "bd7be1a918964dd630a5a78c5ddf47a4271a257492b77384bee1adc0338f12b9",
+          "Info.plist": "6b1a2db1c8fda820ef31bbf2327adc6c165e4c7687eee09efcb7ad16ead4226a",
+          "PkgInfo": "82502191c9484b04d685374f9879a0066069c49b8acae7a04b01d38d07e8eca0"
+        },
+        "udid": "2001BD8C-65A1-415A-AE66-382FD3AF0041"
+      },
+      "equal_snapshots": [
+        "installed-after-B",
+        "installed-after-diagnostics",
+        "installed-before-A",
+        "installed-after-A"
+      ],
+      "before_ui_runner_note": "Identical file hashes; Xcode test setup relocated container before A. No relocation/install/rebuild between A and B or diagnostics.",
+      "actual_ui_assertions": [
+        "Test Case '-[BridgeLabUITests.SameBinaryTests testWebOnlyUpdateOnSameInstalledApplication]' started.",
+        "Test Case '-[BridgeLabUITests.SameBinaryTests testWebOnlyUpdateOnSameInstalledApplication]' passed (38.675 seconds)."
+      ]
+    },
+    "W": {
+      "directory": "verify-simulator-stage4-webkit-privacy-0d37679008",
+      "source": {
+        "branch": "web-native-bridge-lab/t_9d8fd391-per-85-integration-implementer",
+        "head_sha": "be46ee45f2fa2c0e3b2789fbbeebe5aadbc1da8a",
+        "working_diff": ""
+      },
+      "result": {
+        "final_acceptance": false,
+        "layer": "real WebKit component + real native network",
+        "stage4_webkit_privacy": "PASS"
+      },
+      "commands": [
+        {
+          "argv": [
+            "xcrun",
+            "simctl",
+            "boot",
+            "56DB3CED-D37D-4891-A65B-8109D50C2A04"
+          ],
+          "exit_code": 0,
+          "log": "boot.log",
+          "name": "boot"
+        },
+        {
+          "argv": [
+            "xcrun",
+            "simctl",
+            "bootstatus",
+            "56DB3CED-D37D-4891-A65B-8109D50C2A04",
+            "-b"
+          ],
+          "exit_code": 0,
+          "log": "boot-ready.log",
+          "name": "boot-ready"
+        },
+        {
+          "argv": [
+            "xcodebuild",
+            "-project",
+            "ios/BridgeLab.xcodeproj",
+            "-scheme",
+            "BridgeLab",
+            "-destination",
+            "platform=iOS Simulator,id=56DB3CED-D37D-4891-A65B-8109D50C2A04",
+            "-derivedDataPath",
+            "<workspace>/.artifacts/verify-simulator-stage4-webkit-privacy-0d37679008/derived",
+            "-resultBundlePath",
+            "<workspace>/.artifacts/verify-simulator-stage4-webkit-privacy-0d37679008/webkit.xcresult",
+            "CODE_SIGNING_ALLOWED=NO",
+            "-parallel-testing-enabled",
+            "NO",
+            "test"
+          ],
+          "exit_code": 0,
+          "log": "webkit-tests.log",
+          "name": "webkit-tests"
+        },
+        {
+          "argv": [
+            "xcrun",
+            "simctl",
+            "shutdown",
+            "56DB3CED-D37D-4891-A65B-8109D50C2A04"
+          ],
+          "exit_code": 0,
+          "log": "simulator-shutdown.log",
+          "name": "simulator-shutdown"
+        },
+        {
+          "argv": [
+            "xcrun",
+            "simctl",
+            "delete",
+            "56DB3CED-D37D-4891-A65B-8109D50C2A04"
+          ],
+          "exit_code": 0,
+          "log": "simulator-delete.log",
+          "name": "simulator-delete"
+        }
+      ],
+      "cleanup": {
+        "errors": [],
+        "owned_fixture_stopped": true,
+        "owned_simulator_removed": true
+      },
+      "simulator": {
+        "device": "com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro",
+        "fixture_pid": 15301,
+        "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-5",
+        "udid": "56DB3CED-D37D-4891-A65B-8109D50C2A04"
+      },
+      "webkit-summary": {
+        "passedTests": 53,
+        "failedTests": 0,
+        "skippedTests": 0
+      },
+      "fixture_events": [
+        {
+          "port": 8787,
+          "path": "/",
+          "tag": "-",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8787,
+          "path": "/",
+          "tag": "-",
+          "event": "finished"
+        },
+        {
+          "port": 8787,
+          "path": "/response-vectors",
+          "tag": "-",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8787,
+          "path": "/response-vectors",
+          "tag": "-",
+          "event": "finished"
+        },
+        {
+          "port": 8788,
+          "path": "/vectors/empty",
+          "tag": "empty",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8788,
+          "path": "/vectors/empty",
+          "tag": "empty",
+          "event": "finished"
+        },
+        {
+          "port": 8788,
+          "path": "/vectors/headers-exact",
+          "tag": "headers-exact",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8788,
+          "path": "/vectors/headers-exact",
+          "tag": "headers-exact",
+          "event": "finished"
+        },
+        {
+          "port": 8788,
+          "path": "/vectors/headers-over",
+          "tag": "headers-over",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8788,
+          "path": "/vectors/headers-over",
+          "tag": "headers-over",
+          "event": "finished"
+        },
+        {
+          "port": 8788,
+          "path": "/vectors/gzip-exact",
+          "tag": "gzip-exact",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8788,
+          "path": "/vectors/gzip-exact",
+          "tag": "gzip-exact",
+          "event": "gzip",
+          "decodedBytes": 1048576,
+          "wireBytes": 1051
+        },
+        {
+          "port": 8788,
+          "path": "/vectors/gzip-exact",
+          "tag": "gzip-exact",
+          "event": "finished"
+        },
+        {
+          "port": 8788,
+          "path": "/vectors/gzip-over",
+          "tag": "gzip-over",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8788,
+          "path": "/vectors/gzip-over",
+          "tag": "gzip-over",
+          "event": "gzip",
+          "decodedBytes": 1048577,
+          "wireBytes": 1051
+        },
+        {
+          "port": 8788,
+          "path": "/vectors/gzip-over",
+          "tag": "gzip-over",
+          "event": "finished"
+        },
+        {
+          "port": 8788,
+          "path": "/vectors/escaped",
+          "tag": "escaped",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8788,
+          "path": "/vectors/escaped",
+          "tag": "escaped",
+          "event": "finished"
+        },
+        {
+          "port": 8787,
+          "path": "/denials",
+          "tag": "-",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8787,
+          "path": "/denials",
+          "tag": "-",
+          "event": "finished"
+        },
+        {
+          "port": 8787,
+          "path": "/before-failure",
+          "tag": "-",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8787,
+          "path": "/before-failure",
+          "tag": "-",
+          "event": "finished"
+        },
+        {
+          "port": 8788,
+          "path": "/delay",
+          "tag": "provisional",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8788,
+          "path": "/delay",
+          "tag": "provisional",
+          "event": "connection-close"
+        },
+        {
+          "port": 8787,
+          "path": "/abort",
+          "tag": "-",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8787,
+          "path": "/abort",
+          "tag": "-",
+          "event": "connection-close"
+        },
+        {
+          "port": 8787,
+          "path": "/abort",
+          "tag": "-",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8787,
+          "path": "/abort",
+          "tag": "-",
+          "event": "connection-close"
+        },
+        {
+          "port": 8787,
+          "path": "/abort",
+          "tag": "-",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8787,
+          "path": "/abort",
+          "tag": "-",
+          "event": "connection-close"
+        },
+        {
+          "port": 8787,
+          "path": "/abort",
+          "tag": "-",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8787,
+          "path": "/abort",
+          "tag": "-",
+          "event": "connection-close"
+        },
+        {
+          "port": 8787,
+          "path": "/after-failure",
+          "tag": "-",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8787,
+          "path": "/after-failure",
+          "tag": "-",
+          "event": "finished"
+        },
+        {
+          "port": 8788,
+          "path": "/fresh",
+          "tag": "provisional",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8788,
+          "path": "/fresh",
+          "tag": "provisional",
+          "event": "finished"
+        },
+        {
+          "port": 8787,
+          "path": "/redirect-vectors",
+          "tag": "-",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8787,
+          "path": "/redirect-vectors",
+          "tag": "-",
+          "event": "finished"
+        },
+        {
+          "port": 8788,
+          "path": "/vectors/redirect/301/valid",
+          "tag": "redirect-301-valid",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8788,
+          "path": "/vectors/redirect/301/valid",
+          "tag": "redirect-301-valid",
+          "event": "finished"
+        },
+        {
+          "port": 8788,
+          "path": "/vectors/redirect/301/missing",
+          "tag": "redirect-301-missing",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8788,
+          "path": "/vectors/redirect/301/missing",
+          "tag": "redirect-301-missing",
+          "event": "finished"
+        },
+        {
+          "port": 8788,
+          "path": "/vectors/redirect/301/malformed",
+          "tag": "redirect-301-malformed",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8788,
+          "path": "/vectors/redirect/301/malformed",
+          "tag": "redirect-301-malformed",
+          "event": "finished"
+        },
+        {
+          "port": 8788,
+          "path": "/vectors/redirect/302/valid",
+          "tag": "redirect-302-valid",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8788,
+          "path": "/vectors/redirect/302/valid",
+          "tag": "redirect-302-valid",
+          "event": "finished"
+        },
+        {
+          "port": 8788,
+          "path": "/vectors/redirect/302/missing",
+          "tag": "redirect-302-missing",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8788,
+          "path": "/vectors/redirect/302/missing",
+          "tag": "redirect-302-missing",
+          "event": "finished"
+        },
+        {
+          "port": 8788,
+          "path": "/vectors/redirect/302/malformed",
+          "tag": "redirect-302-malformed",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8788,
+          "path": "/vectors/redirect/302/malformed",
+          "tag": "redirect-302-malformed",
+          "event": "finished"
+        },
+        {
+          "port": 8788,
+          "path": "/vectors/redirect/303/valid",
+          "tag": "redirect-303-valid",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8788,
+          "path": "/vectors/redirect/303/valid",
+          "tag": "redirect-303-valid",
+          "event": "finished"
+        },
+        {
+          "port": 8788,
+          "path": "/vectors/redirect/303/missing",
+          "tag": "redirect-303-missing",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8788,
+          "path": "/vectors/redirect/303/missing",
+          "tag": "redirect-303-missing",
+          "event": "finished"
+        },
+        {
+          "port": 8788,
+          "path": "/vectors/redirect/303/malformed",
+          "tag": "redirect-303-malformed",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8788,
+          "path": "/vectors/redirect/303/malformed",
+          "tag": "redirect-303-malformed",
+          "event": "finished"
+        },
+        {
+          "port": 8788,
+          "path": "/vectors/redirect/307/valid",
+          "tag": "redirect-307-valid",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8788,
+          "path": "/vectors/redirect/307/valid",
+          "tag": "redirect-307-valid",
+          "event": "finished"
+        },
+        {
+          "port": 8788,
+          "path": "/vectors/redirect/307/missing",
+          "tag": "redirect-307-missing",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8788,
+          "path": "/vectors/redirect/307/missing",
+          "tag": "redirect-307-missing",
+          "event": "finished"
+        },
+        {
+          "port": 8788,
+          "path": "/vectors/redirect/307/malformed",
+          "tag": "redirect-307-malformed",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8788,
+          "path": "/vectors/redirect/307/malformed",
+          "tag": "redirect-307-malformed",
+          "event": "finished"
+        },
+        {
+          "port": 8788,
+          "path": "/vectors/redirect/308/valid",
+          "tag": "redirect-308-valid",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8788,
+          "path": "/vectors/redirect/308/valid",
+          "tag": "redirect-308-valid",
+          "event": "finished"
+        },
+        {
+          "port": 8788,
+          "path": "/vectors/redirect/308/missing",
+          "tag": "redirect-308-missing",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8788,
+          "path": "/vectors/redirect/308/missing",
+          "tag": "redirect-308-missing",
+          "event": "finished"
+        },
+        {
+          "port": 8788,
+          "path": "/vectors/redirect/308/malformed",
+          "tag": "redirect-308-malformed",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8788,
+          "path": "/vectors/redirect/308/malformed",
+          "tag": "redirect-308-malformed",
+          "event": "finished"
+        },
+        {
+          "port": 8787,
+          "path": "/trickle-vector",
+          "tag": "-",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8787,
+          "path": "/trickle-vector",
+          "tag": "-",
+          "event": "finished"
+        },
+        {
+          "port": 8788,
+          "path": "/vectors/trickle",
+          "tag": "trickle",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8788,
+          "path": "/vectors/trickle",
+          "tag": "trickle",
+          "event": "chunk"
+        },
+        {
+          "port": 8788,
+          "path": "/vectors/trickle",
+          "tag": "trickle",
+          "event": "chunk"
+        },
+        {
+          "port": 8788,
+          "path": "/vectors/trickle",
+          "tag": "trickle",
+          "event": "chunk"
+        },
+        {
+          "port": 8788,
+          "path": "/vectors/trickle",
+          "tag": "trickle",
+          "event": "chunk"
+        },
+        {
+          "port": 8788,
+          "path": "/vectors/trickle",
+          "tag": "trickle",
+          "event": "chunk"
+        },
+        {
+          "port": 8788,
+          "path": "/vectors/trickle",
+          "tag": "trickle",
+          "event": "chunk"
+        },
+        {
+          "port": 8788,
+          "path": "/vectors/trickle",
+          "tag": "trickle",
+          "event": "chunk"
+        },
+        {
+          "port": 8788,
+          "path": "/vectors/trickle",
+          "tag": "trickle",
+          "event": "chunk"
+        },
+        {
+          "port": 8788,
+          "path": "/vectors/trickle",
+          "tag": "trickle",
+          "event": "chunk"
+        },
+        {
+          "port": 8788,
+          "path": "/vectors/trickle",
+          "tag": "trickle",
+          "event": "connection-close"
+        },
+        {
+          "port": 8787,
+          "path": "/close",
+          "tag": "-",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8787,
+          "path": "/close",
+          "tag": "-",
+          "event": "finished"
+        },
+        {
+          "port": 8788,
+          "path": "/delay",
+          "tag": "close",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8788,
+          "path": "/delay",
+          "tag": "close",
+          "event": "connection-close"
+        },
+        {
+          "port": 8787,
+          "path": "/destruction",
+          "tag": "-",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8787,
+          "path": "/destruction",
+          "tag": "-",
+          "event": "finished"
+        },
+        {
+          "port": 8788,
+          "path": "/delay",
+          "tag": "destruction",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8788,
+          "path": "/delay",
+          "tag": "destruction",
+          "event": "connection-close"
+        },
+        {
+          "port": 8787,
+          "path": "/lifetime-navigation",
+          "tag": "-",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8787,
+          "path": "/lifetime-navigation",
+          "tag": "-",
+          "event": "finished"
+        },
+        {
+          "port": 8788,
+          "path": "/delay",
+          "tag": "navigation",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8788,
+          "path": "/delay",
+          "tag": "navigation",
+          "event": "connection-close"
+        },
+        {
+          "port": 8787,
+          "path": "/fresh-document",
+          "tag": "-",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8787,
+          "path": "/fresh-document",
+          "tag": "-",
+          "event": "finished"
+        },
+        {
+          "port": 8788,
+          "path": "/fresh",
+          "tag": "navigation",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8788,
+          "path": "/fresh",
+          "tag": "navigation",
+          "event": "finished"
+        },
+        {
+          "port": 8787,
+          "path": "/lifetime-reload",
+          "tag": "-",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8787,
+          "path": "/lifetime-reload",
+          "tag": "-",
+          "event": "finished"
+        },
+        {
+          "port": 8788,
+          "path": "/delay",
+          "tag": "reload",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8788,
+          "path": "/delay",
+          "tag": "reload",
+          "event": "connection-close"
+        },
+        {
+          "port": 8787,
+          "path": "/lifetime-reload",
+          "tag": "-",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8787,
+          "path": "/lifetime-reload",
+          "tag": "-",
+          "event": "finished"
+        },
+        {
+          "port": 8788,
+          "path": "/fresh",
+          "tag": "reload",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8788,
+          "path": "/fresh",
+          "tag": "reload",
+          "event": "finished"
+        },
+        {
+          "port": 8787,
+          "path": "/frames",
+          "tag": "-",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8787,
+          "path": "/frames",
+          "tag": "-",
+          "event": "finished"
+        },
+        {
+          "port": 8787,
+          "path": "/frame",
+          "tag": "frame-0",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8787,
+          "path": "/frame",
+          "tag": "frame-0",
+          "event": "finished"
+        },
+        {
+          "port": 8788,
+          "path": "/frame",
+          "tag": "frame-1",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8788,
+          "path": "/frame",
+          "tag": "frame-1",
+          "event": "finished"
+        },
+        {
+          "port": 8787,
+          "path": "/uncommitted",
+          "tag": "-",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8787,
+          "path": "/uncommitted",
+          "tag": "-",
+          "event": "finished"
+        },
+        {
+          "port": 8788,
+          "path": "/inspect",
+          "tag": "control-native",
+          "event": "request",
+          "cookie": true,
+          "authorization": false
+        },
+        {
+          "port": 8788,
+          "path": "/inspect",
+          "tag": "control-native",
+          "event": "finished"
+        },
+        {
+          "port": 8787,
+          "path": "/",
+          "tag": "-",
+          "event": "request",
+          "cookie": true,
+          "authorization": false
+        },
+        {
+          "port": 8787,
+          "path": "/",
+          "tag": "-",
+          "event": "finished"
+        },
+        {
+          "port": 8787,
+          "path": "/privacy",
+          "tag": "-",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8787,
+          "path": "/privacy",
+          "tag": "-",
+          "event": "finished"
+        },
+        {
+          "port": 8788,
+          "path": "/inspect",
+          "tag": "privacy-first",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8788,
+          "path": "/inspect",
+          "tag": "privacy-first",
+          "event": "finished"
+        },
+        {
+          "port": 8788,
+          "path": "/inspect",
+          "tag": "privacy-second",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8788,
+          "path": "/inspect",
+          "tag": "privacy-second",
+          "event": "finished"
+        },
+        {
+          "port": 8788,
+          "path": "/cache",
+          "tag": "privacy-cache",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8788,
+          "path": "/cache",
+          "tag": "privacy-cache",
+          "event": "finished"
+        },
+        {
+          "port": 8788,
+          "path": "/challenge",
+          "tag": "privacy-auth-4",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8788,
+          "path": "/challenge",
+          "tag": "privacy-auth-4",
+          "event": "finished"
+        },
+        {
+          "port": 8788,
+          "path": "/challenge",
+          "tag": "privacy-auth-5",
+          "event": "request",
+          "cookie": false,
+          "authorization": false
+        },
+        {
+          "port": 8788,
+          "path": "/challenge",
+          "tag": "privacy-auth-5",
+          "event": "finished"
+        }
+      ]
+    },
+    "I5": {
+      "directory": "verify-simulator-stage5-production-ux-b608b36a53",
+      "source": {
+        "branch": "web-native-bridge-lab/t_9d8fd391-per-85-integration-implementer",
+        "head_sha": "be46ee45f2fa2c0e3b2789fbbeebe5aadbc1da8a",
+        "working_diff": ""
+      },
+      "result": {
+        "executable_sha256": "d011b714e72f07fd7456f64c42afcac125d98f1ca26209812d7ff6c9505fb963",
+        "final_acceptance": false,
+        "installed_files": 3,
+        "manifest_sha256": "70a12753d83759117aa3285bd0b965f51aa5ff2195433b462145ae6ecd130246",
+        "same_container": true,
+        "same_manifest": true,
+        "stage1": "PASS",
+        "stage5_production_ux": "PASS",
+        "udid": "F8EB836C-6D11-48E7-A863-3B1F2F3D0B10",
+        "web_A": {
+          "assets/index-CKnUoMD9.css": "a30a77bb4e9fd5ecba1aba59f1d5c63488938cfa1c9530d5bd2064925273d6b2",
+          "assets/index-PGX1ZbLf.js": "98e198228c32df698918b5c56c9bf05b3217952f8d176f039ccb1b662e16b230",
+          "index.html": "a50bec4b6a49f7197b0aeaf6ab198e8e1af6bcd8e2373b8dce0ed5478e941197"
+        },
+        "web_B": {
+          "assets/index-B7akWnGE.js": "faac69b4dcb03973e7847222a4cbb06568706af9a38a0e7447371b7dc6fd3c0f",
+          "assets/index-CKnUoMD9.css": "a30a77bb4e9fd5ecba1aba59f1d5c63488938cfa1c9530d5bd2064925273d6b2",
+          "index.html": "dda7efb95e45de4b2b6dd2d86414236ca32188b66459db1536d9ce6d174a6d86"
+        }
+      },
+      "commands": [
+        {
+          "argv": [
+            "xcrun",
+            "simctl",
+            "boot",
+            "F8EB836C-6D11-48E7-A863-3B1F2F3D0B10"
+          ],
+          "exit_code": 0,
+          "log": "boot.log",
+          "name": "boot"
+        },
+        {
+          "argv": [
+            "xcrun",
+            "simctl",
+            "bootstatus",
+            "F8EB836C-6D11-48E7-A863-3B1F2F3D0B10",
+            "-b"
+          ],
+          "exit_code": 0,
+          "log": "boot-ready.log",
+          "name": "boot-ready"
+        },
+        {
+          "argv": [
+            "xcodebuild",
+            "-project",
+            "ios/BridgeLab.xcodeproj",
+            "-destination",
+            "platform=iOS Simulator,id=F8EB836C-6D11-48E7-A863-3B1F2F3D0B10",
+            "-derivedDataPath",
+            "<workspace>/.artifacts/verify-simulator-stage5-production-ux-b608b36a53/unit-derived",
+            "CODE_SIGNING_ALLOWED=NO",
+            "-parallel-testing-enabled",
+            "NO",
+            "-scheme",
+            "BridgeLab",
+            "-skip-testing:BridgeLabTests/LiveWebKitTests",
+            "-resultBundlePath",
+            "<workspace>/.artifacts/verify-simulator-stage5-production-ux-b608b36a53/unit.xcresult",
+            "test"
+          ],
+          "exit_code": 0,
+          "log": "ios-simulator-tests.log",
+          "name": "ios-simulator-tests"
+        },
+        {
+          "argv": [
+            "xcodebuild",
+            "-project",
+            "ios/BridgeLab.xcodeproj",
+            "-destination",
+            "platform=iOS Simulator,id=F8EB836C-6D11-48E7-A863-3B1F2F3D0B10",
+            "-derivedDataPath",
+            "<workspace>/.artifacts/verify-simulator-stage5-production-ux-b608b36a53/derived",
+            "CODE_SIGNING_ALLOWED=NO",
+            "-parallel-testing-enabled",
+            "NO",
+            "-scheme",
+            "BridgeLabAcceptance",
+            "build-for-testing"
+          ],
+          "exit_code": 0,
+          "log": "acceptance-build.log",
+          "name": "acceptance-build"
+        },
+        {
+          "argv": [
+            "xcrun",
+            "simctl",
+            "uninstall",
+            "F8EB836C-6D11-48E7-A863-3B1F2F3D0B10",
+            "lab.webnative.BridgeLab"
+          ],
+          "exit_code": 0,
+          "log": "remove-unit-host.log",
+          "name": "remove-unit-host"
+        },
+        {
+          "argv": [
+            "xcrun",
+            "simctl",
+            "install",
+            "F8EB836C-6D11-48E7-A863-3B1F2F3D0B10",
+            "<workspace>/.artifacts/verify-simulator-stage5-production-ux-b608b36a53/derived/Build/Products/Debug-iphonesimulator/BridgeLab.app"
+          ],
+          "exit_code": 0,
+          "log": "install.log",
+          "name": "install"
+        },
+        {
+          "argv": [
+            "npm",
+            "--prefix",
+            "web",
+            "run",
+            "build:a",
+            "--",
+            "--outDir",
+            "<workspace>/.artifacts/verify-simulator-stage5-production-ux-b608b36a53/web",
+            "--emptyOutDir"
+          ],
+          "exit_code": 0,
+          "log": "web-build-A.log",
+          "name": "web-build-A"
+        },
+        {
+          "argv": [
+            "node",
+            "<workspace>/scripts/lab",
+            "start",
+            "--state-dir",
+            "<workspace>/.artifacts/verify-simulator-stage5-production-ux-b608b36a53/lab",
+            "--web-root",
+            "<workspace>/.artifacts/verify-simulator-stage5-production-ux-b608b36a53/web"
+          ],
+          "exit_code": 0,
+          "log": "lab-start.log",
+          "name": "lab-start"
+        },
+        {
+          "argv": [
+            "node",
+            "<workspace>/scripts/lab",
+            "status",
+            "--state-dir",
+            "<workspace>/.artifacts/verify-simulator-stage5-production-ux-b608b36a53/lab",
+            "--web-root",
+            "<workspace>/.artifacts/verify-simulator-stage5-production-ux-b608b36a53/web"
+          ],
+          "exit_code": 0,
+          "log": "lab-status.log",
+          "name": "lab-status"
+        },
+        {
+          "argv": [
+            "xcodebuild",
+            "-project",
+            "ios/BridgeLab.xcodeproj",
+            "-destination",
+            "platform=iOS Simulator,id=F8EB836C-6D11-48E7-A863-3B1F2F3D0B10",
+            "-derivedDataPath",
+            "<workspace>/.artifacts/verify-simulator-stage5-production-ux-b608b36a53/derived",
+            "CODE_SIGNING_ALLOWED=NO",
+            "-parallel-testing-enabled",
+            "NO",
+            "-scheme",
+            "BridgeLabAcceptance",
+            "-resultBundlePath",
+            "<workspace>/.artifacts/verify-simulator-stage5-production-ux-b608b36a53/ab.xcresult",
+            "test-without-building"
+          ],
+          "exit_code": 0,
+          "log": "ab-ui.log",
+          "name": "ab-ui"
+        },
+        {
+          "argv": [
+            "npm",
+            "--prefix",
+            "web",
+            "run",
+            "build:b",
+            "--",
+            "--outDir",
+            "<workspace>/.artifacts/verify-simulator-stage5-production-ux-b608b36a53/web",
+            "--emptyOutDir"
+          ],
+          "exit_code": 0,
+          "log": "web-build-B.log",
+          "name": "web-build-B"
+        },
+        {
+          "argv": [
+            "node",
+            "<workspace>/scripts/lab",
+            "stop",
+            "--state-dir",
+            "<workspace>/.artifacts/verify-simulator-stage5-production-ux-b608b36a53/lab",
+            "--web-root",
+            "<workspace>/.artifacts/verify-simulator-stage5-production-ux-b608b36a53/web"
+          ],
+          "exit_code": 0,
+          "log": "lab-stop.log",
+          "name": "lab-stop"
+        },
+        {
+          "argv": [
+            "node",
+            "<workspace>/scripts/lab",
+            "status",
+            "--state-dir",
+            "<workspace>/.artifacts/verify-simulator-stage5-production-ux-b608b36a53/lab",
+            "--web-root",
+            "<workspace>/.artifacts/verify-simulator-stage5-production-ux-b608b36a53/web"
+          ],
+          "exit_code": 1,
+          "log": "lab-stopped-status.log",
+          "name": "lab-stopped-status"
+        },
+        {
+          "argv": [
+            "xcrun",
+            "simctl",
+            "shutdown",
+            "F8EB836C-6D11-48E7-A863-3B1F2F3D0B10"
+          ],
+          "exit_code": 0,
+          "log": "simulator-shutdown.log",
+          "name": "simulator-shutdown"
+        },
+        {
+          "argv": [
+            "xcrun",
+            "simctl",
+            "delete",
+            "F8EB836C-6D11-48E7-A863-3B1F2F3D0B10"
+          ],
+          "exit_code": 0,
+          "log": "simulator-delete.log",
+          "name": "simulator-delete"
+        }
+      ],
+      "cleanup": {
+        "errors": [],
+        "owned_services_stopped": true,
+        "owned_simulator_removed": true
+      },
+      "simulator": {
+        "device": "com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro",
+        "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-5",
+        "udid": "F8EB836C-6D11-48E7-A863-3B1F2F3D0B10"
+      },
+      "unit-summary": {
+        "passedTests": 42,
+        "failedTests": 0,
+        "skippedTests": 0
+      },
+      "ab-summary": {
+        "passedTests": 1,
+        "failedTests": 0,
+        "skippedTests": 0
+      },
+      "installed_before_A": {
+        "container": "/Users/agent/Library/Developer/CoreSimulator/Devices/F8EB836C-6D11-48E7-A863-3B1F2F3D0B10/data/Containers/Bundle/Application/15913975-9423-4B62-968E-4D288B4AC076/BridgeLab.app",
+        "files": {
+          "BridgeLab": "d011b714e72f07fd7456f64c42afcac125d98f1ca26209812d7ff6c9505fb963",
+          "Info.plist": "6b1a2db1c8fda820ef31bbf2327adc6c165e4c7687eee09efcb7ad16ead4226a",
+          "PkgInfo": "82502191c9484b04d685374f9879a0066069c49b8acae7a04b01d38d07e8eca0"
+        },
+        "udid": "F8EB836C-6D11-48E7-A863-3B1F2F3D0B10"
+      },
+      "equal_snapshots": [
+        "installed-after-B",
+        "installed-after-production-ux",
+        "installed-before-A",
+        "installed-after-A"
+      ],
+      "before_ui_runner_note": "Identical file hashes; Xcode test setup relocated container before A. No relocation/install/rebuild between A and B or diagnostics.",
+      "actual_ui_assertions": [
+        "Test Case '-[BridgeLabUITests.SameBinaryTests testWebOnlyUpdateOnSameInstalledApplication]' started.",
+        "Test Case '-[BridgeLabUITests.SameBinaryTests testWebOnlyUpdateOnSameInstalledApplication]' passed (57.225 seconds)."
+      ]
+    }
+  },
+  "build_analyze": {
+    "command": "xcodebuild -project ios/BridgeLab.xcodeproj -scheme BridgeLab -destination generic/platform=iOS Simulator -derivedDataPath <workspace>/.artifacts/final-build CODE_SIGNING_ALLOWED=NO build analyze",
+    "exit_code": 0,
+    "markers": [
+      "** BUILD SUCCEEDED **",
+      "** ANALYZE SUCCEEDED **"
+    ],
+    "binary_file_output": "<workspace>/.artifacts/final-build/Build/Products/Debug-iphonesimulator/BridgeLab.app/BridgeLab: Mach-O universal binary with 2 architectures: [x86_64:Mach-O 64-bit executable x86_64] [arm64:Mach-O 64-bit executable arm64]\n<workspace>/.artifacts/final-build/Build/Products/Debug-iphonesimulator/BridgeLab.app/BridgeLab (for architecture x86_64):\tMach-O 64-bit executable x86_64\n<workspace>/.artifacts/final-build/Build/Products/Debug-iphonesimulator/BridgeLab.app/BridgeLab (for architecture arm64):\tMach-O 64-bit executable arm64\n",
+    "log_sha256": "bfb2235b75cc2ff9d698f75dff5c79b0bd465e2d31747e7b5e92ac93a50b88a1"
+  },
+  "cleanup_fresh_readback": {
+    "owned_devices_absent": [
+      "8C4F30F1-334B-4EEB-BF32-08ABFB8C09E0",
+      "2001BD8C-65A1-415A-AE66-382FD3AF0041",
+      "56DB3CED-D37D-4891-A65B-8109D50C2A04",
+      "F8EB836C-6D11-48E7-A863-3B1F2F3D0B10",
+      "4FB423A3-8891-4544-A29A-96E6B8D787CE",
+      "9FD6C7BA-090D-462A-8F2A-6A5F3D2FD90F",
+      "E69553D4-1C72-4CEE-AE0C-E7871D69DC43",
+      "767E556A-635C-4F98-ACFA-84E65B9052EC",
+      "14999AA5-8423-47C7-8B04-6EDEB713210F"
+    ],
+    "loopback_ports_bind_listen": [
+      8787,
+      8788
+    ],
+    "remaining_own_node_xcodebuild_xctest": []
+  },
+  "audit": {
+    "native_patterns": {
+      "business": "/api/(catalog|quote)|totalMinor|OUT_OF_STOCK|INVALID_QUANTITY|struct\\s+(Quote|Catalog)",
+      "script_injection": "evaluateJavaScript|eval\\(|innerHTML",
+      "ambient": "URLSession\\.shared|URLCredentialStorage\\.shared|HTTPCookieStorage\\.shared|URLCache\\.shared"
+    },
+    "matches": {
+      "business": [],
+      "script_injection": [],
+      "ambient": []
+    },
+    "dist_equals_clean_build_B": true
+  },
+  "chronology": {
+    "new_live_tests": "Initial added live vectors failed against missing fixture routes; fixture-only support added, working candidate53 GREEN and clean source W repeats53 GREEN. No native production changes.",
+    "red_run": "verify-simulator-stage4-webkit-privacy-f0c0a5cd95",
+    "red_cleanup": {
+      "errors": [],
+      "owned_fixture_stopped": true,
+      "owned_simulator_removed": true
+    },
+    "new_client_tests": "Two existing-behavior conformance tests passed first run; not claimed as production-fix RED. Web26 now pass.",
+    "assets": "Tracked B regenerated for previous Stage5 web App change; equals freshly built B manifest."
+  },
+  "limits": [
+    "See FINAL_MATRIX.md for every requirement/proof layer and prior findings.",
+    "Source remained clean at tested head across all six runner gates and build/analyze. An evidence-only descendant is not claimed as original gate invocation head.",
+    "Before-UI-runner Xcode setup can relocate same-hash bundle; actual before-A/after-A/after-B/after-diagnostics snapshots are identical.",
+    "Schema semantic markers alone are not runtime tests. Individual mode full_security_lifecycle_matrix=PENDING and final_acceptance=false are retained unchanged.",
+    "OS WebContent termination is covered through delegate/actor seam, not induced OS termination.",
+    "No SIGKILL/crash-finally, repeated-cleanup-signal, escaping-descendant, malicious same-user forgery or spawn/state-write atomicity guarantee.",
+    "Historical coordinator420s timeout required exact-owned Simulator recovery, not product auto-cleanup.",
+    "Simulator/synthetic loopback only; not production-ready, not warning-free or device-tested.",
+    "Raw .artifacts logs/xcresults are disposable; this compact observed record and matrix are durable."
+  ],
+  "routing": {
+    "task": "t_9d8fd391",
+    "run": 81,
+    "board": "web-native-bridge-lab",
+    "project": "p_ce173eae",
+    "profile": "iosimplementer",
+    "provider": "openai-codex",
+    "model": "gpt-6-astra",
+    "effort": "high per final packet; effective reasoning not independently measurable"
+  }
+}

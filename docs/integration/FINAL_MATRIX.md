@@ -1,6 +1,6 @@
 # Integrated candidate: requirement / scenario / proof layer
 
-This is the final implementation coverage map, not approval or owner acceptance. The original obligations remain in [verification plan](../verification-plan.md), active OpenSpec specs and [protocol v1](../../protocol/v1/README.md). Historical Stage1–5 reports describe observations at their own heads; their then-pending lists are reconciled below, not silently waived. Final candidate commands and observed exact source SHA belong in `final-candidate-evidence.json` (when produced) and the same-card review handoff. Until that record exists and all required gates pass, final-source regression is pending.
+This is the final implementation coverage map, not approval or owner acceptance. The original obligations remain in [verification plan](../verification-plan.md), active OpenSpec specs and [protocol v1](../../protocol/v1/README.md). Historical Stage1–5 reports describe observations at their own heads; their then-pending lists are reconciled below, not silently waived. Final candidate commands and observed exact source SHA are retained in `final-candidate-evidence.json`: all selected gates passed at clean source be46ee45f2fa2c0e3b2789fbbeebe5aadbc1da8a. The handoff adds only evidence/checklist text over that tested source; independent review and acceptance remain pending.
 
 ## Executable command key and layer
 
