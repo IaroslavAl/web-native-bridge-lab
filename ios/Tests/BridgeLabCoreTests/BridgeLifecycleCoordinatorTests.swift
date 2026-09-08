@@ -1,10 +1,33 @@
 import Foundation
 import XCTest
+#if SWIFT_PACKAGE
 @testable import BridgeLabCore
+#else
+@testable import BridgeLab
+#endif
 @testable import TransportPackage
 
 @MainActor
 final class BridgeLifecycleCoordinatorTests: XCTestCase {
+    func testEngineAdmissionReturnsBeforeHTTPCompletionAndRevocationSettlesReceipt() async {
+        let network = LifecycleNetwork()
+        let executor = HTTPExecutor(
+            policy: .init(allowedOrigin: URL(string: "http://127.0.0.1:8788")!),
+            networkClient: network
+        )
+        let engine = BridgeEngine(executor: executor)
+        let session = await engine.activateDocument()
+        let admission = await engine.admit(.trusted(
+            #"{"v":1,"type":"request","session":"\#(session)","id":1,"method":"GET","url":"http://127.0.0.1:8788/test","headers":{},"body":null,"timeoutMs":30000}"#
+        ))
+        guard case .running = admission else { return XCTFail("admission must acknowledge a running task") }
+        XCTAssertEqual(network.taskCount, 1, "registered task count before completion")
+        await engine.revokeDocument()
+        let reply = await admission.result()
+        XCTAssertEqual(reply, .error(id: 1, code: "CANCELLED", message: "Request was cancelled"))
+        XCTAssertTrue(network.task.isCancelled, "underlying task cancelled")
+    }
+
     func testRevocationWaitsForAdmissionReceiptAndPublicationBeforeFreshActivation() async {
         let network = LifecycleNetwork()
         let executor = HTTPExecutor(

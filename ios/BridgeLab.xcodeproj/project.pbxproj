@@ -17,6 +17,8 @@
 		B10000000000000000000009 /* TransportPackage in Frameworks */ = {isa = PBXBuildFile; productRef = P10000000000000000000002 /* TransportPackage */; };
 		B1000000000000000000000A /* WKBridgeAdapterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000B /* WKBridgeAdapterTests.swift */; };
 /* End PBXBuildFile section */
+		B1000000000000000000000B /* BridgeLifecycleCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000C; };
+		B1000000000000000000000C /* BridgeLifecycleCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000D; };
 
 /* Begin PBXContainerItemProxy section */
 		C10000000000000000000001 = {
@@ -41,6 +43,8 @@
 		F1000000000000000000000A /* BridgeLabTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BridgeLabTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F1000000000000000000000B /* WKBridgeAdapterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WKBridgeAdapterTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+		F1000000000000000000000C = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgeLifecycleCoordinator.swift; sourceTree = "<group>"; };
+		F1000000000000000000000D = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgeLifecycleCoordinatorTests.swift; sourceTree = "<group>"; };
 
 /* Begin PBXFrameworksBuildPhase section */
 		D10000000000000000000001 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (B10000000000000000000008 /* TransportPackage in Frameworks */,); runOnlyForDeploymentPostprocessing = 0; };
@@ -50,9 +54,9 @@
 /* Begin PBXGroup section */
 		G10000000000000000000001 = {isa = PBXGroup; children = (G10000000000000000000002 /* Sources */, G10000000000000000000005 /* Tests */, G10000000000000000000006 /* Configuration */, G10000000000000000000007 /* Products */,); sourceTree = "<group>"; };
 		G10000000000000000000002 /* Sources */ = {isa = PBXGroup; children = (G10000000000000000000003 /* BridgeLabCore */, G10000000000000000000004 /* BridgeLabApp */,); path = Sources; sourceTree = "<group>"; };
-		G10000000000000000000003 /* BridgeLabCore */ = {isa = PBXGroup; children = (F10000000000000000000004 /* BridgeEngine.swift */, F10000000000000000000005 /* BridgePolicies.swift */,); path = BridgeLabCore; sourceTree = "<group>"; };
+		G10000000000000000000003 /* BridgeLabCore */ = {isa = PBXGroup; children = (F10000000000000000000004 /* BridgeEngine.swift */, F10000000000000000000005 /* BridgePolicies.swift */, F1000000000000000000000C,); path = BridgeLabCore; sourceTree = "<group>"; };
 		G10000000000000000000004 /* BridgeLabApp */ = {isa = PBXGroup; children = (F10000000000000000000001 /* BridgeLabApp.swift */, F10000000000000000000002 /* BridgeScreen.swift */, F10000000000000000000003 /* WKBridgeAdapter.swift */,); path = BridgeLabApp; sourceTree = "<group>"; };
-		G10000000000000000000005 /* Tests */ = {isa = PBXGroup; children = (F10000000000000000000006 /* BridgeEngineTests.swift */, F10000000000000000000007 /* BridgePolicyTests.swift */, F1000000000000000000000B /* WKBridgeAdapterTests.swift */,); path = Tests/BridgeLabCoreTests; sourceTree = "<group>"; };
+		G10000000000000000000005 /* Tests */ = {isa = PBXGroup; children = (F10000000000000000000006 /* BridgeEngineTests.swift */, F10000000000000000000007 /* BridgePolicyTests.swift */, F1000000000000000000000B /* WKBridgeAdapterTests.swift */, F1000000000000000000000D,); path = Tests/BridgeLabCoreTests; sourceTree = "<group>"; };
 		G10000000000000000000006 /* Configuration */ = {isa = PBXGroup; children = (F10000000000000000000008 /* Info.plist */,); path = BridgeLab; sourceTree = "<group>"; };
 		G10000000000000000000007 /* Products */ = {isa = PBXGroup; children = (F10000000000000000000009 /* BridgeLab.app */, F1000000000000000000000A /* BridgeLabTests.xctest */,); name = Products; sourceTree = "<group>"; };
 /* End PBXGroup section */
@@ -108,8 +112,8 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		D10000000000000000000003 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (B10000000000000000000001, B10000000000000000000002, B10000000000000000000003, B10000000000000000000004, B10000000000000000000005,); runOnlyForDeploymentPostprocessing = 0; };
-		D10000000000000000000004 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (B10000000000000000000006, B10000000000000000000007, B1000000000000000000000A,); runOnlyForDeploymentPostprocessing = 0; };
+		D10000000000000000000003 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (B10000000000000000000001, B10000000000000000000002, B10000000000000000000003, B10000000000000000000004, B10000000000000000000005, B1000000000000000000000B,); runOnlyForDeploymentPostprocessing = 0; };
+		D10000000000000000000004 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (B10000000000000000000006, B10000000000000000000007, B1000000000000000000000A, B1000000000000000000000C,); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */

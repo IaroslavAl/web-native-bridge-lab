@@ -2,7 +2,8 @@ import Foundation
 import TransportPackage
 
 public protocol HTTPExecuting: Sendable {
-    func execute(_ request: HTTPRequest) async -> HTTPResult
+    /// Must acknowledge registration, never await an HTTP lifetime or capacity.
+    func submit(_ request: HTTPRequest) async -> HTTPSubmission
     func cancel(id: Int) async -> Bool
     func cancelAll() async
 }
@@ -88,6 +89,11 @@ public actor BridgeEngine {
     }
 
     public func handle(_ incoming: BridgeIncoming) async -> BridgeReply {
+        await admit(incoming).result()
+    }
+
+    /// Lifecycle callers serialize this short operation with activate/revoke.
+    public func admit(_ incoming: BridgeIncoming) async -> BridgeAdmission {
         guard isActive else {
             return originDenied(id: nil)
         }
@@ -98,13 +104,13 @@ public actor BridgeEngine {
             return invalid(id: nil)
         case .trusted(let raw):
             guard raw.utf8.count <= Self.maximumMessageBytes else {
-                return .error(id: nil, code: "MESSAGE_TOO_LARGE", message: "Bridge message is too large")
+                return .immediate(.error(id: nil, code: "MESSAGE_TOO_LARGE", message: "Bridge message is too large"))
             }
             return await handleTrusted(raw)
         }
     }
 
-    private func handleTrusted(_ raw: String) async -> BridgeReply {
+    private func handleTrusted(_ raw: String) async -> BridgeAdmission {
         guard
             let data = raw.data(using: .utf8),
             let value = try? JSONSerialization.jsonObject(with: data),
@@ -114,7 +120,7 @@ public actor BridgeEngine {
         }
 
         guard let version = Self.integer(object["v"]), version == 1 else {
-            return .error(id: Self.recoverID(object), code: "UNSUPPORTED_VERSION", message: "Unsupported bridge version")
+            return .immediate(.error(id: Self.recoverID(object), code: "UNSUPPORTED_VERSION", message: "Unsupported bridge version"))
         }
         guard let type = object["type"] as? String else {
             return invalid(id: Self.recoverID(object))
@@ -125,7 +131,7 @@ public actor BridgeEngine {
             guard Set(object.keys) == ["v", "type"], let session else {
                 return invalid(id: nil)
             }
-            return .helloAck(session: session)
+            return .immediate(.helloAck(session: session))
         case "request":
             return await handleRequest(object)
         case "cancel":
@@ -135,7 +141,7 @@ public actor BridgeEngine {
         }
     }
 
-    private func handleRequest(_ object: [String: Any]) async -> BridgeReply {
+    private func handleRequest(_ object: [String: Any]) async -> BridgeAdmission {
         let expected: Set<String> = ["v", "type", "session", "id", "method", "url", "headers", "body", "timeoutMs"]
         let recoveredID = Self.recoverID(object)
         guard Set(object.keys) == expected else {
@@ -170,15 +176,10 @@ public actor BridgeEngine {
             body: body,
             timeoutMs: timeoutMs
         )
-        switch await executor.execute(request) {
-        case .response(let response):
-            return .response(response)
-        case .failure(let failure):
-            return .error(id: failure.id, code: failure.code, message: failure.message)
-        }
+        return BridgeAdmission(await executor.submit(request))
     }
 
-    private func handleCancel(_ object: [String: Any]) async -> BridgeReply {
+    private func handleCancel(_ object: [String: Any]) async -> BridgeAdmission {
         let expected: Set<String> = ["v", "type", "session", "id"]
         let recoveredID = Self.recoverID(object)
         guard Set(object.keys) == expected else {
@@ -195,15 +196,15 @@ public actor BridgeEngine {
         guard suppliedSession == session else {
             return originDenied(id: id)
         }
-        return .cancelAck(id: id, cancelled: await executor.cancel(id: id))
+        return .immediate(.cancelAck(id: id, cancelled: await executor.cancel(id: id)))
     }
 
-    private func invalid(id: Int?) -> BridgeReply {
-        .error(id: id, code: "INVALID_REQUEST", message: "Invalid bridge request")
+    private func invalid(id: Int?) -> BridgeAdmission {
+        .immediate(.error(id: id, code: "INVALID_REQUEST", message: "Invalid bridge request"))
     }
 
-    private func originDenied(id: Int?) -> BridgeReply {
-        .error(id: id, code: "ORIGIN_DENIED", message: "Bridge origin denied")
+    private func originDenied(id: Int?) -> BridgeAdmission {
+        .immediate(.error(id: id, code: "ORIGIN_DENIED", message: "Bridge origin denied"))
     }
 
     private static func integer(_ value: Any?) -> Int? {

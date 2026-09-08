@@ -31,7 +31,7 @@ public enum BridgeAdmission: Sendable {
 }
 
 /// Serializes short admission/control operations, never HTTP lifetimes. WebKit
-/// integration is deliberately deferred to stage B; callers must capture ingress
+/// callers must capture ingress
 /// synchronously on MainActor and return an acknowledged admission, not execute().
 @MainActor
 public final class BridgeLifecycleCoordinator {

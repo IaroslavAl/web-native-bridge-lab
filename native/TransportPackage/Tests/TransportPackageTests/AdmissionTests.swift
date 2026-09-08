@@ -92,7 +92,37 @@ final class AdmissionTests: XCTestCase {
         XCTAssertEqual(network.tasks.count, 1, "invalid request does not start network work")
     }
 
+    func testEmittedCompletionDoesNotWinUntilExecutorSelectsIt() async {
+        let network = MockNetworkClient()
+        let executor = HTTPExecutor(policy: .init(allowedOrigin: URL(string: "http://127.0.0.1:49152")!), networkClient: network)
+        guard case .running(let old) = await executor.submit(request(id: 1)) else { return XCTFail("old receipt") }
+        let cancelled = await executor.emitThenCancelForTest(id: 1) {
+            network.send(.response(status: 204, headers: [], expectedContentLength: 0), at: 0)
+            network.send(.complete(nil), at: 0)
+        }
+        XCTAssertTrue(cancelled, "cancel selected before the emitted relay event can enter the actor")
+        let oldResult = await old.result()
+        XCTAssertEqual(oldResult.failureCode, "CANCELLED", "emission is not terminal selection")
+        guard case .running(let fresh) = await executor.submit(request(id: 1)) else { return XCTFail("fresh receipt") }
+        network.send(.response(status: 204, headers: [], expectedContentLength: 0), at: 1)
+        network.send(.complete(nil), at: 1)
+        let selected = await fresh.result()
+        let lateCancel = await executor.cancel(id: 1)
+        XCTAssertFalse(lateCancel, "response selection before cancellation wins")
+        XCTAssertEqual(selected, .response(.init(id: 1, status: 204, headers: [:], body: "")))
+    }
+
     private func request(id: Int) -> HTTPRequest {
         .init(id: id, method: "GET", url: "http://127.0.0.1:49152/test", headers: [:], body: nil, timeoutMs: 30_000)
+    }
+}
+
+private extension HTTPExecutor {
+    // Both calls execute on this actor. cancel has no suspension in its body;
+    // the relay consumer cannot enter between emission and active-record removal.
+    // No test hook or alternate arbiter is added to production.
+    func emitThenCancelForTest(id: Int, emit: @Sendable () -> Void) async -> Bool {
+        emit()
+        return await cancel(id: id)
     }
 }

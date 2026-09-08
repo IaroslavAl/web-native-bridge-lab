@@ -6,40 +6,38 @@ final class WKBridgeAdapter: NSObject {
     static let handlerName = "nativeHTTP"
 
     private let engine: BridgeEngine
+    private let lifecycle: BridgeLifecycleCoordinator
+    private let beforePublication: @MainActor (BridgeReply) async -> Void
     private let policy: TrustedPagePolicy
     private weak var webView: WKWebView?
     private var proxy: WeakReplyMessageHandler?
     private var committedURL: URL?
     private var documentIsActive = false
-    private var lifecycleTask: Task<Void, Never>?
-    private var lifecycleID: UInt64 = 0
+
     private var onLoadFailure: ((String?) -> Void)?
     private var didClose = false
 
-    init(engine: BridgeEngine, policy: TrustedPagePolicy) {
+    init(
+        engine: BridgeEngine,
+        policy: TrustedPagePolicy,
+        beforePublication: @escaping @MainActor (BridgeReply) async -> Void = { _ in }
+    ) {
         self.engine = engine
         self.policy = policy
+        self.beforePublication = beforePublication
+        self.lifecycle = BridgeLifecycleCoordinator(
+            activate: { _ = await engine.activateDocument() },
+            revoke: { await engine.revokeDocument() }
+        )
     }
 
-    deinit {
-        let retainedWebView = webView
-        if retainedWebView != nil {
-            Task { @MainActor in
-                retainedWebView?.configuration.userContentController.removeScriptMessageHandler(
-                    forName: "nativeHTTP",
-                    contentWorld: .page
-                )
-            }
-        }
-        guard !didClose else { return }
-        let engine = engine
-        Task {
-            await engine.revokeDocument()
-        }
+    isolated deinit {
+        // Fence before queued ingress can run; only the coordinator survives drain.
+        close()
     }
 
     func install(on webView: WKWebView, onLoadFailure: @escaping (String?) -> Void) {
-        precondition(self.webView == nil, "WKBridgeAdapter may only be installed once")
+        precondition(self.webView == nil && !didClose, "WKBridgeAdapter may only be installed once")
         self.webView = webView
         self.onLoadFailure = onLoadFailure
         let proxy = WeakReplyMessageHandler(delegate: self)
@@ -56,7 +54,6 @@ final class WKBridgeAdapter: NSObject {
         didClose = true
         documentIsActive = false
         committedURL = nil
-        lifecycleID &+= 1
         if let webView {
             webView.configuration.userContentController.removeScriptMessageHandler(
                 forName: Self.handlerName,
@@ -68,65 +65,46 @@ final class WKBridgeAdapter: NSObject {
         }
         self.webView = nil
         proxy = nil
-        chainRevocation()
+        onLoadFailure = nil
+        lifecycle.revoke()
     }
 
     private func prepareForAllowedNavigation() {
         guard !didClose else { return }
         documentIsActive = false
         committedURL = nil
-        lifecycleID &+= 1
-        chainRevocation()
-    }
-
-    private func chainRevocation() {
-        let prior = lifecycleTask
-        let engine = engine
-        lifecycleTask = Task {
-            await prior?.value
-            await engine.revokeDocument()
-        }
+        lifecycle.revoke()
     }
 
     private func activateCommittedDocument(_ url: URL?) {
         guard !didClose else { return }
+        guard policy.allowsMainNavigation(to: url, targetIsMainFrame: true) else {
+            failDocumentLoad("Bridge origin denied")
+            return
+        }
         committedURL = url
         documentIsActive = true
-        let currentID = lifecycleID
-        let prior = lifecycleTask
-        let engine = engine
-        lifecycleTask = Task { [weak self] in
-            await prior?.value
-            guard let self, self.lifecycleID == currentID, self.documentIsActive else { return }
-            await engine.activateDocument()
-        }
+        lifecycle.commit()
     }
 
     private func failDocumentLoad(_ message: String) {
         guard !didClose else { return }
         documentIsActive = false
         committedURL = nil
-        lifecycleID &+= 1
-        chainRevocation()
+        lifecycle.revoke()
         onLoadFailure?(message)
     }
 
     fileprivate func receive(
-        _ message: WKScriptMessage,
+        body: Any,
+        frame: BridgeFrameOrigin,
         replyHandler: @escaping (Any?, String?) -> Void
     ) {
-        let securityOrigin = message.frameInfo.securityOrigin
-        let frame = BridgeFrameOrigin(
-            scheme: securityOrigin.protocol,
-            host: securityOrigin.host,
-            port: securityOrigin.port,
-            isMainFrame: message.frameInfo.isMainFrame
-        )
         let trusted = policy.allows(frame: frame, committedURL: committedURL, isActive: documentIsActive)
         let incoming: BridgeIncoming
         if !trusted {
             incoming = .untrusted
-        } else if let raw = message.body as? String {
+        } else if let raw = body as? String {
             incoming = .trusted(raw)
         } else {
             incoming = .trustedNonString
@@ -139,23 +117,14 @@ final class WKBridgeAdapter: NSObject {
         _ incoming: BridgeIncoming,
         replyHandler: @escaping (Any?, String?) -> Void
     ) {
-        let invocationLifecycleID = lifecycleID
-        let activation = lifecycleTask
         let engine = engine
         let reply = ReplyOnce(replyHandler)
-        Task { [weak self] in
-            await activation?.value
-            guard self?.isCurrentInvocation(invocationLifecycleID) == true else {
-                reply.call(Self.originDeniedReply, nil)
-                return
-            }
-            let result = await engine.handle(incoming)
-            guard self?.isCurrentInvocation(invocationLifecycleID) == true else {
-                reply.call(Self.replyForRetiredInvocation(result), nil)
-                return
-            }
+        let beforePublication = beforePublication
+        // Captures generation synchronously, including calls through WebKit's proxy.
+        lifecycle.receive(admit: { await engine.admit(incoming) }, publish: { result in
+            await beforePublication(result)
             reply.call(result.webObject, nil)
-        }
+        })
     }
 
     func navigationPolicy(for url: URL?, targetIsMainFrame: Bool?) -> WKNavigationActionPolicy {
@@ -182,29 +151,6 @@ final class WKBridgeAdapter: NSObject {
         failDocumentLoad("Web content process terminated")
     }
 
-    private func isCurrentInvocation(_ invocationLifecycleID: UInt64) -> Bool {
-        !didClose && documentIsActive && lifecycleID == invocationLifecycleID
-    }
-
-    private static func replyForRetiredInvocation(_ result: BridgeReply) -> [String: Any] {
-        if case let .error(id, code, _) = result, id != nil, code == "CANCELLED" {
-            return result.webObject
-        }
-        if case let .response(response) = result {
-            return BridgeReply.error(
-                id: response.id,
-                code: "CANCELLED",
-                message: "Request was cancelled"
-            ).webObject
-        }
-        return originDeniedReply
-    }
-
-    private static let originDeniedReply = BridgeReply.error(
-        id: nil,
-        code: "ORIGIN_DENIED",
-        message: "Bridge origin denied"
-    ).webObject
 }
 
 extension WKBridgeAdapter: WKNavigationDelegate {
@@ -242,7 +188,8 @@ extension WKBridgeAdapter: WKNavigationDelegate {
     }
 }
 
-private final class WeakReplyMessageHandler: NSObject, WKScriptMessageHandlerWithReply {
+@MainActor
+final class WeakReplyMessageHandler: NSObject, WKScriptMessageHandlerWithReply {
     weak var delegate: WKBridgeAdapter?
 
     init(delegate: WKBridgeAdapter) {
@@ -254,6 +201,16 @@ private final class WeakReplyMessageHandler: NSObject, WKScriptMessageHandlerWit
         didReceive message: WKScriptMessage,
         replyHandler: @escaping (Any?, String?) -> Void
     ) {
+        let origin = message.frameInfo.securityOrigin
+        forward(body: message.body, frame: BridgeFrameOrigin(
+            scheme: origin.protocol, host: origin.host, port: origin.port,
+            isMainFrame: message.frameInfo.isMainFrame
+        ), replyHandler: replyHandler)
+    }
+
+    // Shared synchronous ingress; tests supply provenance tuples, WebKit supplies
+    // actual securityOrigin/frameInfo above. Neither path inserts a Task hop.
+    func forward(body: Any, frame: BridgeFrameOrigin, replyHandler: @escaping (Any?, String?) -> Void) {
         guard let delegate else {
             replyHandler([
                 "v": 1,
@@ -264,29 +221,21 @@ private final class WeakReplyMessageHandler: NSObject, WKScriptMessageHandlerWit
             ], nil)
             return
         }
-        Task { @MainActor in
-            delegate.receive(message, replyHandler: replyHandler)
-        }
+        delegate.receive(body: body, frame: frame, replyHandler: replyHandler)
     }
 }
 
-final class ReplyOnce: @unchecked Sendable {
-    private let lock = NSLock()
-    private var didReply = false
-    private let handler: (Any?, String?) -> Void
+@MainActor
+final class ReplyOnce {
+    private var handler: ((Any?, String?) -> Void)?
 
     init(_ handler: @escaping (Any?, String?) -> Void) {
         self.handler = handler
     }
 
     func call(_ value: Any?, _ error: String?) {
-        lock.lock()
-        guard !didReply else {
-            lock.unlock()
-            return
-        }
-        didReply = true
-        lock.unlock()
+        guard let handler else { return }
+        self.handler = nil
         handler(value, error)
     }
 }

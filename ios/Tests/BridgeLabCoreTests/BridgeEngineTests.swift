@@ -159,6 +159,10 @@ private actor RecordingExecutor: HTTPExecuting {
 
     var requestCount: Int { requests.count }
 
+    func submit(_ request: HTTPRequest) async -> HTTPSubmission {
+        .immediate(await execute(request))
+    }
+
     func execute(_ request: HTTPRequest) async -> HTTPResult {
         requests.append(request)
         switch result {
