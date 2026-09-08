@@ -9,9 +9,24 @@ import {
 import { MockNativeBoundary } from "./test/MockNativeBoundary";
 
 const session = "0123456789abcdef0123456789abcdef";
+const MAX_RESPONSE_BODY_BYTES = 1_048_576;
 
 function response(id: number, body: string): BridgeResponse {
   return { v: 1, type: "response", id, status: 200, headers: { "content-type": "application/json" }, body };
+}
+
+function requestWithResponseBody(body: string) {
+  const native = new MockNativeBoundary((message) =>
+    message.type === "hello"
+      ? { v: 1, type: "helloAck", session }
+      : response(message.id as number, body),
+  );
+  return new BridgeClient(native).request({
+    method: "GET",
+    url: "http://127.0.0.1:8788/api/catalog",
+    headers: {},
+    body: null,
+  }).promise;
 }
 
 describe("BridgeClient with explicitly mocked native boundary", () => {
@@ -78,6 +93,26 @@ describe("BridgeClient with explicitly mocked native boundary", () => {
     });
 
     await expect(pending.promise).rejects.toMatchObject({ code: "PROTOCOL_ERROR" });
+  });
+
+  it("accepts a response body at the inclusive 1048576-byte boundary", async () => {
+    const reply = await requestWithResponseBody("a".repeat(MAX_RESPONSE_BODY_BYTES));
+
+    expect(new TextEncoder().encode(reply.body)).toHaveLength(MAX_RESPONSE_BODY_BYTES);
+  });
+
+  it("rejects a response body one byte over the 1048576-byte boundary", async () => {
+    await expect(
+      requestWithResponseBody("a".repeat(MAX_RESPONSE_BODY_BYTES + 1)),
+    ).rejects.toMatchObject({ code: "PROTOCOL_ERROR" });
+  });
+
+  it("measures the response body bound in UTF-8 bytes rather than JavaScript characters", async () => {
+    const body = `${"a".repeat(MAX_RESPONSE_BODY_BYTES - 1)}é`;
+    expect(body).toHaveLength(MAX_RESPONSE_BODY_BYTES);
+    expect(new TextEncoder().encode(body)).toHaveLength(MAX_RESPONSE_BODY_BYTES + 1);
+
+    await expect(requestWithResponseBody(body)).rejects.toMatchObject({ code: "PROTOCOL_ERROR" });
   });
 
   it("maps native timeout and cancellation errors without a JavaScript deadline", async () => {

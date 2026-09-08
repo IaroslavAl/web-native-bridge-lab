@@ -4,35 +4,35 @@ Candidate scope: `web/` only, based on independently approved foundation `e9f338
 
 ## Exact local gates
 
-All commands ran from the assigned worktree on Node `v26.5.0` and npm `11.17.0`.
+All commands ran from the assigned worktree on Node `v26.5.0` and npm `11.17.0`; commands wrapped in `cd web` ran from the scoped module directory.
 
 | Command | Result |
 | --- | --- |
-| `npm ci --prefix web --no-audit --no-fund --cache "$PWD/.artifacts/npm-cache"` | exit 0; 185 packages installed from lockfile |
-| `npm --prefix web test -- --run` | exit 0; 3 files, 20 tests passed |
+| `(cd web && npm ci --no-audit --no-fund --cache ../.artifacts/npm-cache)` | exit 0; 193 packages installed from lockfile |
+| `(cd web && npm audit --audit-level=high)` | exit 0; full production and development tree, 0 vulnerabilities |
+| `npm --prefix web test -- --run --reporter=dot` | exit 0; 3 files, 23 tests passed |
 | `npm --prefix web run typecheck` | exit 0 |
-| `npm --prefix web run build:a` | exit 0; external JS/CSS production assets |
-| `npm --prefix web run build:b` | exit 0; external JS/CSS production assets; final `web/dist` |
-| `(cd web && npm audit --omit=dev --audit-level=high)` | exit 0; 0 vulnerabilities |
+| `npm --prefix web run build:a` twice | both exit 0; byte-identical external JS/CSS production assets |
+| `npm --prefix web run build:b` twice | both exit 0; byte-identical external JS/CSS production assets; final `web/dist` |
 | `node protocol/v1/validate.cjs` | exit 0; 36 schema/example classifications passed |
 | `OPENSPEC_TELEMETRY=0 OPENSPEC_NO_COMPLETIONS=1 openspec/tooling/node_modules/.bin/openspec validate --all --strict --no-interactive --json` | exit 0; `add-bridge-lab` valid |
 | `git diff --check` | exit 0 |
 
-The local npm policy emitted a warning that install scripts for `esbuild@0.21.5` and optional `fsevents@2.3.3` were not pre-approved; installation and both Vite builds nevertheless completed successfully without changing global/profile policy.
+The reviewer-found Vite/Vitest advisories were resolved with exact pins `vite@7.3.6`, `@vitejs/plugin-react@5.2.0`, and `vitest@3.2.6`; the regenerated lockfile resolves `esbuild@0.28.2`. Full `npm audit --audit-level=high` reports zero vulnerabilities. The local npm policy still warns that install scripts for `esbuild@0.28.2` and optional `fsevents@2.3.3` are not pre-approved; clean install and all builds completed without changing global/profile policy. `npm ci` also prints the upstream `whatwg-encoding@3.1.1` deprecation warning.
 
 ## Deterministic web-only variants
 
-Exact final pre-commit build hashes:
+Exact round-2 pre-commit build hashes; each variant produced the same manifest on two consecutive clean-output builds:
 
-- Variant A: JS `fbf20b99233984998d9edca8997dec6b25932197c8e05b6d1944ac1fff2d3e2a`; CSS `e884af892d316d7f539507ac39fc254e01e79672e8dbee855a7c0be63760e067`; index `05f6d64a66cec6385440dcc4e54279575b1d6cf908bc53480709a917651d1e21`.
-- Variant B: JS `15482a0a07d86bf72ff90dbc46a521d373ff63db6cb8d6c8e4ae5e741295960f`; CSS `e884af892d316d7f539507ac39fc254e01e79672e8dbee855a7c0be63760e067`; index `9304f3c856c2b8e6ea25780fee354998cc5d903a33a3426e27775347b5d1d419`.
+- Variant A: JS `ef1217afc1a6326f5aadd1a3855a166eaa1742fdab742c76f5c9cca0565d8f83`; CSS `a30a77bb4e9fd5ecba1aba59f1d5c63488938cfa1c9530d5bd2064925273d6b2`; index `3df85175d29bb3639ec9e2f403434cfbd7f21bde14e7aca94012b257a101c6b9`.
+- Variant B: JS `97b3a2c8fdc080e725834e1a1c17b12ddb6623049bcf4efc8aa6eaa7e1d66d85`; CSS `a30a77bb4e9fd5ecba1aba59f1d5c63488938cfa1c9530d5bd2064925273d6b2`; index `5886f28090351f475934727d94b895c7da3f5cc3e80dbaa86aea63447217d86f`.
 
 A and B manifests differ. Built HTML has an external module script and stylesheet, no inline script/style. The built JavaScript contains no `fetch(` call; Vite's module-preload fetch polyfill is disabled. Production source contains no fetch/XHR fallback or test mock import.
 
 ## Requirement coverage
 
 - WS-01: catalog GET owns category query and list parsing; quote POST owns JSON body and nested quote parsing. Variant A defaults to catalog and variant B to quote while both expose the selector.
-- WS-02: tests cover loading/result, HTTP, business, JSON parse, native transport timeout/cancel, missing bridge, malformed/mismatched reply, concurrent out-of-order correlation and cancel isolation. Test native boundaries are explicitly named mocks and are absent from production imports.
+- WS-02: tests cover loading/result, HTTP, business, JSON parse, native transport timeout/cancel, missing bridge, malformed/mismatched reply, concurrent out-of-order correlation and cancel isolation. Reply parsing now fail-closes above the inclusive 1,048,576-byte UTF-8 response-body bound; tests cover exact ASCII acceptance, one-byte ASCII excess, and a multibyte excess whose JavaScript character length alone would fit. Test native boundaries are explicitly named mocks and are absent from production imports.
 - WS-03 module input: `build:a` and `build:b` replace the same `web/dist` with differing assets and behavior. Same installed iOS binary proof is intentionally deferred to integration/acceptance.
 - WB-03/04 web portions: one hello/session per document client, monotonic ids, correlated request/cancel promises, closed reply validation, and best-effort pagehide cancellation. Native revocation remains authoritative.
 

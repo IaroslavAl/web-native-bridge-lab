@@ -76,6 +76,7 @@ export class BridgeClientError extends Error {
 }
 
 const MAX_ID = 2_147_483_647;
+const MAX_RESPONSE_BODY_BYTES = 1_048_576;
 const SESSION_PATTERN = /^[0-9a-f]{32}$/;
 const RESPONSE_STATUSES_EXCLUDED = new Set([301, 302, 303, 307, 308]);
 const TRANSPORT_CODE_SET = new Set<string>(TRANSPORT_CODES);
@@ -166,6 +167,9 @@ function parseRequestReply(value: unknown, expectedId: number): BridgeResponse {
     typeof value.body !== "string"
   ) {
     throw protocolError("malformed or mismatched response envelope");
+  }
+  if (new TextEncoder().encode(value.body).length > MAX_RESPONSE_BODY_BYTES) {
+    throw protocolError("response body exceeds the UTF-8 byte bound");
   }
 
   return {
