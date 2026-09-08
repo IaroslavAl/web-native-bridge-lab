@@ -76,6 +76,28 @@ See [Stage4 evidence and explicit framework seams](docs/integration/STAGE4_WEBKI
 Production Diagnostics, adverse runner lifecycle and final reconciliation/review
 remain pending; none of these commands constitutes final acceptance.
 
+## Production Diagnostics and adverse operations (Stage5)
+
+    python3 scripts/tests/operations.py
+    scripts/verify simulator-stage5-production-ux
+
+Run these serially after `scripts/verify unit`. The UI mode repeats A/B and then
+uses the actual production Diagnostics controls: HTTP status/body, business/JSON
+errors, native timeout, visible loading and independent slow cancellation with the
+fast result preserved. The slow diagnostic now waits10s (15s native deadline),
+giving the user time to cancel. It does not load the opt-in acceptance React page.
+
+The operations gate deliberately interrupts fresh owned runner processes before
+and after service ownership, injects a failing command, checks actual service
+signals with active work and repeat start/stop, and proves a synthetic foreign
+listener survives occupied-port refusal. Expected child failures must still yield
+an overall gate PASS and verified cleanup. Only newly created process groups,
+canonical owned lab state and recorded dedicated Simulators may be stopped.
+SIGKILL/crash and instruction-level startup races are not automatically recoverable
+guarantees; see [Stage5 evidence, recovery and limits](docs/integration/STAGE5_UX_OPERATIONS.md).
+Full exact-RC regression, traceability reconciliation and independent review remain
+pending. This is not final acceptance.
+
 ## Manual demonstration
 
     npm ci --prefix web

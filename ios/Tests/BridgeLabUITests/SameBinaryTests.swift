@@ -64,6 +64,11 @@ final class SameBinaryTests: XCTestCase {
         b.name = "Actual React quote B"; b.lifetime = .keepAlways; add(b)
         try await waitForHost("b-observed")
         try await waitForHost("finish") // host hashes B before test runner terminates the app
+        if try await control("production-ux-enabled") {
+            try productionDiagnostics(in: app)
+            try await waitForHost("matrix-observed")
+            return
+        }
         if try await control("diagnostics-enabled") {
             app.buttons["lab.reload"].tap()
             try requireText("Stage2 test-only outcomes", in: app)
@@ -110,5 +115,45 @@ final class SameBinaryTests: XCTestCase {
             outcomes.lifetime = .keepAlways
             add(outcomes)
         }
+    }
+
+    @MainActor
+    private func productionDiagnostics(in app: XCUIApplication) throws {
+        func tap(_ label: String) {
+            let button = app.webViews.buttons[label]
+            for _ in 0..<6 {
+                if button.isHittable { break }
+                app.webViews.firstMatch.swipeUp()
+            }
+            XCTAssertTrue(button.isHittable, "Production button not hittable: \(label)")
+            button.tap()
+        }
+        try requireText("Diagnostics", in: app)
+        XCTAssertFalse(app.webViews.buttons["Cancel active request"].isEnabled)
+        tap("HTTP error")
+        try requireText("HTTP: HTTP 503: {\"error\":{\"code\":\"UNAVAILABLE\",\"message\":\"Try later\"}}", in: app)
+        tap("Business error")
+        try requireText("business: OUT_OF_STOCK: Not available", in: app)
+        tap("Malformed JSON")
+        try requireText("JSON parse: Response body is not valid JSON.", in: app)
+        tap("Native timeout")
+        try requireText("transport TIMEOUT:", in: app)
+        tap("Run concurrent requests")
+        let loading = XCTAttachment(string: app.debugDescription)
+        loading.name = "Production loading accessibility tree"
+        loading.lifetime = .keepAlways
+        add(loading)
+        try requireText("loading", in: app)
+        XCTAssertTrue(app.webViews.buttons["Cancel active request"].isEnabled)
+        tap("Cancel active request")
+        try requireText("transport CANCELLED:", in: app)
+        try requireText("fast — 10 ms", in: app)
+        XCTAssertFalse(app.webViews.buttons["Cancel active request"].isEnabled)
+        XCTAssertFalse(app.webViews.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "slow — 10000 ms")).firstMatch.exists)
+        XCTAssertFalse(app.webViews.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "loading")).firstMatch.exists)
+        let evidence = XCTAttachment(string: app.debugDescription)
+        evidence.name = "Actual production Diagnostics UI"
+        evidence.lifetime = .keepAlways
+        add(evidence)
     }
 }

@@ -38,6 +38,8 @@ Stage3 bounded evidence: `scripts/verify simulator-stage3-trust-limits` adds act
 
 Stage4 component evidence: `scripts/verify simulator-stage4-webkit-privacy` runs actual WebKit frame provenance (test-only outer navigation bypass, no production CSP relaxation), navigation/reload/provisional failure/close/destruction with real socket cancellation, fresh-id isolation and synthetic native/WK cookie/cache/challenge isolation. See docs/integration/STAGE4_WEBKIT_PRIVACY.md for observed layers, mutation checks and irreducible/deferred gaps. No installed-React or actual OS process-termination claim;6.3 remains unchecked.
 
+Stage5 bounded evidence: `scripts/verify simulator-stage5-production-ux` exercises the real production Diagnostics UI after same-installed-app A/B; `python3 scripts/tests/operations.py` exercises owned SIGINT/SIGTERM/command-failure cleanup and synthetic foreign-port preservation. Existing slow diagnostic now allows10s for cancellation (15s native deadline); no new product controls or policy changes. See docs/integration/STAGE5_UX_OPERATIONS.md and its observed evidence JSON for actual test layers, discovered runner fixes and explicit interruption limits. Final source regression/reconciliation and independent review are still required;6.3/6.4 remain unchecked.
+
 ## 7. Independent product acceptance and closure
 
 - [ ] 7.1 Independent verifier repeats exact-RC real Simulator/security/lifecycle/same-binary gates and reports passed/failed/skipped plus limits.

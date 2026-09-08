@@ -130,6 +130,46 @@ class Run:
     def capture(self, args):
         return subprocess.check_output(args, cwd=ROOT, env=self.env, text=True).strip()
 
+    def spawn(self, args, log, env=None):
+        # A group is owned only because THIS run created its session leader.
+        # Never reconstruct ownership from a recorded PID or a process-name scan.
+        child = subprocess.Popen(args, cwd=ROOT, env=env or self.env, stdout=log,
+                                 stderr=subprocess.STDOUT, start_new_session=True)
+        self.children.append(child)
+        return child
+
+    def stop_child(self, child):
+        assert child in self.children, 'refusing unowned process group'
+        def live_members():
+            # Darwin killpg(group, 0) can return EPERM while the last member exits.
+            # Inspect numeric group/state only; zombies cannot own listeners.
+            rows = subprocess.check_output(['/bin/ps', '-axo', 'pid=,pgid=,stat='], text=True)
+            return [row for row in rows.splitlines()
+                    if row.split()[1] == str(child.pid) and not row.split()[2].startswith('Z')]
+
+        def send(signum):
+            try:
+                os.killpg(child.pid, signum)
+            except ProcessLookupError:
+                pass
+            except PermissionError:
+                if live_members():
+                    raise
+
+        send(signal.SIGTERM)
+        deadline = time.monotonic() + 2
+        while live_members() and time.monotonic() < deadline:
+            child.poll()
+            time.sleep(0.05)
+        if live_members():
+            send(signal.SIGKILL)
+        child.wait(timeout=10)
+        deadline = time.monotonic() + 5
+        while live_members() and time.monotonic() < deadline:
+            time.sleep(0.05)
+        assert not live_members(), 'owned command descendants survived cleanup'
+        self.children.remove(child)
+
     def command(self, name, args, timeout=600, allowed=(0,)):
         args = [str(arg) for arg in args]
         print(f'RUN {name}', flush=True)
@@ -137,19 +177,11 @@ class Run:
         self.commands.append(record)
         save(self.out / 'commands.json', self.commands)
         with (self.out / (name + '.log')).open('w') as log:
-            child = subprocess.Popen(args, cwd=ROOT, env=self.env, stdout=log, stderr=subprocess.STDOUT)
-            self.children.append(child)
+            child = self.spawn(args, log)
             try:
                 code = child.wait(timeout=timeout)
-            except BaseException:
-                child.terminate()
-                try:
-                    child.wait(timeout=15)
-                except subprocess.TimeoutExpired:
-                    child.kill(); child.wait()
-                raise
             finally:
-                self.children.remove(child)
+                self.stop_child(child)
             record['exit_code'] = code
         save(self.out / 'commands.json', self.commands)
         if code not in allowed:
@@ -191,7 +223,7 @@ class Run:
         self.command('diff-check', ['git', 'diff', '--check'])
         save(self.out / 'result.json', {'unit': 'PASS', 'final_acceptance': False})
 
-    def simulator(self, stage2=False, stage3=False):
+    def simulator(self, stage2=False, stage3=False, stage5=False):
         require_free_ports() # before creating resources; never steal existing lab services
         udid = None
         started = False
@@ -225,15 +257,14 @@ class Run:
             control.mkdir()
             for name in ('ready', 'a-observed', 'b-observed'):
                 (control / (name + '.txt')).write_text(name)
-            self.command('lab-start', lab + ['start'] + options)
             started = True
+            self.command('lab-start', lab + ['start'] + options)
             self.command('lab-status', lab + ['status'] + options)
             args = base + ['-scheme', 'BridgeLabAcceptance', '-resultBundlePath', str(self.out / 'ab.xcresult'), 'test-without-building']
             record = {'name': 'ab-ui', 'argv': args, 'log': 'ab-ui.log'}
             self.commands.append(record); save(self.out / 'commands.json', self.commands)
             test_log = (self.out / 'ab-ui.log').open('w')
-            tester = subprocess.Popen(args, cwd=ROOT, env=self.env, stdout=test_log, stderr=subprocess.STDOUT)
-            self.children.append(tester)
+            tester = self.spawn(args, test_log)
             server_log = self.out / 'lab/server.log'
 
             def wait_event(name):
@@ -275,7 +306,23 @@ class Run:
                     (control / (name + '.txt')).write_text(name)
                 if stage3:
                     (control / 'trust-enabled.txt').write_text('test-only trust probes')
+            if stage5:
+                for name in ('production-ux-enabled', 'matrix-observed'):
+                    (control / (name + '.txt')).write_text(name)
             (control / 'finish.txt').write_text('release')
+            if stage5:
+                wait_event('matrix-observed')
+                require_same_app(before, self.installed(udid, 'installed-after-production-ux'))
+                ux_log = server_log.read_text()[trust_offset:]
+                (self.out / 'stage5-backend.log').write_text(ux_log)
+                for event in ('GET /fixtures/http-error 503 tag=diagnostic',
+                              'GET /fixtures/business-error 200 tag=diagnostic',
+                              'GET /fixtures/malformed-json 200 tag=diagnostic',
+                              'GET /fixtures/delay connection-close tag=diagnostic',
+                              'GET /fixtures/delay connection-close tag=concurrent-slow',
+                              'GET /fixtures/delay 200 tag=concurrent-fast'):
+                    assert ux_log.splitlines().count(event) == 1, f'production UI backend event: {event}'
+                assert 'GET /fixtures/delay 200 tag=concurrent-slow' not in ux_log, 'cancelled slow succeeded'
             if stage2 or stage3:
                 wait_event('matrix-observed')
                 if stage3:
@@ -305,6 +352,8 @@ class Run:
                  'executable_sha256': before['files']['BridgeLab'], 'manifest_sha256': hashlib.sha256(json.dumps(before['files'], sort_keys=True).encode()).hexdigest(),
                  'installed_files': len(before['files']), 'same_container': True, 'same_manifest': True,
                  'web_A': a_web, 'web_B': b_web}
+            if stage5:
+                result['stage5_production_ux'] = 'PASS'
             if stage2:
                 result['stage2_outcomes'] = 'PASS'
                 result['stage2_events'] = events
@@ -316,13 +365,7 @@ class Run:
         finally:
             cleanup_errors = []
             if tester is not None:
-                if tester.poll() is None:
-                    tester.terminate()
-                    try:
-                        tester.wait(timeout=15)
-                    except subprocess.TimeoutExpired:
-                        tester.kill(); tester.wait()
-                self.children.remove(tester)
+                self.stop_child(tester)
             if test_log is not None:
                 test_log.close()
             if started:
@@ -360,9 +403,8 @@ class Run:
         cleanup_errors = []
         try:
             with (self.out / 'fixture.log').open('w') as log:
-                fixture = subprocess.Popen(['node', str(ROOT / 'scripts/tests/webkit-fixture.mjs'),
-                                            str(self.out / 'events.json')], cwd=ROOT, stdout=log, stderr=subprocess.STDOUT)
-            self.children.append(fixture)
+                fixture = self.spawn(['node', str(ROOT / 'scripts/tests/webkit-fixture.mjs'),
+                                      str(self.out / 'events.json')], log)
             deadline = time.monotonic() + 10
             while True:
                 assert fixture.poll() is None, 'owned fixture exited before readiness'
@@ -393,13 +435,7 @@ class Run:
             require_stage4_events(json.loads((self.out / 'events.json').read_text()))
         finally:
             if fixture:
-                if fixture.poll() is None:
-                    fixture.terminate()
-                    try:
-                        fixture.wait(timeout=10)
-                    except subprocess.TimeoutExpired:
-                        fixture.kill(); fixture.wait()
-                self.children.remove(fixture)
+                self.stop_child(fixture)
                 try:
                     require_free_ports()
                 except Exception as error:
@@ -424,7 +460,7 @@ class Run:
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('mode', choices=['unit', 'simulator-stage1', 'simulator-stage2-outcomes', 'simulator-stage3-trust-limits', 'simulator-stage4-webkit-privacy'])
+    parser.add_argument('mode', choices=['unit', 'simulator-stage1', 'simulator-stage2-outcomes', 'simulator-stage3-trust-limits', 'simulator-stage4-webkit-privacy', 'simulator-stage5-production-ux'])
     args = parser.parse_args()
     def interrupted(signum, frame):
         raise KeyboardInterrupt(f'signal {signum}')
@@ -437,7 +473,7 @@ def main():
         elif args.mode == 'simulator-stage4-webkit-privacy':
             run.webkit()
         else:
-            run.simulator(stage2=args.mode == 'simulator-stage2-outcomes', stage3=args.mode == 'simulator-stage3-trust-limits')
+            run.simulator(stage2=args.mode == 'simulator-stage2-outcomes', stage3=args.mode == 'simulator-stage3-trust-limits', stage5=args.mode == 'simulator-stage5-production-ux')
         print(f'PASS {args.mode}; not final product acceptance. Evidence: {run.out}', flush=True)
     except BaseException as error:
         save(run.out / 'failure.json', {'error': str(error), 'type': type(error).__name__})

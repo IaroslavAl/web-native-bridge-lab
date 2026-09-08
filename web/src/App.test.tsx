@@ -83,7 +83,7 @@ describe("App with explicitly mocked native boundary", () => {
 
   it("keeps fast and slow requests correlated and cancels only the slow request", async () => {
     let settleSlow: ((value: unknown) => void) | undefined;
-    const { client } = clientFor((message) => {
+    const { client, native } = clientFor((message) => {
       if (message.type === "cancel") {
         settleSlow?.({ v: 1, type: "error", id: message.id, code: "CANCELLED", message: "Cancelled" });
         return { v: 1, type: "cancelAck", id: message.id, cancelled: true };
@@ -102,11 +102,26 @@ describe("App with explicitly mocked native boundary", () => {
     render(<App client={client} variant="A" />);
 
     await userEvent.click(screen.getByRole("button", { name: "Run concurrent requests" }));
+    // A human must have time to see loading and activate Cancel (not a one-second race).
+    expect(native.decodedMessages().find((message) => String(message.url).includes("label=slow")))
+      .toMatchObject({ url: "http://127.0.0.1:8788/fixtures/delay?ms=10000&label=slow", timeoutMs: 15000 });
     expect(await screen.findByText(/fast — 10 ms/)).toBeVisible();
     expect(screen.getByTestId("lab.loading")).toHaveTextContent("1 request");
     await userEvent.click(screen.getByTestId("lab.cancel"));
     expect(await screen.findByTestId("lab.error")).toHaveTextContent("transport CANCELLED");
     expect(screen.getByText(/fast — 10 ms/)).toBeVisible();
+  });
+
+  it("renders hostile opaque HTTP body as literal text in the production error panel", async () => {
+    const body = '<img src=x onerror="document.title=\'injected\'"> <script>alert(1)</script>';
+    const { client } = clientFor((message) => ({ v: 1, type: "response", id: message.id,
+      status: 503, headers: { "content-type": "text/plain" }, body }));
+    render(<App client={client} variant="A" />);
+    await userEvent.click(screen.getByRole("button", { name: "HTTP error" }));
+    const panel = await screen.findByTestId("lab.error");
+    expect(panel).toHaveTextContent(body);
+    expect(panel.querySelector("img,script")).toBeNull();
+    expect(document.title).not.toBe("injected");
   });
 
   it("shows bridge unavailable without a substitute network path", () => {

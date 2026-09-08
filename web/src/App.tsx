@@ -136,7 +136,7 @@ export function App({ client, variant, startupError }: AppProps) {
   function runConcurrent() {
     runRequest(
       "Slow diagnostic",
-      buildFixtureRequest("/fixtures/delay?ms=1000&label=slow", 5000, "concurrent-slow"),
+      buildFixtureRequest("/fixtures/delay?ms=10000&label=slow", 15000, "concurrent-slow"),
       interpretDelay,
       true,
     );
