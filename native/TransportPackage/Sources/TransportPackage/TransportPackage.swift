@@ -56,6 +56,49 @@ public enum HTTPResult: Sendable, Equatable {
     case failure(TransportFailure)
 }
 
+/// A short admission acknowledgement, not a wait for network completion.
+public enum HTTPSubmission: Sendable {
+    case immediate(HTTPResult)
+    case running(HTTPExecution)
+}
+
+/// Owns one immutable terminal value. The executor retains only active receipts;
+/// completed values live only as long as their callers retain the receipt.
+public final class HTTPExecution: @unchecked Sendable {
+    public let id: UUID
+    private let lock = NSLock()
+    private var selected: HTTPResult?
+    private var waiters: [CheckedContinuation<HTTPResult, Never>] = []
+
+    fileprivate init(id: UUID) {
+        self.id = id
+    }
+
+    public func result() async -> HTTPResult {
+        await withCheckedContinuation { continuation in
+            lock.lock()
+            if let selected {
+                lock.unlock()
+                continuation.resume(returning: selected)
+            } else {
+                waiters.append(continuation)
+                lock.unlock()
+            }
+        }
+    }
+
+    // Called synchronously in the executor's terminal-selection actor segment.
+    fileprivate func resolve(_ result: HTTPResult) {
+        lock.lock()
+        precondition(selected == nil, "HTTP execution selected twice")
+        selected = result
+        let pending = waiters
+        waiters.removeAll()
+        lock.unlock()
+        for waiter in pending { waiter.resume(returning: result) }
+    }
+}
+
 public struct TransportPolicy: Sendable {
     public let allowedOrigin: URL
 
@@ -196,7 +239,7 @@ public actor HTTPExecutor {
     private struct ActiveRequest {
         let executionID: UUID
         let task: HTTPNetworkTask
-        let continuation: CheckedContinuation<HTTPResult, Never>
+        let execution: HTTPExecution
         var status: Int?
         var headers: [(String, String)] = []
         var data = Data()
@@ -227,18 +270,27 @@ public actor HTTPExecutor {
     }
 
     public func execute(_ request: HTTPRequest) async -> HTTPResult {
+        switch submit(request) {
+        case .immediate(let result): return result
+        case .running(let execution): return await execution.result()
+        }
+    }
+
+    /// Returns only after validation and active task/deadline registration.
+    /// This actor segment never awaits capacity or the HTTP lifetime.
+    public func submit(_ request: HTTPRequest) -> HTTPSubmission {
         let url: URL
         switch validate(request) {
         case let .accepted(validatedURL):
             url = validatedURL
         case let .rejected(code, message):
-            return failure(id: request.id, code: code, message: message)
+            return .immediate(failure(id: request.id, code: code, message: message))
         }
         guard active[request.id] == nil else {
-            return failure(id: request.id, code: "INVALID_REQUEST", message: "Request id is already active")
+            return .immediate(failure(id: request.id, code: "INVALID_REQUEST", message: "Request id is already active"))
         }
         guard active.count < 8 else {
-            return failure(id: request.id, code: "BUSY", message: "Native request capacity is full")
+            return .immediate(failure(id: request.id, code: "BUSY", message: "Native request capacity is full"))
         }
 
         var urlRequest = URLRequest(url: url)
@@ -248,36 +300,31 @@ public actor HTTPExecutor {
             urlRequest.setValue(value, forHTTPHeaderField: name)
         }
 
-        return await withCheckedContinuation { continuation in
-            let executionID = UUID()
-            let eventRelay = NetworkEventRelay()
-            let task = networkClient.makeTask(request: urlRequest) { event in
-                eventRelay.send(event)
-            }
-            eventRelay.attach(task: task)
-            active[request.id] = ActiveRequest(
-                executionID: executionID,
-                task: task,
-                continuation: continuation,
-                eventRelay: eventRelay
-            )
-            let eventConsumer = Task { [weak self] in
-                for await event in eventRelay.stream {
-                    await self?.receive(event, id: request.id, executionID: executionID)
-                }
-            }
-            active[request.id]?.eventConsumer = eventConsumer
-            let deadline = deadlineScheduler.schedule(afterMilliseconds: request.timeoutMs) { [weak self] in
-                await self?.deadlineFired(id: request.id, executionID: executionID)
-            }
-            guard active[request.id] != nil else {
-                deadline.cancel()
-                task.cancel()
-                return
-            }
-            active[request.id]?.deadline = deadline
-            task.resume()
+        let executionID = UUID()
+        let execution = HTTPExecution(id: executionID)
+        let eventRelay = NetworkEventRelay()
+        let task = networkClient.makeTask(request: urlRequest) { event in
+            eventRelay.send(event)
         }
+        eventRelay.attach(task: task)
+        active[request.id] = ActiveRequest(
+            executionID: executionID,
+            task: task,
+            execution: execution,
+            eventRelay: eventRelay
+        )
+        let eventConsumer = Task { [weak self] in
+            for await event in eventRelay.stream {
+                await self?.receive(event, id: request.id, executionID: executionID)
+            }
+        }
+        active[request.id]?.eventConsumer = eventConsumer
+        let deadline = deadlineScheduler.schedule(afterMilliseconds: request.timeoutMs) { [weak self] in
+            await self?.deadlineFired(id: request.id, executionID: executionID)
+        }
+        active[request.id]?.deadline = deadline
+        task.resume()
+        return .running(execution)
     }
 
     public func cancel(id: Int) async -> Bool {
@@ -365,7 +412,7 @@ public actor HTTPExecutor {
             state.eventRelay.finish()
             state.eventConsumer?.cancel()
             state.deadline?.cancel()
-            state.continuation.resume(returning: .response(HTTPResponse(
+            state.execution.resolve(.response(HTTPResponse(
                 id: id,
                 status: status,
                 headers: headers,
@@ -380,7 +427,7 @@ public actor HTTPExecutor {
         state.eventConsumer?.cancel()
         state.deadline?.cancel()
         if cancel { state.task.cancel() }
-        state.continuation.resume(returning: failure(id: id, code: code, message: message))
+        state.execution.resolve(failure(id: id, code: code, message: message))
     }
 
     private func failure(id: Int, code: String, message: String) -> HTTPResult {
