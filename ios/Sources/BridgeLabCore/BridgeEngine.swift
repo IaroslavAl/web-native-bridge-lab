@@ -211,11 +211,10 @@ public actor BridgeEngine {
         guard let number = value as? NSNumber, String(cString: number.objCType) != "c" else {
             return nil
         }
-        let double = number.doubleValue
-        guard double.isFinite, double.rounded() == double, double >= Double(Int.min), double <= Double(Int.max) else {
-            return nil
-        }
-        return Int(double)
+        // Double(Int.max) rounds up outside Int's range on 64-bit targets.
+        // Exact conversion rejects overflow, non-finite values and fractions
+        // without trapping; protocol-specific bounds remain at the call sites.
+        return Int(exactly: number.doubleValue)
     }
 
     private static func recoverID(_ object: [String: Any]) -> Int? {
