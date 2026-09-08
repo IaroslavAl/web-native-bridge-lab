@@ -1,0 +1,281 @@
+#!/usr/bin/env python3
+"""Reproducible local gates. Stage1 is NOT the complete acceptance matrix."""
+import argparse
+import hashlib
+import json
+import os
+from pathlib import Path
+import signal
+import socket
+import subprocess
+import sys
+import time
+import uuid
+
+ROOT = Path(__file__).resolve().parent.parent
+APP_ID = 'lab.webnative.BridgeLab'
+
+
+def manifest(root):
+    """Hash all regular files, including hidden resources; reject ambiguous symlinks."""
+    files = {}
+    for path in sorted(Path(root).rglob('*')):
+        if path.is_symlink():
+            raise AssertionError(f'manifest symlink unsupported: {path}')
+        if path.is_file():
+            files[path.relative_to(root).as_posix()] = hashlib.sha256(path.read_bytes()).hexdigest()
+    assert files, f'manifest empty: {root}'
+    return files
+
+
+def require_same_app(before, after):
+    for field in ('udid', 'container', 'files'):
+        assert before[field] == after[field], f'installed app {field} changed'
+
+
+def save(path, value):
+    path.write_text(json.dumps(value, indent=2, sort_keys=True) + '\n')
+
+
+def require_free_ports():
+    sockets = []
+    try:
+        for port in (8787, 8788):
+            sock = socket.socket()
+            sockets.append(sock)
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            try:
+                sock.bind(('127.0.0.1', port))
+                sock.listen()
+            except OSError as error:
+                raise RuntimeError(f'loopback port {port} unavailable; foreign listeners untouched') from error
+    finally:
+        for sock in sockets:
+            sock.close()
+
+
+class Run:
+    def __init__(self, mode):
+        self.out = ROOT / '.artifacts' / ('verify-' + mode + '-' + uuid.uuid4().hex[:10])
+        self.out.mkdir(parents=True)
+        self.env = {**os.environ, 'OPENSPEC_TELEMETRY': '0', 'OPENSPEC_NO_COMPLETIONS': '1',
+                    'npm_config_cache': str(ROOT / '.artifacts/npm-cache'),
+                    'PYTHONDONTWRITEBYTECODE': '1'}
+        self.commands = []
+        self.children = []
+        print(f'Evidence: {self.out}', flush=True)
+        save(self.out / 'source.json', {'head_sha': self.capture(['git', 'rev-parse', 'HEAD']),
+                                      'branch': self.capture(['git', 'branch', '--show-current']),
+                                      'working_diff': self.capture(['git', 'diff', '--stat'])})
+
+    def capture(self, args):
+        return subprocess.check_output(args, cwd=ROOT, env=self.env, text=True).strip()
+
+    def command(self, name, args, timeout=600, allowed=(0,)):
+        args = [str(arg) for arg in args]
+        print(f'RUN {name}', flush=True)
+        record = {'name': name, 'argv': args, 'log': name + '.log'}
+        self.commands.append(record)
+        save(self.out / 'commands.json', self.commands)
+        with (self.out / (name + '.log')).open('w') as log:
+            child = subprocess.Popen(args, cwd=ROOT, env=self.env, stdout=log, stderr=subprocess.STDOUT)
+            self.children.append(child)
+            try:
+                code = child.wait(timeout=timeout)
+            except BaseException:
+                child.terminate()
+                try:
+                    child.wait(timeout=15)
+                except subprocess.TimeoutExpired:
+                    child.kill(); child.wait()
+                raise
+            finally:
+                self.children.remove(child)
+            record['exit_code'] = code
+        save(self.out / 'commands.json', self.commands)
+        if code not in allowed:
+            raise RuntimeError(f'{name} exit {code}; see {self.out / record["log"]}')
+        return code
+
+    def web(self, variant):
+        self.command('web-build-' + variant, ['npm', '--prefix', 'web', 'run', 'build:' + variant.lower(),
+                     '--', '--outDir', self.out / 'web', '--emptyOutDir'])
+        files = manifest(self.out / 'web')
+        save(self.out / ('web-' + variant + '.json'), files)
+        return files
+
+    def installed(self, udid, name):
+        container = self.capture(['xcrun', 'simctl', 'get_app_container', udid, APP_ID, 'app'])
+        value = {'udid': udid, 'container': container, 'files': manifest(Path(container))}
+        assert 'BridgeLab' in value['files'], 'installed executable BridgeLab missing'
+        assert not any('XCTest' in path or path.startswith('PlugIns/') for path in value['files']), 'A/B shell contains unit-test host artifacts'
+        save(self.out / (name + '.json'), value)
+        return value
+
+    def unit(self):
+        self.command('runner-tests', [sys.executable, '-m', 'unittest', 'discover', '-s', 'scripts/tests', '-v'])
+        self.command('spec-install', ['npm', 'ci', '--prefix', 'openspec/tooling', '--ignore-scripts', '--no-audit', '--no-fund'])
+        self.command('web-install', ['npm', 'ci', '--prefix', 'web', '--no-audit', '--no-fund'])
+        self.command('web-audit', ['npm', 'audit', '--prefix', 'web', '--audit-level=high'])
+        self.command('protocol', ['node', 'protocol/v1/validate.cjs'])
+        self.command('openspec', ['openspec/tooling/node_modules/.bin/openspec', 'validate', '--all', '--strict', '--no-interactive', '--json'])
+        self.command('backend', ['node', '--test', *sorted(str(p.relative_to(ROOT)) for p in (ROOT / 'backend/tests').glob('*.test.mjs'))])
+        self.command('native', ['swift', 'test', '--package-path', 'native/TransportPackage', '-Xswiftc', '-warnings-as-errors'])
+        self.command('ios-package', ['swift', 'test', '--package-path', 'ios', '-Xswiftc', '-warnings-as-errors'])
+        self.command('web-tests', ['npm', '--prefix', 'web', 'test', '--', '--run'])
+        self.command('web-types', ['npm', '--prefix', 'web', 'run', 'typecheck'])
+        a = self.web('A')
+        b = self.web('B')
+        assert a != b, 'web variants have identical file manifests'
+        self.command('diff-check', ['git', 'diff', '--check'])
+        save(self.out / 'result.json', {'unit': 'PASS', 'final_acceptance': False})
+
+    def simulator(self):
+        require_free_ports() # before creating resources; never steal existing lab services
+        udid = None
+        started = False
+        tester = None
+        test_log = None
+        lab = ['node', str(ROOT / 'scripts/lab')]
+        options = ['--state-dir', str(self.out / 'lab'), '--web-root', str(self.out / 'web')]
+        try:
+            runtimes = json.loads(self.capture(['xcrun', 'simctl', 'list', 'runtimes', '-j']))['runtimes']
+            runtime = next(r for r in runtimes if r['isAvailable'] and r['name'].startswith('iOS'))
+            device = next(d for d in runtime['supportedDeviceTypes'] if d['productFamily'] == 'iPhone')
+            udid = self.capture(['xcrun', 'simctl', 'create', 'PER85-Stage1-' + uuid.uuid4().hex[:8], device['identifier'], runtime['identifier']])
+            save(self.out / 'simulator.json', {'udid': udid, 'runtime': runtime['identifier'], 'device': device['identifier']})
+            self.command('boot', ['xcrun', 'simctl', 'boot', udid])
+            self.command('boot-ready', ['xcrun', 'simctl', 'bootstatus', udid, '-b'])
+            base = ['xcodebuild', '-project', 'ios/BridgeLab.xcodeproj', '-destination', 'platform=iOS Simulator,id=' + udid,
+                    '-derivedDataPath', str(self.out / 'derived'), 'CODE_SIGNING_ALLOWED=NO', '-parallel-testing-enabled', 'NO']
+            # Unit tests inject bundles into their host app. Keep that build tree separate
+            # so the A/B application is the uninstrumented production shell.
+            unit_base = [str(self.out / 'unit-derived') if arg == str(self.out / 'derived') else arg for arg in base]
+            self.command('ios-simulator-tests', unit_base + ['-scheme', 'BridgeLab', '-resultBundlePath', self.out / 'unit.xcresult', 'test'], timeout=900)
+            self.command('acceptance-build', base + ['-scheme', 'BridgeLabAcceptance', 'build-for-testing'], timeout=600)
+            app = self.out / 'derived/Build/Products/Debug-iphonesimulator/BridgeLab.app'
+            # Simulator replacement installs can retain the earlier unit-host PlugIns.
+            # Remove that test host before installing the clean shell, strictly before A.
+            self.command('remove-unit-host', ['xcrun', 'simctl', 'uninstall', udid, APP_ID])
+            self.command('install', ['xcrun', 'simctl', 'install', udid, app])
+            self.installed(udid, 'installed-before-ui-runner')
+            a_web = self.web('A')
+            control = self.out / 'web/stage1'
+            control.mkdir()
+            for name in ('ready', 'a-observed', 'b-observed'):
+                (control / (name + '.txt')).write_text(name)
+            self.command('lab-start', lab + ['start'] + options)
+            started = True
+            self.command('lab-status', lab + ['status'] + options)
+            args = base + ['-scheme', 'BridgeLabAcceptance', '-resultBundlePath', str(self.out / 'ab.xcresult'), 'test-without-building']
+            record = {'name': 'ab-ui', 'argv': args, 'log': 'ab-ui.log'}
+            self.commands.append(record); save(self.out / 'commands.json', self.commands)
+            test_log = (self.out / 'ab-ui.log').open('w')
+            tester = subprocess.Popen(args, cwd=ROOT, env=self.env, stdout=test_log, stderr=subprocess.STDOUT)
+            self.children.append(tester)
+            server_log = self.out / 'lab/server.log'
+
+            def wait_event(name):
+                deadline = time.monotonic() + 180
+                needle = 'GET /stage1/' + name + '.txt 200'
+                while time.monotonic() < deadline:
+                    if needle in server_log.read_text():
+                        return
+                    if tester.poll() is not None:
+                        raise RuntimeError(f'UI runner exited {tester.returncode} before {name}; see ab-ui.log')
+                    time.sleep(0.2)
+                raise RuntimeError(f'UI milestone missing: {name}; see ab-ui.log')
+
+            wait_event('ready')
+            before = self.installed(udid, 'installed-before-A')
+            (control / 'a-release.txt').write_text('release')
+            wait_event('a-observed')
+            after_a = self.installed(udid, 'installed-after-A')
+            require_same_app(before, after_a)
+            assert 'GET /api/catalog 200 tag=scenario-a' in server_log.read_text(), 'backend catalog attribution missing'
+            # From here to B observation: ONLY web build, control files and read-only hashes.
+            b_web = self.web('B')
+            assert a_web != b_web, 'web A/B manifest did not change'
+            control.mkdir()
+            (control / 'b-observed.txt').write_text('marker')
+            (control / 'b-release.txt').write_text('release')
+            wait_event('b-observed')
+            after_b = self.installed(udid, 'installed-after-B')
+            require_same_app(before, after_b)
+            assert 'POST /api/quote 200 tag=scenario-b' in server_log.read_text(), 'backend quote attribution missing'
+            (control / 'finish.txt').write_text('release')
+            code = tester.wait(timeout=120)
+            record['exit_code'] = code; save(self.out / 'commands.json', self.commands)
+            assert code == 0, f'UI test exit_code={code}; see ab-ui.log'
+            for name in ('unit', 'ab'):
+                summary = json.loads(self.capture(['xcrun', 'xcresulttool', 'get', 'test-results', 'summary', '--path', str(self.out / (name + '.xcresult')), '--format', 'json']))
+                save(self.out / (name + '-summary.json'), summary)
+                assert summary['failedTests'] == 0, f'{name} failedTests={summary["failedTests"]}'
+                assert summary['passedTests'] > 0, f'{name} passedTests=0'
+                assert summary['skippedTests'] == 0, f'{name} skippedTests={summary["skippedTests"]}'
+            result = {'stage1': 'PASS', 'final_acceptance': False, 'udid': udid,
+                 'executable_sha256': before['files']['BridgeLab'], 'manifest_sha256': hashlib.sha256(json.dumps(before['files'], sort_keys=True).encode()).hexdigest(),
+                 'installed_files': len(before['files']), 'same_container': True, 'same_manifest': True,
+                 'web_A': a_web, 'web_B': b_web}
+        finally:
+            cleanup_errors = []
+            if tester is not None:
+                if tester.poll() is None:
+                    tester.terminate()
+                    try:
+                        tester.wait(timeout=15)
+                    except subprocess.TimeoutExpired:
+                        tester.kill(); tester.wait()
+                self.children.remove(tester)
+            if test_log is not None:
+                test_log.close()
+            if started:
+                try:
+                    self.command('lab-stop', lab + ['stop'] + options)
+                    require_free_ports()
+                    self.command('lab-stopped-status', lab + ['status'] + options, allowed=(1,))
+                except Exception as error:
+                    cleanup_errors.append(str(error))
+            if udid:
+                try:
+                    states = json.loads(self.capture(['xcrun', 'simctl', 'list', 'devices', '-j']))['devices']
+                    current = next(d for group in states.values() for d in group if d['udid'] == udid)
+                    if current['state'] != 'Shutdown':
+                        self.command('simulator-shutdown', ['xcrun', 'simctl', 'shutdown', udid])
+                    self.command('simulator-delete', ['xcrun', 'simctl', 'delete', udid])
+                    states = json.loads(self.capture(['xcrun', 'simctl', 'list', 'devices', '-j']))['devices']
+                    assert all(d['udid'] != udid for group in states.values() for d in group), 'owned Simulator remains'
+                except Exception as error:
+                    cleanup_errors.append(str(error))
+            save(self.out / 'cleanup.json', {'errors': cleanup_errors, 'owned_simulator_removed': bool(udid) and not cleanup_errors,
+                                            'owned_services_stopped': started and not cleanup_errors})
+            if cleanup_errors:
+                raise RuntimeError('cleanup failed: ' + '; '.join(cleanup_errors))
+        # Never emit a successful result if cleanup failed.
+        save(self.out / 'result.json', result)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('mode', choices=['unit', 'simulator-stage1'])
+    args = parser.parse_args()
+    def interrupted(signum, frame):
+        raise KeyboardInterrupt(f'signal {signum}')
+    for signum in (signal.SIGINT, signal.SIGTERM):
+        signal.signal(signum, interrupted)
+    run = Run(args.mode)
+    try:
+        if args.mode == 'unit':
+            run.unit()
+        else:
+            run.simulator()
+        print(f'PASS {args.mode}; not final product acceptance. Evidence: {run.out}', flush=True)
+    except BaseException as error:
+        save(run.out / 'failure.json', {'error': str(error), 'type': type(error).__name__})
+        print(f'FAIL {args.mode}: {error}; evidence: {run.out}', file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

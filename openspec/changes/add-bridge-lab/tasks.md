@@ -29,8 +29,8 @@
 
 ## 6. Integrated RC and same-binary evidence (integration card)
 
-- [ ] 6.1 Merge all reviewed module heads preserving identities; implement scripts/verify and top-level reproducibility instructions.
-- [ ] 6.2 Run unit/build/schema/lifecycle suites and actual WKWebView catalog A → web-only build B → quote acceptance with unchanged installed executable/bundle hashes.
+- [x] 6.1 Merge all reviewed module heads preserving identities; implement scripts/verify and top-level reproducibility instructions. Stage1 checkpoint evidence: docs/integration/STAGE1.md; full Simulator failure matrix command remains Stage2.
+- [x] 6.2 Run unit/build/schema/lifecycle suites and actual WKWebView catalog A → web-only build B → quote acceptance with unchanged installed executable/bundle hashes. Stage1 actual Simulator42 + UI1 PASS, clean three-file installed shell unchanged; docs/integration/stage1-evidence.json. This is implementation evidence, not independent final acceptance.
 - [ ] 6.3 Exercise real error/JSON/timeout/cancel/concurrency/origin/iframe/redirect/navigation/size gates and preserve durable evidence, not just temporary log paths.
 - [ ] 6.4 Stop owned servers/Simulator session, verify released ports/foreign-process preservation and request independent same-card RC review.
 
@@ -40,4 +40,4 @@
 - [ ] 7.2 Delivery synthesis reconciles source/spec/tests/graph and reports accepted head, agent-flow evidence and safe coordinator next steps.
 - [ ] 7.3 Coordinator performs authorized canonical spec sync/archive only after required gates, final main/cleanup and owner RC handoff; no publication implied.
 
-All tasks are intentionally unchecked in the proposed foundation. Later completion must cite command-backed evidence and exact reviewed head, not merely existence of an artifact or a green document parser. Module workers avoid this shared file; integration/coordinator reconcile checkboxes from reviewed handoffs.
+Foundation originally left all tasks unchecked. Stage1 integration now records only its executed substeps above; full upstream checklist reconciliation and independent gates remain pending. Completion must cite command-backed evidence and exact reviewed head, not merely existence of an artifact or a green document parser. Module workers avoid this shared file; integration/coordinator reconcile checkboxes from reviewed handoffs.

@@ -1,0 +1,599 @@
+{
+  "ab-summary.json": {
+    "devicesAndConfigurations": [
+      {
+        "device": {
+          "architecture": "arm64",
+          "deviceId": "590F6FAA-46F4-408D-92D8-3939F5EF245C",
+          "deviceName": "PER85-Stage1-d3301f75",
+          "modelName": "iPhone 17 Pro",
+          "osBuildNumber": "23F77",
+          "osVersion": "26.5",
+          "platform": "iOS Simulator"
+        },
+        "expectedFailures": 0,
+        "failedTests": 0,
+        "passedTests": 1,
+        "skippedTests": 0,
+        "testPlanConfiguration": {
+          "configurationId": "1",
+          "configurationName": "Test Scheme Action"
+        }
+      }
+    ],
+    "environmentDescription": "BridgeLabAcceptance \u00b7 Built with macOS 26.6.2",
+    "expectedFailures": 0,
+    "failedTests": 0,
+    "finishTime": 1788863891.561,
+    "passedTests": 1,
+    "result": "Passed",
+    "skippedTests": 0,
+    "startTime": 1788863859.458,
+    "statistics": [],
+    "testFailures": [],
+    "title": "Test - BridgeLabAcceptance",
+    "topInsights": [],
+    "totalTestCount": 1
+  },
+  "backend_attribution": [
+    "GET /api/catalog 200 tag=scenario-a",
+    "POST /api/quote 200 tag=scenario-b"
+  ],
+  "cleanup.json": {
+    "errors": [],
+    "owned_services_stopped": true,
+    "owned_simulator_removed": true
+  },
+  "commands.json": [
+    {
+      "argv": [
+        "xcrun",
+        "simctl",
+        "boot",
+        "590F6FAA-46F4-408D-92D8-3939F5EF245C"
+      ],
+      "exit_code": 0,
+      "log": "boot.log",
+      "name": "boot"
+    },
+    {
+      "argv": [
+        "xcrun",
+        "simctl",
+        "bootstatus",
+        "590F6FAA-46F4-408D-92D8-3939F5EF245C",
+        "-b"
+      ],
+      "exit_code": 0,
+      "log": "boot-ready.log",
+      "name": "boot-ready"
+    },
+    {
+      "argv": [
+        "xcodebuild",
+        "-project",
+        "ios/BridgeLab.xcodeproj",
+        "-destination",
+        "platform=iOS Simulator,id=590F6FAA-46F4-408D-92D8-3939F5EF245C",
+        "-derivedDataPath",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/.artifacts/verify-simulator-stage1-7f955bba81/unit-derived",
+        "CODE_SIGNING_ALLOWED=NO",
+        "-parallel-testing-enabled",
+        "NO",
+        "-scheme",
+        "BridgeLab",
+        "-resultBundlePath",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/.artifacts/verify-simulator-stage1-7f955bba81/unit.xcresult",
+        "test"
+      ],
+      "exit_code": 0,
+      "log": "ios-simulator-tests.log",
+      "name": "ios-simulator-tests"
+    },
+    {
+      "argv": [
+        "xcodebuild",
+        "-project",
+        "ios/BridgeLab.xcodeproj",
+        "-destination",
+        "platform=iOS Simulator,id=590F6FAA-46F4-408D-92D8-3939F5EF245C",
+        "-derivedDataPath",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/.artifacts/verify-simulator-stage1-7f955bba81/derived",
+        "CODE_SIGNING_ALLOWED=NO",
+        "-parallel-testing-enabled",
+        "NO",
+        "-scheme",
+        "BridgeLabAcceptance",
+        "build-for-testing"
+      ],
+      "exit_code": 0,
+      "log": "acceptance-build.log",
+      "name": "acceptance-build"
+    },
+    {
+      "argv": [
+        "xcrun",
+        "simctl",
+        "uninstall",
+        "590F6FAA-46F4-408D-92D8-3939F5EF245C",
+        "lab.webnative.BridgeLab"
+      ],
+      "exit_code": 0,
+      "log": "remove-unit-host.log",
+      "name": "remove-unit-host"
+    },
+    {
+      "argv": [
+        "xcrun",
+        "simctl",
+        "install",
+        "590F6FAA-46F4-408D-92D8-3939F5EF245C",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/.artifacts/verify-simulator-stage1-7f955bba81/derived/Build/Products/Debug-iphonesimulator/BridgeLab.app"
+      ],
+      "exit_code": 0,
+      "log": "install.log",
+      "name": "install"
+    },
+    {
+      "argv": [
+        "npm",
+        "--prefix",
+        "web",
+        "run",
+        "build:a",
+        "--",
+        "--outDir",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/.artifacts/verify-simulator-stage1-7f955bba81/web",
+        "--emptyOutDir"
+      ],
+      "exit_code": 0,
+      "log": "web-build-A.log",
+      "name": "web-build-A"
+    },
+    {
+      "argv": [
+        "node",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/scripts/lab",
+        "start",
+        "--state-dir",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/.artifacts/verify-simulator-stage1-7f955bba81/lab",
+        "--web-root",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/.artifacts/verify-simulator-stage1-7f955bba81/web"
+      ],
+      "exit_code": 0,
+      "log": "lab-start.log",
+      "name": "lab-start"
+    },
+    {
+      "argv": [
+        "node",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/scripts/lab",
+        "status",
+        "--state-dir",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/.artifacts/verify-simulator-stage1-7f955bba81/lab",
+        "--web-root",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/.artifacts/verify-simulator-stage1-7f955bba81/web"
+      ],
+      "exit_code": 0,
+      "log": "lab-status.log",
+      "name": "lab-status"
+    },
+    {
+      "argv": [
+        "xcodebuild",
+        "-project",
+        "ios/BridgeLab.xcodeproj",
+        "-destination",
+        "platform=iOS Simulator,id=590F6FAA-46F4-408D-92D8-3939F5EF245C",
+        "-derivedDataPath",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/.artifacts/verify-simulator-stage1-7f955bba81/derived",
+        "CODE_SIGNING_ALLOWED=NO",
+        "-parallel-testing-enabled",
+        "NO",
+        "-scheme",
+        "BridgeLabAcceptance",
+        "-resultBundlePath",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/.artifacts/verify-simulator-stage1-7f955bba81/ab.xcresult",
+        "test-without-building"
+      ],
+      "exit_code": 0,
+      "log": "ab-ui.log",
+      "name": "ab-ui"
+    },
+    {
+      "argv": [
+        "npm",
+        "--prefix",
+        "web",
+        "run",
+        "build:b",
+        "--",
+        "--outDir",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/.artifacts/verify-simulator-stage1-7f955bba81/web",
+        "--emptyOutDir"
+      ],
+      "exit_code": 0,
+      "log": "web-build-B.log",
+      "name": "web-build-B"
+    },
+    {
+      "argv": [
+        "node",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/scripts/lab",
+        "stop",
+        "--state-dir",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/.artifacts/verify-simulator-stage1-7f955bba81/lab",
+        "--web-root",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/.artifacts/verify-simulator-stage1-7f955bba81/web"
+      ],
+      "exit_code": 0,
+      "log": "lab-stop.log",
+      "name": "lab-stop"
+    },
+    {
+      "argv": [
+        "node",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/scripts/lab",
+        "status",
+        "--state-dir",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/.artifacts/verify-simulator-stage1-7f955bba81/lab",
+        "--web-root",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/.artifacts/verify-simulator-stage1-7f955bba81/web"
+      ],
+      "exit_code": 1,
+      "log": "lab-stopped-status.log",
+      "name": "lab-stopped-status"
+    },
+    {
+      "argv": [
+        "xcrun",
+        "simctl",
+        "shutdown",
+        "590F6FAA-46F4-408D-92D8-3939F5EF245C"
+      ],
+      "exit_code": 0,
+      "log": "simulator-shutdown.log",
+      "name": "simulator-shutdown"
+    },
+    {
+      "argv": [
+        "xcrun",
+        "simctl",
+        "delete",
+        "590F6FAA-46F4-408D-92D8-3939F5EF245C"
+      ],
+      "exit_code": 0,
+      "log": "simulator-delete.log",
+      "name": "simulator-delete"
+    }
+  ],
+  "core_commands": [
+    {
+      "argv": [
+        "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "scripts/tests",
+        "-v"
+      ],
+      "exit_code": 0,
+      "log": "runner-tests.log",
+      "name": "runner-tests"
+    },
+    {
+      "argv": [
+        "npm",
+        "ci",
+        "--prefix",
+        "openspec/tooling",
+        "--ignore-scripts",
+        "--no-audit",
+        "--no-fund"
+      ],
+      "exit_code": 0,
+      "log": "spec-install.log",
+      "name": "spec-install"
+    },
+    {
+      "argv": [
+        "npm",
+        "ci",
+        "--prefix",
+        "web",
+        "--no-audit",
+        "--no-fund"
+      ],
+      "exit_code": 0,
+      "log": "web-install.log",
+      "name": "web-install"
+    },
+    {
+      "argv": [
+        "npm",
+        "audit",
+        "--prefix",
+        "web",
+        "--audit-level=high"
+      ],
+      "exit_code": 0,
+      "log": "web-audit.log",
+      "name": "web-audit"
+    },
+    {
+      "argv": [
+        "node",
+        "protocol/v1/validate.cjs"
+      ],
+      "exit_code": 0,
+      "log": "protocol.log",
+      "name": "protocol"
+    },
+    {
+      "argv": [
+        "openspec/tooling/node_modules/.bin/openspec",
+        "validate",
+        "--all",
+        "--strict",
+        "--no-interactive",
+        "--json"
+      ],
+      "exit_code": 0,
+      "log": "openspec.log",
+      "name": "openspec"
+    },
+    {
+      "argv": [
+        "node",
+        "--test",
+        "backend/tests/arguments.test.mjs",
+        "backend/tests/fixtures.test.mjs",
+        "backend/tests/lifecycle.test.mjs",
+        "backend/tests/port-retry.test.mjs",
+        "backend/tests/static-cleanup.test.mjs"
+      ],
+      "exit_code": 0,
+      "log": "backend.log",
+      "name": "backend"
+    },
+    {
+      "argv": [
+        "swift",
+        "test",
+        "--package-path",
+        "native/TransportPackage",
+        "-Xswiftc",
+        "-warnings-as-errors"
+      ],
+      "exit_code": 0,
+      "log": "native.log",
+      "name": "native"
+    },
+    {
+      "argv": [
+        "swift",
+        "test",
+        "--package-path",
+        "ios",
+        "-Xswiftc",
+        "-warnings-as-errors"
+      ],
+      "exit_code": 0,
+      "log": "ios-package.log",
+      "name": "ios-package"
+    },
+    {
+      "argv": [
+        "npm",
+        "--prefix",
+        "web",
+        "test",
+        "--",
+        "--run"
+      ],
+      "exit_code": 0,
+      "log": "web-tests.log",
+      "name": "web-tests"
+    },
+    {
+      "argv": [
+        "npm",
+        "--prefix",
+        "web",
+        "run",
+        "typecheck"
+      ],
+      "exit_code": 0,
+      "log": "web-types.log",
+      "name": "web-types"
+    },
+    {
+      "argv": [
+        "npm",
+        "--prefix",
+        "web",
+        "run",
+        "build:a",
+        "--",
+        "--outDir",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/.artifacts/verify-unit-9b9213adaf/web",
+        "--emptyOutDir"
+      ],
+      "exit_code": 0,
+      "log": "web-build-A.log",
+      "name": "web-build-A"
+    },
+    {
+      "argv": [
+        "npm",
+        "--prefix",
+        "web",
+        "run",
+        "build:b",
+        "--",
+        "--outDir",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/.artifacts/verify-unit-9b9213adaf/web",
+        "--emptyOutDir"
+      ],
+      "exit_code": 0,
+      "log": "web-build-B.log",
+      "name": "web-build-B"
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exit_code": 0,
+      "log": "diff-check.log",
+      "name": "diff-check"
+    }
+  ],
+  "installed-after-A.json": {
+    "container": "/Users/agent/Library/Developer/CoreSimulator/Devices/590F6FAA-46F4-408D-92D8-3939F5EF245C/data/Containers/Bundle/Application/10FF0945-F66B-4181-9C27-69ADAFA0C06F/BridgeLab.app",
+    "files": {
+      "BridgeLab": "cccde0b4d3f3c2520496b16921c4a228995e91752c6b2c59173deb20eb1845b9",
+      "Info.plist": "6b1a2db1c8fda820ef31bbf2327adc6c165e4c7687eee09efcb7ad16ead4226a",
+      "PkgInfo": "82502191c9484b04d685374f9879a0066069c49b8acae7a04b01d38d07e8eca0"
+    },
+    "udid": "590F6FAA-46F4-408D-92D8-3939F5EF245C"
+  },
+  "installed-after-B.json": {
+    "container": "/Users/agent/Library/Developer/CoreSimulator/Devices/590F6FAA-46F4-408D-92D8-3939F5EF245C/data/Containers/Bundle/Application/10FF0945-F66B-4181-9C27-69ADAFA0C06F/BridgeLab.app",
+    "files": {
+      "BridgeLab": "cccde0b4d3f3c2520496b16921c4a228995e91752c6b2c59173deb20eb1845b9",
+      "Info.plist": "6b1a2db1c8fda820ef31bbf2327adc6c165e4c7687eee09efcb7ad16ead4226a",
+      "PkgInfo": "82502191c9484b04d685374f9879a0066069c49b8acae7a04b01d38d07e8eca0"
+    },
+    "udid": "590F6FAA-46F4-408D-92D8-3939F5EF245C"
+  },
+  "installed-before-A.json": {
+    "container": "/Users/agent/Library/Developer/CoreSimulator/Devices/590F6FAA-46F4-408D-92D8-3939F5EF245C/data/Containers/Bundle/Application/10FF0945-F66B-4181-9C27-69ADAFA0C06F/BridgeLab.app",
+    "files": {
+      "BridgeLab": "cccde0b4d3f3c2520496b16921c4a228995e91752c6b2c59173deb20eb1845b9",
+      "Info.plist": "6b1a2db1c8fda820ef31bbf2327adc6c165e4c7687eee09efcb7ad16ead4226a",
+      "PkgInfo": "82502191c9484b04d685374f9879a0066069c49b8acae7a04b01d38d07e8eca0"
+    },
+    "udid": "590F6FAA-46F4-408D-92D8-3939F5EF245C"
+  },
+  "installed-before-ui-runner.json": {
+    "container": "/Users/agent/Library/Developer/CoreSimulator/Devices/590F6FAA-46F4-408D-92D8-3939F5EF245C/data/Containers/Bundle/Application/529A574C-84C0-4447-8072-06A7E899B0D1/BridgeLab.app",
+    "files": {
+      "BridgeLab": "cccde0b4d3f3c2520496b16921c4a228995e91752c6b2c59173deb20eb1845b9",
+      "Info.plist": "6b1a2db1c8fda820ef31bbf2327adc6c165e4c7687eee09efcb7ad16ead4226a",
+      "PkgInfo": "82502191c9484b04d685374f9879a0066069c49b8acae7a04b01d38d07e8eca0"
+    },
+    "udid": "590F6FAA-46F4-408D-92D8-3939F5EF245C"
+  },
+  "lifecycle": {
+    "lab-start": "started pid=39554 web=8787 api=8788\n",
+    "lab-status": "{\"state\":\"running\",\"webPort\":8787,\"apiPort\":8788,\"assetsAvailable\":true,\"processes\":[{\"pid\":39554,\"startIdentity\":\"Tue Sep  8 14:37:38 2026\",\"scriptPath\":\"/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/backend/server.mjs\",\"repoRoot\":\"/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391\"}]}\n",
+    "lab-stop": "stopped pid=39554\n",
+    "lab-stopped-status": "{\"state\":\"stopped\",\"webPort\":8787,\"apiPort\":8788,\"assetsAvailable\":true,\"processes\":[]}\n"
+  },
+  "raw_log_sha256": {
+    "verify-simulator-stage1-7f955bba81/ab-ui.log": "5a8cf29af8c2b49fafe7297d952ebdf49e3befd9d926f99b4f83c2a579cf915e",
+    "verify-simulator-stage1-7f955bba81/acceptance-build.log": "ea9d957cd83d9a21d17f3ef3b2d58899325a1db45bd6f34915dd4f9217d43137",
+    "verify-simulator-stage1-7f955bba81/boot-ready.log": "cfe03b93ebbff451d16355b49ed03785a7fd51a6e7a27dd1b4fec65be416015e",
+    "verify-simulator-stage1-7f955bba81/boot.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "verify-simulator-stage1-7f955bba81/install.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "verify-simulator-stage1-7f955bba81/ios-simulator-tests.log": "07c901367dbbe0142d365c98636ebda4575c6de130d0a3f816a270879f35313e",
+    "verify-simulator-stage1-7f955bba81/lab-start.log": "37f811c741a041bc54c902c540a1e08378107a7e7ec6d6346c26a1f974a28633",
+    "verify-simulator-stage1-7f955bba81/lab-status.log": "e342490e95aed6a4282218acb2a14fe81ad5c5d72f09c78e43826a4ca26d61f7",
+    "verify-simulator-stage1-7f955bba81/lab-stop.log": "8b16da8ee350d357657b7084665333f74f1274c3c1e4d62a752c3e853b976332",
+    "verify-simulator-stage1-7f955bba81/lab-stopped-status.log": "5d6457fb634dbfb3f461ee63c34a89454925702b1bab8b8befe2f199f3f0a395",
+    "verify-simulator-stage1-7f955bba81/remove-unit-host.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "verify-simulator-stage1-7f955bba81/simulator-delete.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "verify-simulator-stage1-7f955bba81/simulator-shutdown.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "verify-simulator-stage1-7f955bba81/web-build-A.log": "4e43d7567531d9ae4e6703bebb154db1366004df95257be1f0c8c07f40dfd82b",
+    "verify-simulator-stage1-7f955bba81/web-build-B.log": "aac954c340b3ed0d3865876585059c4aeaafaad6e7ebc2b34954e688c9458a04",
+    "verify-unit-9b9213adaf/backend.log": "6d56b854826110815e248c808564f9d24ef82f64d58fc319ec1ea35a06b30591",
+    "verify-unit-9b9213adaf/diff-check.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "verify-unit-9b9213adaf/ios-package.log": "e95705a8e7129903a7ae3ce22d030b04b324b5a1b615b66087079faeabf7e3c4",
+    "verify-unit-9b9213adaf/native.log": "b10483036322c8a0c8c8ba8a3d0611c8601a5da3dc69e4e9e5db3c7167aa8f19",
+    "verify-unit-9b9213adaf/openspec.log": "d3d3024f07e688121e2ba2dcc529706c92383398158501579cc0e94f82db3584",
+    "verify-unit-9b9213adaf/protocol.log": "c65f35f46f48fcfad2c801a32d64dfff4d8a801c7d6cf97c90a3d3a7c512f1ce",
+    "verify-unit-9b9213adaf/runner-tests.log": "80a697088e7bfbb6e57df6a9e86846a630841e0453181eb4aa5cfaca5fd3bfcd",
+    "verify-unit-9b9213adaf/spec-install.log": "af2da1beb28bfb63ed82bb7d3deea4a44c636b4010fbb0c98d18a474915b0e20",
+    "verify-unit-9b9213adaf/web-audit.log": "6d8c5c8f3d7684adb070417bd608d01ae90aa3dc26a65af03ffda4955f38d9a3",
+    "verify-unit-9b9213adaf/web-build-A.log": "b55c7608dd8c678c3933eefb515cb9564a1420474b1e1d0153c9cab5acbff04d",
+    "verify-unit-9b9213adaf/web-build-B.log": "577465e1a4ab65f08068f8f5722df1b44ff77207cdea9216f17555e8101f759d",
+    "verify-unit-9b9213adaf/web-install.log": "a1a665fe93555d2664cef9d834c40741409f94f9c591f3fbe7b54850990a457b",
+    "verify-unit-9b9213adaf/web-tests.log": "49b23560ecbf07da0061f234f86ac94c96c4f44675730b84c3b8f5ff461b6dbf",
+    "verify-unit-9b9213adaf/web-types.log": "dafad60c1f7515a7f2607c4c8351e014932b00b35395337ac68598e0c78b0d48"
+  },
+  "result.json": {
+    "executable_sha256": "cccde0b4d3f3c2520496b16921c4a228995e91752c6b2c59173deb20eb1845b9",
+    "final_acceptance": false,
+    "installed_files": 3,
+    "manifest_sha256": "d5d8700154bbae12eb1ee5671e8382702c3fec3d53d72e0b7959940f97509a25",
+    "same_container": true,
+    "same_manifest": true,
+    "stage1": "PASS",
+    "udid": "590F6FAA-46F4-408D-92D8-3939F5EF245C",
+    "web_A": {
+      "assets/index-CDTaXPYU.js": "ef1217afc1a6326f5aadd1a3855a166eaa1742fdab742c76f5c9cca0565d8f83",
+      "assets/index-CKnUoMD9.css": "a30a77bb4e9fd5ecba1aba59f1d5c63488938cfa1c9530d5bd2064925273d6b2",
+      "index.html": "3df85175d29bb3639ec9e2f403434cfbd7f21bde14e7aca94012b257a101c6b9"
+    },
+    "web_B": {
+      "assets/index-CKnUoMD9.css": "a30a77bb4e9fd5ecba1aba59f1d5c63488938cfa1c9530d5bd2064925273d6b2",
+      "assets/index-CdC4wsJe.js": "97b3a2c8fdc080e725834e1a1c17b12ddb6623049bcf4efc8aa6eaa7e1d66d85",
+      "index.html": "5886f28090351f475934727d94b895c7da3f5cc3e80dbaa86aea63447217d86f"
+    }
+  },
+  "simulator.json": {
+    "device": "com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro",
+    "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-5",
+    "udid": "590F6FAA-46F4-408D-92D8-3939F5EF245C"
+  },
+  "source.json": {
+    "branch": "web-native-bridge-lab/t_9d8fd391-per-85-integration-implementer",
+    "head_sha": "71bba97f47afc1c0e069e9e129a621d3fe3a1a04",
+    "working_diff": "README.md                               | 66 ++++++++++++++++++++++++++++++---\n ios/BridgeLab.xcodeproj/project.pbxproj | 14 ++++++-\n 2 files changed, 73 insertions(+), 7 deletions(-)"
+  },
+  "unit-summary.json": {
+    "devicesAndConfigurations": [
+      {
+        "device": {
+          "architecture": "arm64",
+          "deviceId": "590F6FAA-46F4-408D-92D8-3939F5EF245C",
+          "deviceName": "PER85-Stage1-d3301f75",
+          "modelName": "iPhone 17 Pro",
+          "osBuildNumber": "23F77",
+          "osVersion": "26.5",
+          "platform": "iOS Simulator"
+        },
+        "expectedFailures": 0,
+        "failedTests": 0,
+        "passedTests": 42,
+        "skippedTests": 0,
+        "testPlanConfiguration": {
+          "configurationId": "1",
+          "configurationName": "Test Scheme Action"
+        }
+      }
+    ],
+    "environmentDescription": "BridgeLab \u00b7 Built with macOS 26.6.2",
+    "expectedFailures": 0,
+    "failedTests": 0,
+    "finishTime": 1788863839.986,
+    "passedTests": 42,
+    "result": "Passed",
+    "skippedTests": 0,
+    "startTime": 1788863793.905,
+    "statistics": [],
+    "testFailures": [],
+    "title": "Test - BridgeLab",
+    "topInsights": [
+      {
+        "category": "Longest Test Runs",
+        "impact": "82% of duration",
+        "text": "1 longest test run with outlier durations exceeding 2.00s (three standard deviations)"
+      }
+    ],
+    "totalTestCount": 42
+  }
+}

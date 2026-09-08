@@ -4,6 +4,16 @@
 	classes = {};
 	objectVersion = 60;
 	objects = {
+		B20000000000000000000001 = {isa = PBXBuildFile; fileRef = F20000000000000000000001; };
+		F20000000000000000000001 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tests/BridgeLabUITests/SameBinaryTests.swift; sourceTree = SOURCE_ROOT; };
+		F20000000000000000000002 = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = BridgeLabUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		D20000000000000000000001 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (B20000000000000000000001,); runOnlyForDeploymentPostprocessing = 0; };
+		D20000000000000000000002 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		D20000000000000000000003 = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		T20000000000000000000001 = {isa = PBXNativeTarget; buildConfigurationList = L20000000000000000000001; buildPhases = (D20000000000000000000001, D20000000000000000000002, D20000000000000000000003,); buildRules = (); dependencies = (Y10000000000000000000001,); name = BridgeLabUITests; productName = BridgeLabUITests; productReference = F20000000000000000000002; productType = "com.apple.product-type.bundle.ui-testing"; };
+		L20000000000000000000001 = {isa = XCConfigurationList; buildConfigurations = (X20000000000000000000001, X20000000000000000000002,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		X20000000000000000000001 = {isa = XCBuildConfiguration; buildSettings = {CODE_SIGNING_ALLOWED = NO; CODE_SIGNING_REQUIRED = NO; GENERATE_INFOPLIST_FILE = YES; INFOPLIST_KEY_NSAppTransportSecurity_NSAllowsLocalNetworking = YES; IPHONEOS_DEPLOYMENT_TARGET = 17.0; PRODUCT_BUNDLE_IDENTIFIER = lab.webnative.BridgeLabUITests; PRODUCT_NAME = "$(TARGET_NAME)"; SUPPORTED_PLATFORMS = iphonesimulator; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = "1,2"; TEST_TARGET_NAME = BridgeLab;}; name = Debug; };
+		X20000000000000000000002 = {isa = XCBuildConfiguration; buildSettings = {CODE_SIGNING_ALLOWED = NO; CODE_SIGNING_REQUIRED = NO; GENERATE_INFOPLIST_FILE = YES; INFOPLIST_KEY_NSAppTransportSecurity_NSAllowsLocalNetworking = YES; IPHONEOS_DEPLOYMENT_TARGET = 17.0; PRODUCT_BUNDLE_IDENTIFIER = lab.webnative.BridgeLabUITests; PRODUCT_NAME = "$(TARGET_NAME)"; SUPPORTED_PLATFORMS = iphonesimulator; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = "1,2"; TEST_TARGET_NAME = BridgeLab;}; name = Release; };
 
 /* Begin PBXBuildFile section */
 		B10000000000000000000001 /* BridgeLabApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000001 /* BridgeLabApp.swift */; };
@@ -52,7 +62,7 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		G10000000000000000000001 = {isa = PBXGroup; children = (G10000000000000000000002 /* Sources */, G10000000000000000000005 /* Tests */, G10000000000000000000006 /* Configuration */, G10000000000000000000007 /* Products */,); sourceTree = "<group>"; };
+		G10000000000000000000001 = {isa = PBXGroup; children = (F20000000000000000000001, F20000000000000000000002, G10000000000000000000002 /* Sources */, G10000000000000000000005 /* Tests */, G10000000000000000000006 /* Configuration */, G10000000000000000000007 /* Products */,); sourceTree = "<group>"; };
 		G10000000000000000000002 /* Sources */ = {isa = PBXGroup; children = (G10000000000000000000003 /* BridgeLabCore */, G10000000000000000000004 /* BridgeLabApp */,); path = Sources; sourceTree = "<group>"; };
 		G10000000000000000000003 /* BridgeLabCore */ = {isa = PBXGroup; children = (F10000000000000000000004 /* BridgeEngine.swift */, F10000000000000000000005 /* BridgePolicies.swift */, F1000000000000000000000C,); path = BridgeLabCore; sourceTree = "<group>"; };
 		G10000000000000000000004 /* BridgeLabApp */ = {isa = PBXGroup; children = (F10000000000000000000001 /* BridgeLabApp.swift */, F10000000000000000000002 /* BridgeScreen.swift */, F10000000000000000000003 /* WKBridgeAdapter.swift */,); path = BridgeLabApp; sourceTree = "<group>"; };
@@ -102,7 +112,7 @@
 			productRefGroup = G10000000000000000000007 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
-			targets = (T10000000000000000000001 /* BridgeLab */, T10000000000000000000002 /* BridgeLabTests */,);
+			targets = (T10000000000000000000001 /* BridgeLab */, T10000000000000000000002 /* BridgeLabTests */, T20000000000000000000001 /* BridgeLabUITests */,);
 		};
 /* End PBXProject section */
 
