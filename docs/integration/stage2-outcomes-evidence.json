@@ -1,0 +1,910 @@
+{
+  "status": "OUTCOME SLICE PASS; FULL RC NOT READY",
+  "tested_source_head": "7c4d5bfd48c6b7d48b810f3f95c87deacb16ceb7",
+  "source_and_simulator_results": {
+    "source": {
+      "branch": "web-native-bridge-lab/t_9d8fd391-per-85-integration-implementer",
+      "head_sha": "7c4d5bfd48c6b7d48b810f3f95c87deacb16ceb7",
+      "working_diff": ""
+    },
+    "simulator": {
+      "device": "com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro",
+      "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-5",
+      "udid": "DAE7DC10-B997-4AAF-9E68-CBA2C1924469"
+    },
+    "result": {
+      "executable_sha256": "989fad6e49fb93989785f273a1bd6fcfdf853e8b846091599f86d04f552ace00",
+      "final_acceptance": false,
+      "full_security_lifecycle_matrix": "PENDING",
+      "installed_files": 3,
+      "manifest_sha256": "73deb1b18dcd9de779325093681f5d98df1531cbaf90f508a4d47d09db725161",
+      "same_container": true,
+      "same_manifest": true,
+      "stage1": "PASS",
+      "stage2_events": [
+        "GET /fixtures/http-error 503 tag=s2-http",
+        "POST /api/quote 422 tag=s2-quote",
+        "GET /fixtures/business-error 200 tag=s2-business",
+        "GET /fixtures/malformed-json 200 tag=s2-json",
+        "GET /fixtures/delay connection-close tag=s2-timeout",
+        "GET /fixtures/delay connection-close tag=s2-cancel",
+        "GET /fixtures/delay 200 tag=s2-fast",
+        "GET /fixtures/delay 200 tag=s2-slow"
+      ],
+      "stage2_outcomes": "PASS",
+      "udid": "DAE7DC10-B997-4AAF-9E68-CBA2C1924469",
+      "web_A": {
+        "assets/index-CDTaXPYU.js": "ef1217afc1a6326f5aadd1a3855a166eaa1742fdab742c76f5c9cca0565d8f83",
+        "assets/index-CKnUoMD9.css": "a30a77bb4e9fd5ecba1aba59f1d5c63488938cfa1c9530d5bd2064925273d6b2",
+        "index.html": "3df85175d29bb3639ec9e2f403434cfbd7f21bde14e7aca94012b257a101c6b9"
+      },
+      "web_B": {
+        "assets/index-CKnUoMD9.css": "a30a77bb4e9fd5ecba1aba59f1d5c63488938cfa1c9530d5bd2064925273d6b2",
+        "assets/index-CdC4wsJe.js": "97b3a2c8fdc080e725834e1a1c17b12ddb6623049bcf4efc8aa6eaa7e1d66d85",
+        "index.html": "5886f28090351f475934727d94b895c7da3f5cc3e80dbaa86aea63447217d86f"
+      }
+    },
+    "cleanup": {
+      "errors": [],
+      "owned_services_stopped": true,
+      "owned_simulator_removed": true
+    },
+    "unit-summary": {
+      "devicesAndConfigurations": [
+        {
+          "device": {
+            "architecture": "arm64",
+            "deviceId": "DAE7DC10-B997-4AAF-9E68-CBA2C1924469",
+            "deviceName": "PER85-Stage1-d42ee69a",
+            "modelName": "iPhone 17 Pro",
+            "osBuildNumber": "23F77",
+            "osVersion": "26.5",
+            "platform": "iOS Simulator"
+          },
+          "expectedFailures": 0,
+          "failedTests": 0,
+          "passedTests": 42,
+          "skippedTests": 0,
+          "testPlanConfiguration": {
+            "configurationId": "1",
+            "configurationName": "Test Scheme Action"
+          }
+        }
+      ],
+      "environmentDescription": "BridgeLab · Built with macOS 26.6.2",
+      "expectedFailures": 0,
+      "failedTests": 0,
+      "finishTime": 1788865537.708,
+      "passedTests": 42,
+      "result": "Passed",
+      "skippedTests": 0,
+      "startTime": 1788865480.685,
+      "statistics": [],
+      "testFailures": [],
+      "title": "Test - BridgeLab",
+      "topInsights": [
+        {
+          "category": "Longest Test Runs",
+          "impact": "83% of duration",
+          "text": "1 longest test run with outlier durations exceeding 1.93s (three standard deviations)"
+        }
+      ],
+      "totalTestCount": 42
+    },
+    "ab-summary": {
+      "devicesAndConfigurations": [
+        {
+          "device": {
+            "architecture": "arm64",
+            "deviceId": "DAE7DC10-B997-4AAF-9E68-CBA2C1924469",
+            "deviceName": "PER85-Stage1-d42ee69a",
+            "modelName": "iPhone 17 Pro",
+            "osBuildNumber": "23F77",
+            "osVersion": "26.5",
+            "platform": "iOS Simulator"
+          },
+          "expectedFailures": 0,
+          "failedTests": 0,
+          "passedTests": 1,
+          "skippedTests": 0,
+          "testPlanConfiguration": {
+            "configurationId": "1",
+            "configurationName": "Test Scheme Action"
+          }
+        }
+      ],
+      "environmentDescription": "BridgeLabAcceptance · Built with macOS 26.6.2",
+      "expectedFailures": 0,
+      "failedTests": 0,
+      "finishTime": 1788865606.991,
+      "passedTests": 1,
+      "result": "Passed",
+      "skippedTests": 0,
+      "startTime": 1788865553.594,
+      "statistics": [],
+      "testFailures": [],
+      "title": "Test - BridgeLabAcceptance",
+      "topInsights": [],
+      "totalTestCount": 1
+    },
+    "installed-before-A": {
+      "container": "/Users/agent/Library/Developer/CoreSimulator/Devices/DAE7DC10-B997-4AAF-9E68-CBA2C1924469/data/Containers/Bundle/Application/7389E97D-18A2-4687-A197-CBEC3444FAFB/BridgeLab.app",
+      "files": {
+        "BridgeLab": "989fad6e49fb93989785f273a1bd6fcfdf853e8b846091599f86d04f552ace00",
+        "Info.plist": "6b1a2db1c8fda820ef31bbf2327adc6c165e4c7687eee09efcb7ad16ead4226a",
+        "PkgInfo": "82502191c9484b04d685374f9879a0066069c49b8acae7a04b01d38d07e8eca0"
+      },
+      "udid": "DAE7DC10-B997-4AAF-9E68-CBA2C1924469"
+    },
+    "installed-after-A": {
+      "container": "/Users/agent/Library/Developer/CoreSimulator/Devices/DAE7DC10-B997-4AAF-9E68-CBA2C1924469/data/Containers/Bundle/Application/7389E97D-18A2-4687-A197-CBEC3444FAFB/BridgeLab.app",
+      "files": {
+        "BridgeLab": "989fad6e49fb93989785f273a1bd6fcfdf853e8b846091599f86d04f552ace00",
+        "Info.plist": "6b1a2db1c8fda820ef31bbf2327adc6c165e4c7687eee09efcb7ad16ead4226a",
+        "PkgInfo": "82502191c9484b04d685374f9879a0066069c49b8acae7a04b01d38d07e8eca0"
+      },
+      "udid": "DAE7DC10-B997-4AAF-9E68-CBA2C1924469"
+    },
+    "installed-after-B": {
+      "container": "/Users/agent/Library/Developer/CoreSimulator/Devices/DAE7DC10-B997-4AAF-9E68-CBA2C1924469/data/Containers/Bundle/Application/7389E97D-18A2-4687-A197-CBEC3444FAFB/BridgeLab.app",
+      "files": {
+        "BridgeLab": "989fad6e49fb93989785f273a1bd6fcfdf853e8b846091599f86d04f552ace00",
+        "Info.plist": "6b1a2db1c8fda820ef31bbf2327adc6c165e4c7687eee09efcb7ad16ead4226a",
+        "PkgInfo": "82502191c9484b04d685374f9879a0066069c49b8acae7a04b01d38d07e8eca0"
+      },
+      "udid": "DAE7DC10-B997-4AAF-9E68-CBA2C1924469"
+    },
+    "installed-after-diagnostics": {
+      "container": "/Users/agent/Library/Developer/CoreSimulator/Devices/DAE7DC10-B997-4AAF-9E68-CBA2C1924469/data/Containers/Bundle/Application/7389E97D-18A2-4687-A197-CBEC3444FAFB/BridgeLab.app",
+      "files": {
+        "BridgeLab": "989fad6e49fb93989785f273a1bd6fcfdf853e8b846091599f86d04f552ace00",
+        "Info.plist": "6b1a2db1c8fda820ef31bbf2327adc6c165e4c7687eee09efcb7ad16ead4226a",
+        "PkgInfo": "82502191c9484b04d685374f9879a0066069c49b8acae7a04b01d38d07e8eca0"
+      },
+      "udid": "DAE7DC10-B997-4AAF-9E68-CBA2C1924469"
+    },
+    "web-diagnostics": {
+      "assets/index-Dj278rfb.js": "952bb19ab62ff272de50881bb08fcd0b3cd4b6d10548734705531516a71c035d",
+      "index.html": "6151be46dbd17baed55170b7c75dac432226d22cc16b34d01fdd0687aefede0f"
+    }
+  },
+  "unit_result": {
+    "final_acceptance": false,
+    "unit": "PASS"
+  },
+  "unit_commands": [
+    {
+      "argv": [
+        "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "scripts/tests",
+        "-v"
+      ],
+      "exit_code": 0,
+      "log": "runner-tests.log",
+      "name": "runner-tests"
+    },
+    {
+      "argv": [
+        "npm",
+        "ci",
+        "--prefix",
+        "openspec/tooling",
+        "--ignore-scripts",
+        "--no-audit",
+        "--no-fund"
+      ],
+      "exit_code": 0,
+      "log": "spec-install.log",
+      "name": "spec-install"
+    },
+    {
+      "argv": [
+        "npm",
+        "ci",
+        "--prefix",
+        "web",
+        "--no-audit",
+        "--no-fund"
+      ],
+      "exit_code": 0,
+      "log": "web-install.log",
+      "name": "web-install"
+    },
+    {
+      "argv": [
+        "npm",
+        "audit",
+        "--prefix",
+        "web",
+        "--audit-level=high"
+      ],
+      "exit_code": 0,
+      "log": "web-audit.log",
+      "name": "web-audit"
+    },
+    {
+      "argv": [
+        "node",
+        "protocol/v1/validate.cjs"
+      ],
+      "exit_code": 0,
+      "log": "protocol.log",
+      "name": "protocol"
+    },
+    {
+      "argv": [
+        "openspec/tooling/node_modules/.bin/openspec",
+        "validate",
+        "--all",
+        "--strict",
+        "--no-interactive",
+        "--json"
+      ],
+      "exit_code": 0,
+      "log": "openspec.log",
+      "name": "openspec"
+    },
+    {
+      "argv": [
+        "node",
+        "--test",
+        "backend/tests/arguments.test.mjs",
+        "backend/tests/fixtures.test.mjs",
+        "backend/tests/lifecycle.test.mjs",
+        "backend/tests/port-retry.test.mjs",
+        "backend/tests/static-cleanup.test.mjs"
+      ],
+      "exit_code": 0,
+      "log": "backend.log",
+      "name": "backend"
+    },
+    {
+      "argv": [
+        "swift",
+        "test",
+        "--package-path",
+        "native/TransportPackage",
+        "-Xswiftc",
+        "-warnings-as-errors"
+      ],
+      "exit_code": 0,
+      "log": "native.log",
+      "name": "native"
+    },
+    {
+      "argv": [
+        "swift",
+        "test",
+        "--package-path",
+        "ios",
+        "-Xswiftc",
+        "-warnings-as-errors"
+      ],
+      "exit_code": 0,
+      "log": "ios-package.log",
+      "name": "ios-package"
+    },
+    {
+      "argv": [
+        "npm",
+        "--prefix",
+        "web",
+        "test",
+        "--",
+        "--run"
+      ],
+      "exit_code": 0,
+      "log": "web-tests.log",
+      "name": "web-tests"
+    },
+    {
+      "argv": [
+        "npm",
+        "--prefix",
+        "web",
+        "run",
+        "typecheck"
+      ],
+      "exit_code": 0,
+      "log": "web-types.log",
+      "name": "web-types"
+    },
+    {
+      "argv": [
+        "web/node_modules/.bin/vite",
+        "build",
+        "web",
+        "--config",
+        "web/vite.acceptance.config.ts",
+        "--outDir",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/.artifacts/verify-unit-c1a2b5e3a0/diagnostics-web",
+        "--emptyOutDir"
+      ],
+      "exit_code": 0,
+      "log": "web-build-diagnostics.log",
+      "name": "web-build-diagnostics"
+    },
+    {
+      "argv": [
+        "npm",
+        "--prefix",
+        "web",
+        "run",
+        "build:a",
+        "--",
+        "--outDir",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/.artifacts/verify-unit-c1a2b5e3a0/web",
+        "--emptyOutDir"
+      ],
+      "exit_code": 0,
+      "log": "web-build-A.log",
+      "name": "web-build-A"
+    },
+    {
+      "argv": [
+        "npm",
+        "--prefix",
+        "web",
+        "run",
+        "build:b",
+        "--",
+        "--outDir",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/.artifacts/verify-unit-c1a2b5e3a0/web",
+        "--emptyOutDir"
+      ],
+      "exit_code": 0,
+      "log": "web-build-B.log",
+      "name": "web-build-B"
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exit_code": 0,
+      "log": "diff-check.log",
+      "name": "diff-check"
+    }
+  ],
+  "simulator_commands": [
+    {
+      "argv": [
+        "xcrun",
+        "simctl",
+        "boot",
+        "DAE7DC10-B997-4AAF-9E68-CBA2C1924469"
+      ],
+      "exit_code": 0,
+      "log": "boot.log",
+      "name": "boot"
+    },
+    {
+      "argv": [
+        "xcrun",
+        "simctl",
+        "bootstatus",
+        "DAE7DC10-B997-4AAF-9E68-CBA2C1924469",
+        "-b"
+      ],
+      "exit_code": 0,
+      "log": "boot-ready.log",
+      "name": "boot-ready"
+    },
+    {
+      "argv": [
+        "xcodebuild",
+        "-project",
+        "ios/BridgeLab.xcodeproj",
+        "-destination",
+        "platform=iOS Simulator,id=DAE7DC10-B997-4AAF-9E68-CBA2C1924469",
+        "-derivedDataPath",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/.artifacts/verify-simulator-stage2-outcomes-13a19a2118/unit-derived",
+        "CODE_SIGNING_ALLOWED=NO",
+        "-parallel-testing-enabled",
+        "NO",
+        "-scheme",
+        "BridgeLab",
+        "-resultBundlePath",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/.artifacts/verify-simulator-stage2-outcomes-13a19a2118/unit.xcresult",
+        "test"
+      ],
+      "exit_code": 0,
+      "log": "ios-simulator-tests.log",
+      "name": "ios-simulator-tests"
+    },
+    {
+      "argv": [
+        "xcodebuild",
+        "-project",
+        "ios/BridgeLab.xcodeproj",
+        "-destination",
+        "platform=iOS Simulator,id=DAE7DC10-B997-4AAF-9E68-CBA2C1924469",
+        "-derivedDataPath",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/.artifacts/verify-simulator-stage2-outcomes-13a19a2118/derived",
+        "CODE_SIGNING_ALLOWED=NO",
+        "-parallel-testing-enabled",
+        "NO",
+        "-scheme",
+        "BridgeLabAcceptance",
+        "build-for-testing"
+      ],
+      "exit_code": 0,
+      "log": "acceptance-build.log",
+      "name": "acceptance-build"
+    },
+    {
+      "argv": [
+        "xcrun",
+        "simctl",
+        "uninstall",
+        "DAE7DC10-B997-4AAF-9E68-CBA2C1924469",
+        "lab.webnative.BridgeLab"
+      ],
+      "exit_code": 0,
+      "log": "remove-unit-host.log",
+      "name": "remove-unit-host"
+    },
+    {
+      "argv": [
+        "xcrun",
+        "simctl",
+        "install",
+        "DAE7DC10-B997-4AAF-9E68-CBA2C1924469",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/.artifacts/verify-simulator-stage2-outcomes-13a19a2118/derived/Build/Products/Debug-iphonesimulator/BridgeLab.app"
+      ],
+      "exit_code": 0,
+      "log": "install.log",
+      "name": "install"
+    },
+    {
+      "argv": [
+        "npm",
+        "--prefix",
+        "web",
+        "run",
+        "build:a",
+        "--",
+        "--outDir",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/.artifacts/verify-simulator-stage2-outcomes-13a19a2118/web",
+        "--emptyOutDir"
+      ],
+      "exit_code": 0,
+      "log": "web-build-A.log",
+      "name": "web-build-A"
+    },
+    {
+      "argv": [
+        "node",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/scripts/lab",
+        "start",
+        "--state-dir",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/.artifacts/verify-simulator-stage2-outcomes-13a19a2118/lab",
+        "--web-root",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/.artifacts/verify-simulator-stage2-outcomes-13a19a2118/web"
+      ],
+      "exit_code": 0,
+      "log": "lab-start.log",
+      "name": "lab-start"
+    },
+    {
+      "argv": [
+        "node",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/scripts/lab",
+        "status",
+        "--state-dir",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/.artifacts/verify-simulator-stage2-outcomes-13a19a2118/lab",
+        "--web-root",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/.artifacts/verify-simulator-stage2-outcomes-13a19a2118/web"
+      ],
+      "exit_code": 0,
+      "log": "lab-status.log",
+      "name": "lab-status"
+    },
+    {
+      "argv": [
+        "xcodebuild",
+        "-project",
+        "ios/BridgeLab.xcodeproj",
+        "-destination",
+        "platform=iOS Simulator,id=DAE7DC10-B997-4AAF-9E68-CBA2C1924469",
+        "-derivedDataPath",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/.artifacts/verify-simulator-stage2-outcomes-13a19a2118/derived",
+        "CODE_SIGNING_ALLOWED=NO",
+        "-parallel-testing-enabled",
+        "NO",
+        "-scheme",
+        "BridgeLabAcceptance",
+        "-resultBundlePath",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/.artifacts/verify-simulator-stage2-outcomes-13a19a2118/ab.xcresult",
+        "test-without-building"
+      ],
+      "exit_code": 0,
+      "log": "ab-ui.log",
+      "name": "ab-ui"
+    },
+    {
+      "argv": [
+        "npm",
+        "--prefix",
+        "web",
+        "run",
+        "build:b",
+        "--",
+        "--outDir",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/.artifacts/verify-simulator-stage2-outcomes-13a19a2118/web",
+        "--emptyOutDir"
+      ],
+      "exit_code": 0,
+      "log": "web-build-B.log",
+      "name": "web-build-B"
+    },
+    {
+      "argv": [
+        "web/node_modules/.bin/vite",
+        "build",
+        "web",
+        "--config",
+        "web/vite.acceptance.config.ts",
+        "--outDir",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/.artifacts/verify-simulator-stage2-outcomes-13a19a2118/web",
+        "--emptyOutDir"
+      ],
+      "exit_code": 0,
+      "log": "web-build-diagnostics.log",
+      "name": "web-build-diagnostics"
+    },
+    {
+      "argv": [
+        "node",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/scripts/lab",
+        "stop",
+        "--state-dir",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/.artifacts/verify-simulator-stage2-outcomes-13a19a2118/lab",
+        "--web-root",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/.artifacts/verify-simulator-stage2-outcomes-13a19a2118/web"
+      ],
+      "exit_code": 0,
+      "log": "network-off.log",
+      "name": "network-off"
+    },
+    {
+      "argv": [
+        "node",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/scripts/lab",
+        "status",
+        "--state-dir",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/.artifacts/verify-simulator-stage2-outcomes-13a19a2118/lab",
+        "--web-root",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/.artifacts/verify-simulator-stage2-outcomes-13a19a2118/web"
+      ],
+      "exit_code": 1,
+      "log": "network-off-status.log",
+      "name": "network-off-status"
+    },
+    {
+      "argv": [
+        "node",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/scripts/lab",
+        "stop",
+        "--state-dir",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/.artifacts/verify-simulator-stage2-outcomes-13a19a2118/lab",
+        "--web-root",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/.artifacts/verify-simulator-stage2-outcomes-13a19a2118/web"
+      ],
+      "exit_code": 0,
+      "log": "lab-stop.log",
+      "name": "lab-stop"
+    },
+    {
+      "argv": [
+        "node",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/scripts/lab",
+        "status",
+        "--state-dir",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/.artifacts/verify-simulator-stage2-outcomes-13a19a2118/lab",
+        "--web-root",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/.artifacts/verify-simulator-stage2-outcomes-13a19a2118/web"
+      ],
+      "exit_code": 1,
+      "log": "lab-stopped-status.log",
+      "name": "lab-stopped-status"
+    },
+    {
+      "argv": [
+        "xcrun",
+        "simctl",
+        "shutdown",
+        "DAE7DC10-B997-4AAF-9E68-CBA2C1924469"
+      ],
+      "exit_code": 0,
+      "log": "simulator-shutdown.log",
+      "name": "simulator-shutdown"
+    },
+    {
+      "argv": [
+        "xcrun",
+        "simctl",
+        "delete",
+        "DAE7DC10-B997-4AAF-9E68-CBA2C1924469"
+      ],
+      "exit_code": 0,
+      "log": "simulator-delete.log",
+      "name": "simulator-delete"
+    }
+  ],
+  "unit_log_extracts": {
+    "backend.log": [
+      "  ✔ web port \"-1\" (53.983958ms)",
+      "  ✔ web port \"65536\" (48.456375ms)",
+      "  ✔ web port \"0\" (49.14425ms)",
+      "  ✔ web port \"1.5\" (48.030334ms)",
+      "  ✔ web port \"NaN\" (44.005875ms)",
+      "  ✔ web port \"\" (44.280291ms)",
+      "  ✔ same ports (64.768375ms)",
+      "  ✔ foreign repository (67.455417ms)",
+      "  ✔ missing repository (57.185375ms)",
+      "  ✔ invalid token (46.897583ms)",
+      "  ✔ relative state (40.053167ms)",
+      "  ✔ relative assets (38.68375ms)",
+      "  ✔ duplicate option (44.070834ms)",
+      "  ✔ unknown option (39.893375ms)",
+      "✔ server rejects invalid ports and ownership bindings before listening (698.004542ms)",
+      "✔ serves deterministic catalog data from an isolated API listener (26.453333ms)",
+      "✔ reports listener health independently from web asset availability (7.494958ms)",
+      "✔ serves current static files with safe paths, MIME types, and CSP (20.568833ms)",
+      "✔ implements catalog and quote success and validation contracts (21.021166ms)",
+      "✔ returns exact echo, HTTP, business, and malformed JSON fixtures (8.175375ms)",
+      "✔ bounds request bodies and distinguishes unknown routes from wrong methods (10.009583ms)",
+      "✔ validates delay input and clears delayed work when the client cancels (70.597125ms)",
+      "✔ returns redirect fixtures without following them server-side (5.000916ms)",
+      "✔ streams bounded large fixture without Content-Length (11.327959ms)",
+      "✔ returns invalid UTF-8, binary, and filtered-header test inputs exactly (6.390958ms)",
+      "✔ echoes only valid x-lab-tag values and never grants CORS (3.138042ms)",
+      "✔ CLI harness retries a confirmed foreign bind conflict with fresh resources and bounds exhaustion (794.398ms)",
+      "✔ status from another cwd reports stopped state as JSON (48.748834ms)",
+      "✔ start, status, and stop are idempotent and stop active delayed work (470.797708ms)",
+      "✔ concurrent lifecycle calls serialize and preserve an unrelated listener (385.14575ms)",
+      "✔ foreign port conflict fails without signalling the foreign process (119.88425ms)",
+      "✔ stale PID-reuse state is never treated as owned or signalled (321.459166ms)",
+      "✔ direct server startup rolls back its first listener when the second bind fails (2.137458ms)",
+      "✔ direct server startup rejects invalid lifecycle ownership arguments (36.979833ms)",
+      "✔ ownership requires an exact token, command and start identity, not a PID or substring (520.595041ms)",
+      "✔ stale files recover and a live configuration mismatch fails safely (383.87625ms)",
+      "✔ bind retry allocates fresh listeners and preserves a forced foreign collision (24.641375ms)",
+      "✔ bind retry exhaustion is bounded and preserves its bind error cause (1.772583ms)",
+      "✔ bind retry does not repeat assertion or ownership failures (0.3935ms)",
+      "✔ static source descriptor closes after client abort (188.239ms)",
+      "✔ static source descriptor closes after server shutdown (215.840417ms)",
+      "ℹ tests 41",
+      "ℹ suites 0",
+      "ℹ pass 41",
+      "ℹ fail 0",
+      "ℹ cancelled 0",
+      "ℹ skipped 0",
+      "ℹ todo 0",
+      "ℹ duration_ms 3154.802708"
+    ],
+    "web-build-diagnostics.log": [],
+    "runner-tests.log": [
+      "test_manifest_includes_every_file_sorted_and_detects_resource_change (test_verify.EvidenceTests) ... ok",
+      "test_manifest_includes_hidden_files_and_rejects_symlinks (test_verify.EvidenceTests) ... ok",
+      "test_same_app_rejects_container_change_and_non_executable_change (test_verify.EvidenceTests) ... ok",
+      "test_stage2_log_requires_socket_closes_and_out_of_order_completion (test_verify.EvidenceTests) ... ok",
+      "Ran 4 tests in 0.002s"
+    ],
+    "spec-install.log": [],
+    "web-types.log": [],
+    "openspec.log": [
+      "      \"passed\": 1,",
+      "        \"passed\": 1,",
+      "        \"passed\": 0,"
+    ],
+    "diff-check.log": [],
+    "web-build-A.log": [],
+    "web-install.log": [],
+    "web-build-B.log": [],
+    "ios-package.log": [
+      "Test Case '-[BridgeLabCoreTests.BridgeEngineTests testCancelAcknowledgesOnlyExecutorWinner]' passed (0.000 seconds).",
+      "Test Case '-[BridgeLabCoreTests.BridgeEngineTests testClosedRequestShapeAndSessionValidationPrecedeIDConsumption]' passed (0.000 seconds).",
+      "Test Case '-[BridgeLabCoreTests.BridgeEngineTests testHelloReturnsStableSessionWithoutResettingRequestIDs]' passed (0.000 seconds).",
+      "Test Case '-[BridgeLabCoreTests.BridgeEngineTests testHugeRecoveredIDReturnsInvalidWithoutTrapping]' passed (0.000 seconds).",
+      "Test Case '-[BridgeLabCoreTests.BridgeEngineTests testHugeVersionReturnsUnsupportedWithoutTrapping]' passed (0.000 seconds).",
+      "Test Case '-[BridgeLabCoreTests.BridgeEngineTests testInvalidNumericIDsCannotSubmitCancelOrConsumeHighWaterMark]' passed (0.001 seconds).",
+      "Test Case '-[BridgeLabCoreTests.BridgeEngineTests testNonIntegralAndOverflowTimeoutsDoNotConsumeID]' passed (0.000 seconds).",
+      "Test Case '-[BridgeLabCoreTests.BridgeEngineTests testNumericVersionMatrixPreservesPrecedenceAndRecoverableID]' passed (0.000 seconds).",
+      "Test Case '-[BridgeLabCoreTests.BridgeEngineTests testOrdinaryNumericBoundsAndIntegralNotationRemainExact]' passed (0.000 seconds).",
+      "Test Case '-[BridgeLabCoreTests.BridgeEngineTests testRawInputValidationAndUnsupportedVersionPrecedence]' passed (0.001 seconds).",
+      "Test Case '-[BridgeLabCoreTests.BridgeEngineTests testRepresentableTimeoutBoundaryFailuresRemainTransportValidation]' passed (0.000 seconds).",
+      "Test Case '-[BridgeLabCoreTests.BridgeEngineTests testResponsePreservesSafeTextAsStructuredData]' passed (0.000 seconds).",
+      "Test Case '-[BridgeLabCoreTests.BridgeEngineTests testRevocationCancelsAllAndAllowsFreshIDOneOnlyAfterActivation]' passed (0.000 seconds).",
+      "Test Case '-[BridgeLabCoreTests.BridgeEngineTests testSemanticFailureConsumesIDAndBodyRemainsOpaque]' passed (0.000 seconds).",
+      "Test Case '-[BridgeLabCoreTests.BridgeEngineTests testUntrustedAndInactiveMessagesAreDeniedBeforeParsing]' passed (0.000 seconds).",
+      "Test Suite 'BridgeEngineTests' passed at 2026-09-08 15:03:14.543.",
+      "\t Executed 15 tests, with 0 failures (0 unexpected) in 0.005 (0.006) seconds",
+      "Test Case '-[BridgeLabCoreTests.BridgeLifecycleCoordinatorTests testEngineAdmissionReturnsBeforeHTTPCompletionAndRevocationSettlesReceipt]' passed (0.000 seconds).",
+      "Test Case '-[BridgeLabCoreTests.BridgeLifecycleCoordinatorTests testRevocationWaitsForAdmissionReceiptAndPublicationBeforeFreshActivation]' passed (0.001 seconds).",
+      "Test Suite 'BridgeLifecycleCoordinatorTests' passed at 2026-09-08 15:03:14.545.",
+      "\t Executed 2 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds",
+      "Test Case '-[BridgeLabCoreTests.BridgePolicyTests testNavigationAllowsOnlyTrustedMainFrameAndRejectsNewWindows]' passed (0.000 seconds).",
+      "Test Case '-[BridgeLabCoreTests.BridgePolicyTests testTrustedPageRequiresExactSecurityOriginCommittedURLAndMainFrame]' passed (0.000 seconds).",
+      "Test Suite 'BridgePolicyTests' passed at 2026-09-08 15:03:14.545.",
+      "\t Executed 2 tests, with 0 failures (0 unexpected) in 0.000 (0.000) seconds",
+      "Test Suite 'BridgeLabCorePackageTests.xctest' passed at 2026-09-08 15:03:14.545.",
+      "\t Executed 19 tests, with 0 failures (0 unexpected) in 0.006 (0.008) seconds",
+      "Test Suite 'All tests' passed at 2026-09-08 15:03:14.545.",
+      "\t Executed 19 tests, with 0 failures (0 unexpected) in 0.006 (0.008) seconds",
+      "✔ Test run with 0 tests in 0 suites passed after 0.001 seconds."
+    ],
+    "native.log": [
+      "Test Case '-[TransportPackageTests.AdmissionTests testAcknowledgedAdmissionIsCancelledBeforeAnyResultWaiterAndCannotEscapeIntoReusedID]' passed (0.001 seconds).",
+      "Test Case '-[TransportPackageTests.AdmissionTests testEmittedCompletionDoesNotWinUntilExecutorSelectsIt]' passed (0.000 seconds).",
+      "Test Case '-[TransportPackageTests.AdmissionTests testReceiptsDoNotSerializeEightRequestsAndNinthIsImmediateBusy]' passed (0.001 seconds).",
+      "Test Case '-[TransportPackageTests.AdmissionTests testSelectedFailureIsImmutableAndExecutorDoesNotRetainCompletedReceipt]' passed (0.000 seconds).",
+      "Test Suite 'AdmissionTests' passed at 2026-09-08 15:03:12.294.",
+      "\t Executed 4 tests, with 0 failures (0 unexpected) in 0.002 (0.002) seconds",
+      "Test Case '-[TransportPackageTests.CancellationAndConcurrencyTests testCancelAllSettlesEveryOutstandingExecution]' passed (0.000 seconds).",
+      "Test Case '-[TransportPackageTests.CancellationAndConcurrencyTests testCancelWinsAndLateCompletionHasNoEffect]' passed (0.000 seconds).",
+      "Test Case '-[TransportPackageTests.CancellationAndConcurrencyTests testDuplicateActiveIDDoesNotReplaceOriginalExecution]' passed (0.000 seconds).",
+      "Test Case '-[TransportPackageTests.CancellationAndConcurrencyTests testLateNetworkEventsDoNotContaminateReusedID]' passed (0.000 seconds).",
+      "Test Case '-[TransportPackageTests.CancellationAndConcurrencyTests testNinthLiveRequestIsBusyWithoutQueueing]' passed (0.046 seconds).",
+      "Test Case '-[TransportPackageTests.CancellationAndConcurrencyTests testOutOfOrderCompletionsRemainCorrelated]' passed (0.000 seconds).",
+      "Test Case '-[TransportPackageTests.CancellationAndConcurrencyTests testResponseWinsBeforeCancel]' passed (0.000 seconds).",
+      "Test Suite 'CancellationAndConcurrencyTests' passed at 2026-09-08 15:03:12.342.",
+      "\t Executed 7 tests, with 0 failures (0 unexpected) in 0.047 (0.048) seconds",
+      "Test Case '-[TransportPackageTests.ContractBoundaryTests testExactRequestBoundsAndOneByteExcess]' passed (0.003 seconds).",
+      "Test Case '-[TransportPackageTests.ContractBoundaryTests testExposedHeaderBoundaryAndRepeatedValues]' passed (0.002 seconds).",
+      "Test Case '-[TransportPackageTests.ContractBoundaryTests testNonRedirectHTTPStatusesPreserveOpaqueText]' passed (0.000 seconds).",
+      "Test Case '-[TransportPackageTests.ContractBoundaryTests testSharedSemanticTransportVectors]' passed (0.002 seconds).",
+      "Test Suite 'ContractBoundaryTests' passed at 2026-09-08 15:03:12.350.",
+      "\t Executed 4 tests, with 0 failures (0 unexpected) in 0.007 (0.007) seconds",
+      "Test Case '-[TransportPackageTests.DeadlineTests testAlreadyFiredOldDeadlineCannotCancelReusedIDAfterCancelAll]' passed (0.000 seconds).",
+      "Test Case '-[TransportPackageTests.DeadlineTests testCompletionCancelsDeadline]' passed (0.000 seconds).",
+      "Test Case '-[TransportPackageTests.DeadlineTests testInjectedDeadlineWinsAndCancelsUnderlyingTask]' passed (0.000 seconds).",
+      "Test Case '-[TransportPackageTests.DeadlineTests testRealDeadlineDoesNotDependOnNetworkInactivityTimeout]' passed (0.045 seconds).",
+      "Test Suite 'DeadlineTests' passed at 2026-09-08 15:03:12.396.",
+      "\t Executed 4 tests, with 0 failures (0 unexpected) in 0.046 (0.046) seconds",
+      "Test Case '-[TransportPackageTests.HTTPExecutorTests testGETSuccessPreservesOpaqueResponse]' passed (0.000 seconds).",
+      "Test Suite 'HTTPExecutorTests' passed at 2026-09-08 15:03:12.396.",
+      "\t Executed 1 test, with 0 failures (0 unexpected) in 0.000 (0.000) seconds",
+      "Test Case '-[TransportPackageTests.IngestionRegressionTests testProducerAheadOfActorCancelsAtFirstExcessByte]' passed (0.001 seconds).",
+      "Test Case '-[TransportPackageTests.IngestionRegressionTests testRelayRetainsAtMostCapBytesAndOneOverflowDespiteLateBurst]' passed (0.000 seconds).",
+      "Test Suite 'IngestionRegressionTests' passed at 2026-09-08 15:03:12.397.",
+      "\t Executed 2 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds",
+      "Test Case '-[TransportPackageTests.RequestValidationTests testDeniedOriginsPreventNetworkStart]' passed (0.222 seconds).",
+      "Test Case '-[TransportPackageTests.RequestValidationTests testInvalidRequestFieldsPreventNetworkStart]' passed (0.844 seconds).",
+      "Test Case '-[TransportPackageTests.RequestValidationTests testPOSTTransportsOpaqueUTF8Body]' passed (0.001 seconds).",
+      "Test Case '-[TransportPackageTests.RequestValidationTests testRequestBodyUsesUTF8ByteLimit]' passed (0.047 seconds).",
+      "Test Suite 'RequestValidationTests' passed at 2026-09-08 15:03:13.513.",
+      "\t Executed 4 tests, with 0 failures (0 unexpected) in 1.115 (1.116) seconds",
+      "Test Case '-[TransportPackageTests.ResponsePolicyTests testDeclaredOversizeResponseIsRejectedBeforeBody]' passed (0.001 seconds).",
+      "Test Case '-[TransportPackageTests.ResponsePolicyTests testInvalidUTF8IsRejectedWithoutLossyReplacement]' passed (0.001 seconds).",
+      "Test Case '-[TransportPackageTests.ResponsePolicyTests testNetworkAndAuthenticationFailuresStayTransportFailures]' passed (0.001 seconds).",
+      "Test Case '-[TransportPackageTests.ResponsePolicyTests testNonemptyResponseRequiresAllowedTextualMediaType]' passed (0.001 seconds).",
+      "Test Case '-[TransportPackageTests.ResponsePolicyTests testRedirectDelegateDenialCancelsUnderlyingTask]' passed (0.000 seconds).",
+      "Test Case '-[TransportPackageTests.ResponsePolicyTests testRedirectStatusesBecomeTransportFailures]' passed (0.001 seconds).",
+      "Test Case '-[TransportPackageTests.ResponsePolicyTests testResponseDataCapIsInclusiveAndStreaming]' passed (0.002 seconds).",
+      "Test Case '-[TransportPackageTests.ResponsePolicyTests testResponseHeadersAreFilteredAndBounded]' passed (0.002 seconds).",
+      "Test Suite 'ResponsePolicyTests' passed at 2026-09-08 15:03:13.522.",
+      "\t Executed 8 tests, with 0 failures (0 unexpected) in 0.008 (0.009) seconds",
+      "Test Case '-[TransportPackageTests.URLSessionNetworkClientTests testAuthenticationChallengeIsCancelledWithoutCredential]' passed (0.007 seconds).",
+      "Test Case '-[TransportPackageTests.URLSessionNetworkClientTests testEphemeralConfigurationHasNoAmbientCredentialStores]' passed (0.001 seconds).",
+      "Test Case '-[TransportPackageTests.URLSessionNetworkClientTests testPublicExecutorInitializerUsesFoundationNetworkClient]' passed (0.000 seconds).",
+      "Test Case '-[TransportPackageTests.URLSessionNetworkClientTests testRedirectDelegateReturnsNoDestinationRequest]' passed (0.001 seconds).",
+      "Test Case '-[TransportPackageTests.URLSessionNetworkClientTests testURLSessionTaskStreamsResponseAndBody]' passed (0.004 seconds).",
+      "Test Suite 'URLSessionNetworkClientTests' passed at 2026-09-08 15:03:13.536.",
+      "\t Executed 5 tests, with 0 failures (0 unexpected) in 0.013 (0.014) seconds",
+      "Test Suite 'TransportPackagePackageTests.xctest' passed at 2026-09-08 15:03:13.536.",
+      "\t Executed 39 tests, with 0 failures (0 unexpected) in 1.239 (1.244) seconds",
+      "Test Suite 'All tests' passed at 2026-09-08 15:03:13.536.",
+      "\t Executed 39 tests, with 0 failures (0 unexpected) in 1.239 (1.245) seconds",
+      "✔ Test run with 0 tests in 0 suites passed after 0.001 seconds."
+    ],
+    "web-audit.log": [
+      "found 0 vulnerabilities"
+    ],
+    "protocol.log": [
+      "valid: 14 classifications PASS",
+      "invalid: 15 classifications PASS",
+      "semanticOnly: 7 classifications PASS",
+      "Schema compiled; 36 vectors PASS. Semantic-only expected error codes were NOT runtime-tested."
+    ],
+    "web-tests.log": [
+      " Test Files  3 passed (3)",
+      "      Tests  23 passed (23)"
+    ]
+  },
+  "backend_transcript": [
+    "ready web=8787 api=8788",
+    "GET /healthz 200 tag=-",
+    "GET /healthz 200 tag=-",
+    "GET /healthz 200 tag=-",
+    "GET /healthz 200 tag=-",
+    "GET / 200 tag=-",
+    "GET /assets/index-CKnUoMD9.css 200 tag=-",
+    "GET /assets/index-CDTaXPYU.js 200 tag=-",
+    "GET /stage1/ready.txt 200 tag=-",
+    "GET /stage1/a-release.txt 404 tag=-",
+    "GET /stage1/a-release.txt 404 tag=-",
+    "GET /stage1/a-release.txt 200 tag=-",
+    "GET /api/catalog 200 tag=scenario-a",
+    "GET /stage1/a-observed.txt 200 tag=-",
+    "GET /stage1/b-release.txt 404 tag=-",
+    "GET /stage1/b-release.txt 404 tag=-",
+    "GET /stage1/b-release.txt 404 tag=-",
+    "GET /stage1/b-release.txt 404 tag=-",
+    "GET /stage1/b-release.txt 404 tag=-",
+    "GET /stage1/b-release.txt 404 tag=-",
+    "GET /stage1/b-release.txt 200 tag=-",
+    "GET / 200 tag=-",
+    "GET /assets/index-CdC4wsJe.js 200 tag=-",
+    "GET /assets/index-CKnUoMD9.css 200 tag=-",
+    "POST /api/quote 200 tag=scenario-b",
+    "GET /stage1/b-observed.txt 200 tag=-",
+    "GET /stage1/finish.txt 404 tag=-",
+    "GET /stage1/finish.txt 404 tag=-",
+    "GET /stage1/finish.txt 404 tag=-",
+    "GET /stage1/finish.txt 404 tag=-",
+    "GET /stage1/finish.txt 200 tag=-",
+    "GET /stage1/diagnostics-enabled.txt 200 tag=-",
+    "GET / 200 tag=-",
+    "GET /assets/index-Dj278rfb.js 200 tag=-",
+    "GET /fixtures/http-error 503 tag=s2-http",
+    "POST /api/quote 422 tag=s2-quote",
+    "GET /fixtures/business-error 200 tag=s2-business",
+    "GET /fixtures/malformed-json 200 tag=s2-json",
+    "GET /fixtures/delay connection-close tag=s2-timeout",
+    "GET /fixtures/delay connection-close tag=s2-cancel",
+    "GET /fixtures/delay 200 tag=s2-fast",
+    "GET /fixtures/delay 200 tag=s2-slow",
+    "GET /stage1/matrix-observed.txt 200 tag=-",
+    "GET /stage1/matrix-observed.txt 200 tag=-",
+    "GET /stage1/matrix-observed.txt 200 tag=-"
+  ],
+  "actual_ui_static_text_lines": [
+    "StaticText, 0x115659680, {{8.0, 231.0}, {134.0, 21.0}}, label: 'HTTP 503 preserved', value: HTTP 503 preserved, Focused",
+    "StaticText, 0x115659400, {{8.0, 267.0}, {134.0, 21.0}}, label: 'HTTP 422 preserved', value: HTTP 422 preserved, Focused",
+    "StaticText, 0x115659b80, {{8.0, 303.0}, {166.0, 21.0}}, label: 'Business error interpreted', value: Business error int..., Focused",
+    "StaticText, 0x11565a080, {{8.0, 339.0}, {181.0, 21.0}}, label: 'Malformed JSON preserved', value: Malformed JSON pre..., Focused",
+    "StaticText, 0x11565b5c0, {{8.0, 375.0}, {119.0, 21.0}}, label: 'Native TIMEOUT', value: Native TIMEOUT, Focused",
+    "StaticText, 0x11565af80, {{8.0, 411.0}, {150.0, 21.0}}, label: 'Explicit CANCELLED', value: Explicit CANCELLED, Focused",
+    "StaticText, 0x11565ad00, {{8.0, 447.0}, {165.0, 21.0}}, label: 'Concurrent fast then slow', value: Concurrent fast th..., Focused",
+    "StaticText, 0x11565b0c0, {{8.0, 483.0}, {146.0, 21.0}}, label: 'Outcome matrix PASS', value: Outcome matrix PASS, Focused",
+    "StaticText, 0x115658b40, {{8.0, 519.0}, {263.0, 21.0}}, label: 'NETWORK_ERROR after backend stop', value: NETWORK_ERROR afte..., Focused"
+  ],
+  "ui_test_completion": [
+    "Test Case '-[BridgeLabUITests.SameBinaryTests testWebOnlyUpdateOnSameInstalledApplication]' started.",
+    "Test Case '-[BridgeLabUITests.SameBinaryTests testWebOnlyUpdateOnSameInstalledApplication]' passed (42.135 seconds).",
+    "\t Executed 1 test, with 0 failures (0 unexpected) in 42.135 (42.137) seconds",
+    "\t Executed 1 test, with 0 failures (0 unexpected) in 42.135 (42.138) seconds",
+    "\t Executed 1 test, with 0 failures (0 unexpected) in 42.135 (42.139) seconds"
+  ],
+  "stopped_status": {
+    "state": "stopped",
+    "webPort": 8787,
+    "apiPort": 8788,
+    "assetsAvailable": true,
+    "processes": []
+  },
+  "rechecked_cleanup": {
+    "ports_8787_8788_free": true,
+    "dedicated_udid_absent": "DAE7DC10-B997-4AAF-9E68-CBA2C1924469"
+  },
+  "tools": {
+    "Node": "26.5.0",
+    "npm": "11.17.0",
+    "Python": "3.9.6",
+    "Xcode": "26.6 / 17F113",
+    "Swift": "6.3.3"
+  },
+  "known_limits_reference": "docs/integration/STAGE2_OUTCOMES.md",
+  "security_source_scan": {
+    "added_line_secret_shell_eval_matches": 0,
+    "business_endpoint_model_matches_native_sources": 0
+  },
+  "retention": "Raw artifacts are disposable; essentials captured in this committed JSON. Evidence-only commit follows tested source head."
+}
