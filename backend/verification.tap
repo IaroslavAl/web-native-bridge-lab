@@ -1,0 +1,257 @@
+TAP version 13
+# Subtest: server rejects invalid ports and ownership bindings before listening
+    # Subtest: web port "-1"
+    ok 1 - web port "-1"
+      ---
+      duration_ms: 51.225625
+      type: 'test'
+      ...
+    # Subtest: web port "65536"
+    ok 2 - web port "65536"
+      ---
+      duration_ms: 44.217166
+      type: 'test'
+      ...
+    # Subtest: web port "0"
+    ok 3 - web port "0"
+      ---
+      duration_ms: 41.786875
+      type: 'test'
+      ...
+    # Subtest: web port "1.5"
+    ok 4 - web port "1.5"
+      ---
+      duration_ms: 59.839458
+      type: 'test'
+      ...
+    # Subtest: web port "NaN"
+    ok 5 - web port "NaN"
+      ---
+      duration_ms: 48.964833
+      type: 'test'
+      ...
+    # Subtest: web port ""
+    ok 6 - web port ""
+      ---
+      duration_ms: 37.253125
+      type: 'test'
+      ...
+    # Subtest: same ports
+    ok 7 - same ports
+      ---
+      duration_ms: 39.188416
+      type: 'test'
+      ...
+    # Subtest: foreign repository
+    ok 8 - foreign repository
+      ---
+      duration_ms: 37.891834
+      type: 'test'
+      ...
+    # Subtest: missing repository
+    ok 9 - missing repository
+      ---
+      duration_ms: 34.708875
+      type: 'test'
+      ...
+    # Subtest: invalid token
+    ok 10 - invalid token
+      ---
+      duration_ms: 35.889083
+      type: 'test'
+      ...
+    # Subtest: relative state
+    ok 11 - relative state
+      ---
+      duration_ms: 35.324542
+      type: 'test'
+      ...
+    # Subtest: relative assets
+    ok 12 - relative assets
+      ---
+      duration_ms: 35.932208
+      type: 'test'
+      ...
+    # Subtest: duplicate option
+    ok 13 - duplicate option
+      ---
+      duration_ms: 36.12275
+      type: 'test'
+      ...
+    # Subtest: unknown option
+    ok 14 - unknown option
+      ---
+      duration_ms: 34.845542
+      type: 'test'
+      ...
+    1..14
+ok 1 - server rejects invalid ports and ownership bindings before listening
+  ---
+  duration_ms: 582.919292
+  type: 'test'
+  ...
+# Subtest: serves deterministic catalog data from an isolated API listener
+ok 2 - serves deterministic catalog data from an isolated API listener
+  ---
+  duration_ms: 24.387542
+  type: 'test'
+  ...
+# Subtest: reports listener health independently from web asset availability
+ok 3 - reports listener health independently from web asset availability
+  ---
+  duration_ms: 9.052167
+  type: 'test'
+  ...
+# Subtest: serves current static files with safe paths, MIME types, and CSP
+ok 4 - serves current static files with safe paths, MIME types, and CSP
+  ---
+  duration_ms: 16.114916
+  type: 'test'
+  ...
+# Subtest: implements catalog and quote success and validation contracts
+ok 5 - implements catalog and quote success and validation contracts
+  ---
+  duration_ms: 16.534792
+  type: 'test'
+  ...
+# Subtest: returns exact echo, HTTP, business, and malformed JSON fixtures
+ok 6 - returns exact echo, HTTP, business, and malformed JSON fixtures
+  ---
+  duration_ms: 7.139375
+  type: 'test'
+  ...
+# Subtest: bounds request bodies and distinguishes unknown routes from wrong methods
+ok 7 - bounds request bodies and distinguishes unknown routes from wrong methods
+  ---
+  duration_ms: 6.528792
+  type: 'test'
+  ...
+# Subtest: validates delay input and clears delayed work when the client cancels
+ok 8 - validates delay input and clears delayed work when the client cancels
+  ---
+  duration_ms: 68.839292
+  type: 'test'
+  ...
+# Subtest: returns redirect fixtures without following them server-side
+ok 9 - returns redirect fixtures without following them server-side
+  ---
+  duration_ms: 3.33875
+  type: 'test'
+  ...
+# Subtest: streams bounded large fixture without Content-Length
+ok 10 - streams bounded large fixture without Content-Length
+  ---
+  duration_ms: 12.891958
+  type: 'test'
+  ...
+# Subtest: returns invalid UTF-8, binary, and filtered-header test inputs exactly
+ok 11 - returns invalid UTF-8, binary, and filtered-header test inputs exactly
+  ---
+  duration_ms: 5.073042
+  type: 'test'
+  ...
+# Subtest: echoes only valid x-lab-tag values and never grants CORS
+ok 12 - echoes only valid x-lab-tag values and never grants CORS
+  ---
+  duration_ms: 2.539125
+  type: 'test'
+  ...
+# Subtest: CLI harness retries a confirmed foreign bind conflict with fresh resources and bounds exhaustion
+ok 13 - CLI harness retries a confirmed foreign bind conflict with fresh resources and bounds exhaustion
+  ---
+  duration_ms: 648.4455
+  type: 'test'
+  ...
+# Subtest: status from another cwd reports stopped state as JSON
+ok 14 - status from another cwd reports stopped state as JSON
+  ---
+  duration_ms: 47.207917
+  type: 'test'
+  ...
+# Subtest: start, status, and stop are idempotent and stop active delayed work
+ok 15 - start, status, and stop are idempotent and stop active delayed work
+  ---
+  duration_ms: 425.989
+  type: 'test'
+  ...
+# Subtest: concurrent lifecycle calls serialize and preserve an unrelated listener
+ok 16 - concurrent lifecycle calls serialize and preserve an unrelated listener
+  ---
+  duration_ms: 371.888333
+  type: 'test'
+  ...
+# Subtest: foreign port conflict fails without signalling the foreign process
+ok 17 - foreign port conflict fails without signalling the foreign process
+  ---
+  duration_ms: 117.424916
+  type: 'test'
+  ...
+# Subtest: stale PID-reuse state is never treated as owned or signalled
+ok 18 - stale PID-reuse state is never treated as owned or signalled
+  ---
+  duration_ms: 314.774333
+  type: 'test'
+  ...
+# Subtest: direct server startup rolls back its first listener when the second bind fails
+ok 19 - direct server startup rolls back its first listener when the second bind fails
+  ---
+  duration_ms: 2.067209
+  type: 'test'
+  ...
+# Subtest: direct server startup rejects invalid lifecycle ownership arguments
+ok 20 - direct server startup rejects invalid lifecycle ownership arguments
+  ---
+  duration_ms: 33.940083
+  type: 'test'
+  ...
+# Subtest: ownership requires an exact token, command and start identity, not a PID or substring
+ok 21 - ownership requires an exact token, command and start identity, not a PID or substring
+  ---
+  duration_ms: 534.145583
+  type: 'test'
+  ...
+# Subtest: stale files recover and a live configuration mismatch fails safely
+ok 22 - stale files recover and a live configuration mismatch fails safely
+  ---
+  duration_ms: 369.937708
+  type: 'test'
+  ...
+# Subtest: bind retry allocates fresh listeners and preserves a forced foreign collision
+ok 23 - bind retry allocates fresh listeners and preserves a forced foreign collision
+  ---
+  duration_ms: 22.359792
+  type: 'test'
+  ...
+# Subtest: bind retry exhaustion is bounded and preserves its bind error cause
+ok 24 - bind retry exhaustion is bounded and preserves its bind error cause
+  ---
+  duration_ms: 0.813916
+  type: 'test'
+  ...
+# Subtest: bind retry does not repeat assertion or ownership failures
+ok 25 - bind retry does not repeat assertion or ownership failures
+  ---
+  duration_ms: 0.324333
+  type: 'test'
+  ...
+# Subtest: static source descriptor closes after client abort
+ok 26 - static source descriptor closes after client abort
+  ---
+  duration_ms: 177.1805
+  type: 'test'
+  ...
+# Subtest: static source descriptor closes after server shutdown
+ok 27 - static source descriptor closes after server shutdown
+  ---
+  duration_ms: 163.584917
+  type: 'test'
+  ...
+1..27
+# tests 41
+# suites 0
+# pass 41
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2926.075083
