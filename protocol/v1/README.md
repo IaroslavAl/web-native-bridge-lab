@@ -1,6 +1,6 @@
 # Bridge protocol v1 — normative wire and transport contract
 
-Status: proposed foundation; independent same-card review is required before implementation. Scope: synthetic-data, loopback, Simulator-only lab. This document owns wire semantics and limits; `schema.json` owns structural validation. Both are required. OpenSpec owns observable requirements; business fixtures belong to `docs/architecture.md`, never native production sources.
+Status: independently reviewed foundation, implemented by the integrated candidate; final integration/owner acceptance is separate. Scope: synthetic-data, loopback, Simulator-only lab. This document owns wire semantics and limits; `schema.json` owns structural validation. Both are required. OpenSpec owns observable requirements; business fixtures belong to `docs/architecture.md`, never native production sources.
 
 ## Boundary and message shapes
 

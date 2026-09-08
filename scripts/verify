@@ -431,7 +431,7 @@ class Run:
             save(self.out / 'webkit-summary.json', summary)
             assert summary['failedTests'] == 0, f'webkit failedTests={summary["failedTests"]}'
             assert summary['skippedTests'] == 0, f'webkit skippedTests={summary["skippedTests"]}'
-            assert summary['passedTests'] == 50, f'webkit passedTests={summary["passedTests"]}, expected 42 regression + 8 live tests'
+            assert summary['passedTests'] == 53, f'webkit passedTests={summary["passedTests"]}, expected 42 regression + 11 live tests'
             require_stage4_events(json.loads((self.out / 'events.json').read_text()))
         finally:
             if fixture:

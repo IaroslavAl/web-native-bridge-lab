@@ -1,6 +1,6 @@
 # Verification plan and requirement-to-test matrix
 
-Status: planned runtime tests, not executed product evidence. Foundation validates only OpenSpec shape, schema and example classifications. Stable test case IDs below are implementation obligations, not claims that files or tests already exist. Module reviewers replace planned references with actual test names/commands in their handoffs. Final integration evidence maps every row to exact RC tests; missing or skipped mandatory behavior is a failure, not a pass.
+Status: original verification obligations retained below. The implemented [final requirement/scenario matrix](integration/FINAL_MATRIX.md) maps these stable IDs to actual source symbols, commands, proof layers and explicit limits. Observed exact-source candidate results belong to its evidence record; independent review and final acceptance are separate. Historical “Planned” cells below describe the foundation checkpoint, not the current implementation status. Missing or skipped mandatory behavior remains a failure, not a pass.
 
 Sources: approved owner mission, active OpenSpec `add-bridge-lab`, normative `protocol/v1/README.md`, and architecture fixture/build/lifecycle decisions. Contract text plus schema are reviewed together; a green schema cannot prove network policy or WebKit provenance.
 
@@ -41,7 +41,7 @@ Official OpenSpec 1.12.0 is pinned in openspec/tooling/package-lock.json. Initia
 
 `validate.cjs` compiles the actual schema with pinned Ajv, asserts labeled valid/invalid examples, and verifies semantic-only vectors are structurally valid. It deliberately does not implement runtime policy. Semantic examples have expected codes for native/adapter tests to import; this foundation does not claim those codes were produced by a transport.
 
-## Downstream command contracts (not executable in this foundation)
+## Original downstream command contracts (implemented entry points in final matrix)
 
 Each module publishes exact commands after implementation; these names are the agreed entry points:
 
@@ -49,7 +49,7 @@ Each module publishes exact commands after implementation; these names are the a
 - Transport: `swift test --package-path native/TransportPackage`.
 - Web: `npm ci --prefix web`, `npm --prefix web test -- --run`, `npm --prefix web run build:a`, `npm --prefix web run build:b`. Web worker selects/pins compatible test packages; test script must support --run.
 - iOS: `xcodebuild -project ios/BridgeLab.xcodeproj -scheme BridgeLab -destination 'platform=iOS Simulator,id=<dedicated-UDID>' -derivedDataPath <workspace>/.artifacts/DerivedData CODE_SIGNING_ALLOWED=NO test`; worker records available runtime/device and exact command/output. No invented UDID or signing setup.
-- Integration: `scripts/verify unit` and `scripts/verify simulator --udid <dedicated-UDID>` must fail honestly on missing prerequisites, save command results, and clean up owned resources on success/failure/signals. Simulator command owns serial fixtures + A/B proof, not another permanent server. Native project can add a separate UI test scheme if needed, documented without changing product behavior.
+- Integration: `scripts/verify unit` and the named `simulator-stage*` modes in the final matrix fail honestly on missing prerequisites, save command results, and clean up owned resources on success/failure/handled signals. Each mode creates/deletes its own dedicated UDID; no generic `simulator --udid` command is implemented or required. These are serial fixtures + A/B/component proof, not another permanent server. `BridgeLabAcceptance` is a separate UI runner scheme, not a native test bypass.
 
 The matrix's behavioral test cases are stable; framework-specific test method names can vary. Tests must not mutate other worktrees or run shared fixed-port services in parallel. No network package install failure can be replaced by fabricated fixture results.
 

@@ -30,6 +30,39 @@ function requestWithResponseBody(body: string) {
 }
 
 describe("BridgeClient with explicitly mocked native boundary", () => {
+  it("accepts the last id and fails closed without wrapping or another native call", async () => {
+    const native = new MockNativeBoundary((message) => message.type === "hello"
+      ? { v: 1, type: "helloAck", session } : response(message.id as number, "{}"));
+    const client = new BridgeClient(native);
+    // Explicit deterministic allocator seam; do not make two billion requests.
+    Reflect.set(client, "nextId", 2_147_483_647);
+    const input = { method: "GET" as const, url: "http://127.0.0.1:8788/last", headers: {}, body: null };
+    const last = client.request(input);
+    await expect(last.promise).resolves.toMatchObject({ id: 2_147_483_647 });
+    expect(() => client.request(input)).toThrowError(expect.objectContaining({ code: "ID_EXHAUSTED" }));
+    expect(native.messages).toHaveLength(2);
+    await expect(last.cancel()).resolves.toBe(false);
+    expect(native.messages).toHaveLength(2);
+  });
+
+  it("rejects malformed hello and cancel acknowledgements without accepting success", async () => {
+    const input = { method: "GET" as const, url: "http://127.0.0.1:8788/test", headers: {}, body: null };
+    const badHello = new MockNativeBoundary(() => ({ v: 1, type: "helloAck", session: "bad" }));
+    await expect(new BridgeClient(badHello).request(input).promise).rejects.toMatchObject({ code: "PROTOCOL_ERROR" });
+    expect(badHello.messages).toHaveLength(1);
+    let settle: ((reply: unknown) => void) | undefined;
+    const native = new MockNativeBoundary((message) => {
+      if (message.type === "hello") return { v: 1, type: "helloAck", session };
+      if (message.type === "cancel") return { v: 1, type: "cancelAck", id: message.id, cancelled: "true" };
+      return new Promise((resolve) => { settle = resolve; });
+    });
+    const request = new BridgeClient(native).request(input);
+    await vi.waitFor(() => expect(native.messages).toHaveLength(2));
+    await expect(request.cancel()).rejects.toMatchObject({ code: "PROTOCOL_ERROR" });
+    settle?.(response(request.id, "{}"));
+    await expect(request.promise).resolves.toMatchObject({ id: request.id });
+  });
+
   it("performs one hello and correlates out-of-order concurrent replies", async () => {
     const resolvers = new Map<number, (value: unknown) => void>();
     const native = new MockNativeBoundary((message) => {

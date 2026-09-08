@@ -14,6 +14,21 @@ From this checkout:
 
 Installs pinned local tooling, audits the complete web dependency tree, runs schema/OpenSpec validation, backend HTTP/process tests, native and iOS package tests, React/TypeScript tests and both web builds. Output goes to a fresh ignored `.artifacts/verify-unit-*/` directory. Commands and exit codes are recorded in `commands.json`; failures return nonzero. Builds use isolated output and do not replace tracked `web/dist`. Unit native/bridge doubles are not proof of actual WebKit networking.
 
+## Final candidate gates and evidence
+
+The [final requirement/scenario matrix](docs/integration/FINAL_MATRIX.md) is the current cross-layer coverage map. Stage1–5 reports below are historical checkpoints, not five outstanding product phases. Run separately and serially after the unit command:
+
+    python3 scripts/tests/operations.py
+    scripts/verify simulator-stage2-outcomes
+    scripts/verify simulator-stage3-trust-limits
+    scripts/verify simulator-stage4-webkit-privacy
+    scripts/verify simulator-stage5-production-ux
+    xcodebuild -project ios/BridgeLab.xcodeproj -scheme BridgeLab \
+      -destination 'generic/platform=iOS Simulator' \
+      -derivedDataPath "$PWD/.artifacts/final-build" CODE_SIGNING_ALLOWED=NO build analyze
+
+Each installed-shell mode includes the entire A/B proof, so Stage1 alone need not be repeated. WebKit mode now includes eleven live tests (53 with inherited tests), including remaining redirect/Location, decoded gzip/header/escaped-reply boundaries and streaming deadline vectors. Individual commands may take minutes; use a bounded background process on hosts with short foreground caps, retain its handle and verify its real exit/cleanup. Do not abandon an owned Simulator after a tool timeout. Current exact-source results are retained in `docs/integration/final-candidate-evidence.json` when produced and the same-card review handoff; absence of that record means final-source verification is pending. No runner grants independent review, product acceptance or an owner RC decision.
+
 ## Actual Simulator A/B proof (Stage 1 only)
 
 After the core command:
@@ -28,7 +43,7 @@ Before A, after A and after B, the host records the actual installed container a
 
 The runner refuses occupied ports without killing foreign listeners. It stops its own lab, verifies both ports can bind again, shuts down/deletes only its newly created Simulator and verifies its absence on success or handled failure. SIGINT/SIGTERM trigger cleanup; a force-kill or host crash cannot be guaranteed recoverable automatically. Do not run simultaneous fixed-port sessions. If cleanup fails, read `cleanup.json` and use the recorded state directory/UDID; never broadly kill Node or Simulator processes.
 
-Stage 1 is a coordinator checkpoint, not final acceptance. Full real error/security/lifecycle matrix, same-card independent integration review and separate exact-RC product acceptance are still required. No generic `simulator` command is advertised as a full gate until that matrix is implemented. See [Stage 1 evidence](docs/integration/STAGE1.md), [verification obligations](docs/verification-plan.md), and active [OpenSpec tasks](openspec/changes/add-bridge-lab/tasks.md).
+Stage 1 was a coordinator checkpoint, not final acceptance. The final matrix above reconciles subsequent error/security/lifecycle proof; independent integration review and separate exact-RC acceptance remain separate gates. There is no generic `simulator` command. See [Stage 1 evidence](docs/integration/STAGE1.md), [verification obligations](docs/verification-plan.md), and active [OpenSpec tasks](openspec/changes/add-bridge-lab/tasks.md).
 
 ## Actual Simulator outcome slice (Stage 2, incomplete matrix)
 
@@ -38,7 +53,7 @@ Includes the complete Stage1 regression, then replaces only served assets with a
 
 The UI test asserts preserved HTTP 503/422 bodies, business and JSON-parse classification, native timeout, explicit cancellation and acknowledgements, out-of-order concurrent correlation, and NETWORK_ERROR after actually stopping the backend. The host requires matching backend events, connection-close for timeout/cancel with no late success, unchanged installed app files, released ports and removed owned Simulator. All failure categories are assertions, not skipped tests. Test-runner synchronization remains restricted to static web-port control files.
 
-This is a bounded outcome checkpoint, NOT the complete security/lifecycle matrix or an approved RC. Remaining proof includes real iframe/foreign-origin provenance, redirect destination non-delivery, synthetic credential isolation, bounds/adversarial wire inputs and live document-revocation races. See [Stage2 outcome evidence and gaps](docs/integration/STAGE2_OUTCOMES.md). `final_acceptance` remains false.
+This is an outcome-only mode, not an approved RC. Other modes supply iframe provenance, redirects, synthetic privacy, bounds and revocation as mapped in the final matrix. See [Stage2 outcome evidence and gaps](docs/integration/STAGE2_OUTCOMES.md). `final_acceptance` remains false.
 
 ## Actual Simulator trust/limits slice (Stage 3, incomplete matrix)
 
@@ -55,14 +70,14 @@ The test-only raw probes intentionally bypass TS validation, never native policy
 
 See [Stage3 evidence and remaining obligations](docs/integration/STAGE3_TRUST_LIMITS.md).
 This mode does not repeat Stage2 outcome probes; both commands remain available.
-Full provenance, privacy, document revocation, production Diagnostics and adversarial
-runner cleanup gates remain pending. This is not a final RC or security acceptance.
+Provenance/privacy/revocation, production Diagnostics and adversarial cleanup are
+covered by the complementary modes; no single mode is final security acceptance.
 
 ## Real WebKit component trust/lifetime/privacy (Stage4)
 
     scripts/verify simulator-stage4-webkit-privacy
 
-Runs eight live WebKit/network component tests plus42 existing Simulator tests on
+Runs eleven live WebKit/network component tests plus42 existing Simulator tests on
 a newly created dedicated Simulator. The opt-in fixture has no CSP so actual
 same/foreign iframe messages reach the unchanged production adapter. This is NOT
 the installed React E2E layer. It checks real navigation, reload, provisional
@@ -73,8 +88,8 @@ or host keychain are read. Owned fixture ports8787/8788 and the device are clean
 on success or handled failure. Run fixed-port modes serially.
 
 See [Stage4 evidence and explicit framework seams](docs/integration/STAGE4_WEBKIT_PRIVACY.md).
-Production Diagnostics, adverse runner lifecycle and final reconciliation/review
-remain pending; none of these commands constitutes final acceptance.
+Production Diagnostics and adverse runner lifecycle are separate modes below;
+none of these commands constitutes final acceptance.
 
 ## Production Diagnostics and adverse operations (Stage5)
 
@@ -95,8 +110,8 @@ an overall gate PASS and verified cleanup. Only newly created process groups,
 canonical owned lab state and recorded dedicated Simulators may be stopped.
 SIGKILL/crash and instruction-level startup races are not automatically recoverable
 guarantees; see [Stage5 evidence, recovery and limits](docs/integration/STAGE5_UX_OPERATIONS.md).
-Full exact-RC regression, traceability reconciliation and independent review remain
-pending. This is not final acceptance.
+The final matrix and observed candidate evidence distinguish full exact-source
+regression from the still-independent review/acceptance gates.
 
 ## Manual demonstration
 

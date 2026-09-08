@@ -206,6 +206,66 @@ final class LiveWebKitTests: XCTestCase {
         XCTAssertFalse(wkCookies.contains { $0.name == "per85_shared" }, "native cookie did not enter WK store")
     }
 
+    func testActualRedirectStatusAndLocationMatrixNeverRequestsDestination() async throws {
+        try await host.load(web + "/redirect-vectors")
+        let session = try await hello()
+        var id = 1
+        for status in [301, 302, 303, 307, 308] {
+            for location in ["valid", "missing", "malformed"] {
+                let tag = "redirect-\(status)-\(location)"
+                let result = try await request(session: session, id: id,
+                    path: "/vectors/redirect/\(status)/\(location)", tag: tag)
+                XCTAssertEqual(result["code"] as? String, "REDIRECT_DENIED", tag)
+                let hits = try await events(path: "/vectors/redirect/\(status)/\(location)", tag: tag)
+                XCTAssertEqual(hits.count, 1, "one source request: \(tag)")
+                id += 1
+            }
+        }
+        let destinations = try await events(path: "/forbidden-redirect-destination")
+        XCTAssertTrue(destinations.isEmpty, "no redirect destination regardless of Location parsing")
+    }
+
+    func testActualDecodedGzipHeaderBoundsEmptyHTTPAndEscapedLargeReply() async throws {
+        try await host.load(web + "/response-vectors")
+        let session = try await hello()
+        for (offset, vector) in ["empty", "headers-exact", "headers-over", "gzip-exact", "gzip-over", "escaped"].enumerated() {
+            let result = try await request(session: session, id: offset + 1, path: "/vectors/" + vector, tag: vector)
+            if vector == "headers-over" || vector == "gzip-over" {
+                XCTAssertEqual(result["code"] as? String, "RESPONSE_TOO_LARGE", vector)
+            } else {
+                XCTAssertEqual(result["type"] as? String, "response", vector)
+                if vector == "empty" {
+                    XCTAssertEqual(result["status"] as? Int, 204, "actual empty HTTP status")
+                    XCTAssertEqual(result["body"] as? String, "", "empty response without media type")
+                } else if vector == "headers-exact" {
+                    let headers = try XCTUnwrap(result["headers"] as? [String: String])
+                    XCTAssertEqual(headers, ["x-lab-tag": String(repeating: "a", count: 8183)], "8192 exposed bytes; large private header excluded")
+                } else if vector == "gzip-exact" {
+                    XCTAssertEqual(result["body"] as? String, String(repeating: "x", count: 1_048_576), "decoded gzip cap inclusive")
+                } else {
+                    let body = try XCTUnwrap(result["body"] as? String)
+                    XCTAssertEqual(body, String(repeating: "\"\\\n", count: 50_000), "structured WebKit reply preserves escaped text")
+                    let serialized = try JSONSerialization.data(withJSONObject: result)
+                    XCTAssertGreaterThan(serialized.count, 131_072, "outgoing reply not subject to incoming cap")
+                }
+            }
+        }
+    }
+
+    func testActualTrickleDeadlineStopsSocketWithoutJavaScriptTimer() async throws {
+        try await host.load(web + "/trickle-vector")
+        let session = try await hello()
+        let result = try await host.js("return await bridge({v:1,type:'request',session,id:1,method:'GET',url,headers:{},body:null,timeoutMs:500})",
+            ["session":session, "url":api + "/vectors/trickle?tag=trickle"]) as! [String: Any]
+        XCTAssertEqual(result["code"] as? String, "TIMEOUT", "native deadline despite continuing HTTP chunks")
+        try await eventually("trickle underlying socket cancelled") {
+            try await self.allEvents().contains { $0["tag"] as? String == "trickle" && $0["event"] as? String == "connection-close" }
+        }
+        let observed = try await allEvents().filter { $0["tag"] as? String == "trickle" }
+        XCTAssertGreaterThan(observed.filter { $0["event"] as? String == "chunk" }.count, 1, "actual continuing chunks, not a silent server")
+        XCTAssertFalse(observed.contains { $0["event"] as? String == "finished" }, "native stopped unfinished response")
+    }
+
     private func lifetime(kind: String) async throws {
         try await host.load(web + "/lifetime-" + kind)
         let old = try await hello()

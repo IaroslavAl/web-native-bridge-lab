@@ -3,6 +3,7 @@
 // are retained. Owned by scripts/verify simulator-stage4-webkit-privacy.
 import http from 'node:http';
 import { writeFileSync } from 'node:fs';
+import { gzipSync } from 'node:zlib';
 
 const events = [];
 const sockets = new Set();
@@ -37,6 +38,38 @@ function handle(req, res) {
   const base = {port:req.socket.localPort, path:url.pathname, tag};
   record({...base, event:'request', cookie:!!req.headers.cookie, authorization:!!req.headers.authorization});
   res.on('close', () => record({...base, event:res.writableFinished ? 'finished' : 'connection-close'}));
+  if (url.pathname.startsWith('/vectors/redirect/')) {
+    const [, , , status, location] = url.pathname.split('/');
+    const headers = location === 'missing' ? {} : {location: location === 'malformed' ? 'http://[' : '/forbidden-redirect-destination'};
+    res.writeHead(Number(status), headers); res.end(); return;
+  }
+  if (url.pathname === '/vectors/empty') { res.writeHead(204); res.end(); return; }
+  if (url.pathname.startsWith('/vectors/headers-')) {
+    const extra = url.pathname.endsWith('-over') ? 1 : 0;
+    res.writeHead(204, {'x-lab-tag':'a'.repeat(8192 - Buffer.byteLength('x-lab-tag') + extra), 'x-private':'b'.repeat(9000)});
+    res.end(); return;
+  }
+  if (url.pathname.startsWith('/vectors/gzip-')) {
+    const bytes = 1048576 + (url.pathname.endsWith('-over') ? 1 : 0);
+    const compressed = gzipSync(Buffer.alloc(bytes, 'x'));
+    record({...base, event:'gzip', decodedBytes:bytes, wireBytes:compressed.length});
+    res.writeHead(200, {'content-type':'text/plain', 'content-encoding':'gzip'});
+    res.end(compressed); return;
+  }
+  if (url.pathname === '/vectors/escaped') {
+    res.writeHead(200, {'content-type':'text/plain'}); res.end('"\\\n'.repeat(50000)); return;
+  }
+  if (url.pathname === '/vectors/trickle') {
+    res.writeHead(200, {'content-type':'text/plain'}); res.flushHeaders();
+    let chunks = 0;
+    const timer = setInterval(() => {
+      res.write('x'); record({...base, event:'chunk'});
+      if (++chunks === 100) { clearInterval(timer); timers.delete(timer); res.end(); }
+    }, 50);
+    timers.add(timer);
+    res.on('close', () => { clearInterval(timer); timers.delete(timer); });
+    return;
+  }
   if (url.pathname === '/abort') { res.destroy(); return; }
   if (url.pathname === '/delay') {
     const timer = setTimeout(() => {
