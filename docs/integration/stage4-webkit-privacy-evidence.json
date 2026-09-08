@@ -1,0 +1,932 @@
+{
+  "stage": "Stage4 bounded component slice",
+  "final_acceptance": false,
+  "entry_head": "e913d5c2b1a2204fdbe188f9741945ee128680d0",
+  "source_commit": "0ad9292e5499899d6357752082f1bf9deddeab47",
+  "first_run_source": {
+    "branch": "web-native-bridge-lab/t_9d8fd391-per-85-integration-implementer",
+    "head_sha": "e913d5c2b1a2204fdbe188f9741945ee128680d0",
+    "working_diff": "ios/BridgeLab.xcodeproj/project.pbxproj |  4 +-\n scripts/tests/test_verify.py            | 12 +++++\n scripts/verify                          | 89 ++++++++++++++++++++++++++++++++-\n 3 files changed, 102 insertions(+), 3 deletions(-)"
+  },
+  "source_correspondence": "Green test/runner working candidate committed unchanged; subsequent README/task/evidence docs only. Not a clean-HEAD first invocation.",
+  "code_sha256": {
+    "ios/BridgeLab.xcodeproj/project.pbxproj": "93b4d3ea6713a0ab13eb2939306bda09e413525bba8a5eaeb04faa1e816f5561",
+    "ios/Tests/BridgeLabCoreTests/LiveWebKitTests.swift": "a2360b55d8063540a6cecc1e08c500849e73cedc07e16c6f1b62fd06ee85dcd3",
+    "scripts/tests/test_verify.py": "b074742f48e13abfdf2fe59fa72eb205a787bd3da1367ae25e337671b1de9abb",
+    "scripts/tests/webkit-fixture.mjs": "4c84486ada48445c826059ff6a0d2fe920294e78132b4425920e78b46ecac469",
+    "scripts/verify": "69b132c2fa052cc43256fb9c094ca0f6ee4c9c023af047e1ab57b1dd5ad2d1ca"
+  },
+  "layer": "Real WebKit component host + real URLSession + synthetic loopback fixture, not installed React E2E",
+  "commands": [
+    {
+      "argv": [
+        "xcrun",
+        "simctl",
+        "boot",
+        "3B5EEB70-6F68-4838-B36F-DF62E0C2C21E"
+      ],
+      "exit_code": 0,
+      "log": "boot.log",
+      "name": "boot"
+    },
+    {
+      "argv": [
+        "xcrun",
+        "simctl",
+        "bootstatus",
+        "3B5EEB70-6F68-4838-B36F-DF62E0C2C21E",
+        "-b"
+      ],
+      "exit_code": 0,
+      "log": "boot-ready.log",
+      "name": "boot-ready"
+    },
+    {
+      "argv": [
+        "xcodebuild",
+        "-project",
+        "ios/BridgeLab.xcodeproj",
+        "-scheme",
+        "BridgeLab",
+        "-destination",
+        "platform=iOS Simulator,id=3B5EEB70-6F68-4838-B36F-DF62E0C2C21E",
+        "-derivedDataPath",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/.artifacts/verify-simulator-stage4-webkit-privacy-9cbc77f61d/derived",
+        "-resultBundlePath",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/.artifacts/verify-simulator-stage4-webkit-privacy-9cbc77f61d/webkit.xcresult",
+        "CODE_SIGNING_ALLOWED=NO",
+        "-parallel-testing-enabled",
+        "NO",
+        "test"
+      ],
+      "exit_code": 0,
+      "log": "webkit-tests.log",
+      "name": "webkit-tests"
+    },
+    {
+      "argv": [
+        "xcrun",
+        "simctl",
+        "shutdown",
+        "3B5EEB70-6F68-4838-B36F-DF62E0C2C21E"
+      ],
+      "exit_code": 0,
+      "log": "simulator-shutdown.log",
+      "name": "simulator-shutdown"
+    },
+    {
+      "argv": [
+        "xcrun",
+        "simctl",
+        "delete",
+        "3B5EEB70-6F68-4838-B36F-DF62E0C2C21E"
+      ],
+      "exit_code": 0,
+      "log": "simulator-delete.log",
+      "name": "simulator-delete"
+    }
+  ],
+  "simulator_summary": {
+    "devicesAndConfigurations": [
+      {
+        "device": {
+          "architecture": "arm64",
+          "deviceId": "3B5EEB70-6F68-4838-B36F-DF62E0C2C21E",
+          "deviceName": "PER85-Stage4-29851b2f",
+          "modelName": "iPhone 17 Pro",
+          "osBuildNumber": "23F77",
+          "osVersion": "26.5",
+          "platform": "iOS Simulator"
+        },
+        "expectedFailures": 0,
+        "failedTests": 0,
+        "passedTests": 50,
+        "skippedTests": 0,
+        "testPlanConfiguration": {
+          "configurationId": "1",
+          "configurationName": "Test Scheme Action"
+        }
+      }
+    ],
+    "environmentDescription": "BridgeLab · Built with macOS 26.6.2",
+    "expectedFailures": 0,
+    "failedTests": 0,
+    "finishTime": 1788868972.917,
+    "passedTests": 50,
+    "result": "Passed",
+    "skippedTests": 0,
+    "startTime": 1788868901.665,
+    "statistics": [],
+    "testFailures": [],
+    "title": "Test - BridgeLab",
+    "topInsights": [
+      {
+        "category": "Longest Test Runs",
+        "impact": "21% of duration",
+        "text": "1 longest test run with outlier durations exceeding 2.95s (three standard deviations)"
+      }
+    ],
+    "totalTestCount": 50
+  },
+  "live_tests": [
+    "Test Case '-[BridgeLabTests.LiveWebKitTests testActualDeniedNavigationFrameAndNewWindowKeepCurrentDocument]' passed (1.179 seconds).",
+    "Test Case '-[BridgeLabTests.LiveWebKitTests testActualProvisionalNetworkFailureRevokesAndNextDocumentRecovers]' passed (1.018 seconds).",
+    "Test Case '-[BridgeLabTests.LiveWebKitTests testLiveCloseAndAdapterDestructionCancelSocketsAndReleaseOwnership]' passed (1.985 seconds).",
+    "Test Case '-[BridgeLabTests.LiveWebKitTests testLiveNavigationCancelsSocketAndFreshIDOneIsIsolated]' passed (2.684 seconds).",
+    "Test Case '-[BridgeLabTests.LiveWebKitTests testLiveSameURLReloadCancelsSocketAndFreshIDOneRejectsStaleToken]' passed (2.722 seconds).",
+    "Test Case '-[BridgeLabTests.LiveWebKitTests testRealFrameMetadataRejectedAtAdapterAfterTestOnlyNavigationBypass]' passed (0.936 seconds).",
+    "Test Case '-[BridgeLabTests.LiveWebKitTests testRealMainFrameUncommittedAndInactiveMessagesDenied]' passed (0.899 seconds).",
+    "Test Case '-[BridgeLabTests.LiveWebKitTests testSyntheticWebNativeCookiesCacheAndChallengeIsolation]' passed (2.347 seconds)."
+  ],
+  "events": [
+    {
+      "port": 8787,
+      "path": "/",
+      "tag": "-",
+      "event": "request",
+      "cookie": false,
+      "authorization": false
+    },
+    {
+      "port": 8787,
+      "path": "/",
+      "tag": "-",
+      "event": "finished"
+    },
+    {
+      "port": 8787,
+      "path": "/denials",
+      "tag": "-",
+      "event": "request",
+      "cookie": false,
+      "authorization": false
+    },
+    {
+      "port": 8787,
+      "path": "/denials",
+      "tag": "-",
+      "event": "finished"
+    },
+    {
+      "port": 8787,
+      "path": "/before-failure",
+      "tag": "-",
+      "event": "request",
+      "cookie": false,
+      "authorization": false
+    },
+    {
+      "port": 8787,
+      "path": "/before-failure",
+      "tag": "-",
+      "event": "finished"
+    },
+    {
+      "port": 8788,
+      "path": "/delay",
+      "tag": "provisional",
+      "event": "request",
+      "cookie": false,
+      "authorization": false
+    },
+    {
+      "port": 8787,
+      "path": "/abort",
+      "tag": "-",
+      "event": "request",
+      "cookie": false,
+      "authorization": false
+    },
+    {
+      "port": 8787,
+      "path": "/abort",
+      "tag": "-",
+      "event": "connection-close"
+    },
+    {
+      "port": 8788,
+      "path": "/delay",
+      "tag": "provisional",
+      "event": "connection-close"
+    },
+    {
+      "port": 8787,
+      "path": "/abort",
+      "tag": "-",
+      "event": "request",
+      "cookie": false,
+      "authorization": false
+    },
+    {
+      "port": 8787,
+      "path": "/abort",
+      "tag": "-",
+      "event": "connection-close"
+    },
+    {
+      "port": 8787,
+      "path": "/abort",
+      "tag": "-",
+      "event": "request",
+      "cookie": false,
+      "authorization": false
+    },
+    {
+      "port": 8787,
+      "path": "/abort",
+      "tag": "-",
+      "event": "connection-close"
+    },
+    {
+      "port": 8787,
+      "path": "/abort",
+      "tag": "-",
+      "event": "request",
+      "cookie": false,
+      "authorization": false
+    },
+    {
+      "port": 8787,
+      "path": "/abort",
+      "tag": "-",
+      "event": "connection-close"
+    },
+    {
+      "port": 8787,
+      "path": "/after-failure",
+      "tag": "-",
+      "event": "request",
+      "cookie": false,
+      "authorization": false
+    },
+    {
+      "port": 8787,
+      "path": "/after-failure",
+      "tag": "-",
+      "event": "finished"
+    },
+    {
+      "port": 8788,
+      "path": "/fresh",
+      "tag": "provisional",
+      "event": "request",
+      "cookie": false,
+      "authorization": false
+    },
+    {
+      "port": 8788,
+      "path": "/fresh",
+      "tag": "provisional",
+      "event": "finished"
+    },
+    {
+      "port": 8787,
+      "path": "/close",
+      "tag": "-",
+      "event": "request",
+      "cookie": false,
+      "authorization": false
+    },
+    {
+      "port": 8787,
+      "path": "/close",
+      "tag": "-",
+      "event": "finished"
+    },
+    {
+      "port": 8788,
+      "path": "/delay",
+      "tag": "close",
+      "event": "request",
+      "cookie": false,
+      "authorization": false
+    },
+    {
+      "port": 8788,
+      "path": "/delay",
+      "tag": "close",
+      "event": "connection-close"
+    },
+    {
+      "port": 8787,
+      "path": "/destruction",
+      "tag": "-",
+      "event": "request",
+      "cookie": false,
+      "authorization": false
+    },
+    {
+      "port": 8787,
+      "path": "/destruction",
+      "tag": "-",
+      "event": "finished"
+    },
+    {
+      "port": 8788,
+      "path": "/delay",
+      "tag": "destruction",
+      "event": "request",
+      "cookie": false,
+      "authorization": false
+    },
+    {
+      "port": 8788,
+      "path": "/delay",
+      "tag": "destruction",
+      "event": "connection-close"
+    },
+    {
+      "port": 8787,
+      "path": "/lifetime-navigation",
+      "tag": "-",
+      "event": "request",
+      "cookie": false,
+      "authorization": false
+    },
+    {
+      "port": 8787,
+      "path": "/lifetime-navigation",
+      "tag": "-",
+      "event": "finished"
+    },
+    {
+      "port": 8788,
+      "path": "/delay",
+      "tag": "navigation",
+      "event": "request",
+      "cookie": false,
+      "authorization": false
+    },
+    {
+      "port": 8788,
+      "path": "/delay",
+      "tag": "navigation",
+      "event": "connection-close"
+    },
+    {
+      "port": 8787,
+      "path": "/fresh-document",
+      "tag": "-",
+      "event": "request",
+      "cookie": false,
+      "authorization": false
+    },
+    {
+      "port": 8787,
+      "path": "/fresh-document",
+      "tag": "-",
+      "event": "finished"
+    },
+    {
+      "port": 8788,
+      "path": "/fresh",
+      "tag": "navigation",
+      "event": "request",
+      "cookie": false,
+      "authorization": false
+    },
+    {
+      "port": 8788,
+      "path": "/fresh",
+      "tag": "navigation",
+      "event": "finished"
+    },
+    {
+      "port": 8787,
+      "path": "/lifetime-reload",
+      "tag": "-",
+      "event": "request",
+      "cookie": false,
+      "authorization": false
+    },
+    {
+      "port": 8787,
+      "path": "/lifetime-reload",
+      "tag": "-",
+      "event": "finished"
+    },
+    {
+      "port": 8788,
+      "path": "/delay",
+      "tag": "reload",
+      "event": "request",
+      "cookie": false,
+      "authorization": false
+    },
+    {
+      "port": 8788,
+      "path": "/delay",
+      "tag": "reload",
+      "event": "connection-close"
+    },
+    {
+      "port": 8787,
+      "path": "/lifetime-reload",
+      "tag": "-",
+      "event": "request",
+      "cookie": false,
+      "authorization": false
+    },
+    {
+      "port": 8787,
+      "path": "/lifetime-reload",
+      "tag": "-",
+      "event": "finished"
+    },
+    {
+      "port": 8788,
+      "path": "/fresh",
+      "tag": "reload",
+      "event": "request",
+      "cookie": false,
+      "authorization": false
+    },
+    {
+      "port": 8788,
+      "path": "/fresh",
+      "tag": "reload",
+      "event": "finished"
+    },
+    {
+      "port": 8787,
+      "path": "/frames",
+      "tag": "-",
+      "event": "request",
+      "cookie": false,
+      "authorization": false
+    },
+    {
+      "port": 8787,
+      "path": "/frames",
+      "tag": "-",
+      "event": "finished"
+    },
+    {
+      "port": 8787,
+      "path": "/frame",
+      "tag": "frame-0",
+      "event": "request",
+      "cookie": false,
+      "authorization": false
+    },
+    {
+      "port": 8787,
+      "path": "/frame",
+      "tag": "frame-0",
+      "event": "finished"
+    },
+    {
+      "port": 8788,
+      "path": "/frame",
+      "tag": "frame-1",
+      "event": "request",
+      "cookie": false,
+      "authorization": false
+    },
+    {
+      "port": 8788,
+      "path": "/frame",
+      "tag": "frame-1",
+      "event": "finished"
+    },
+    {
+      "port": 8787,
+      "path": "/uncommitted",
+      "tag": "-",
+      "event": "request",
+      "cookie": false,
+      "authorization": false
+    },
+    {
+      "port": 8787,
+      "path": "/uncommitted",
+      "tag": "-",
+      "event": "finished"
+    },
+    {
+      "port": 8788,
+      "path": "/inspect",
+      "tag": "control-native",
+      "event": "request",
+      "cookie": true,
+      "authorization": false
+    },
+    {
+      "port": 8788,
+      "path": "/inspect",
+      "tag": "control-native",
+      "event": "finished"
+    },
+    {
+      "port": 8787,
+      "path": "/",
+      "tag": "-",
+      "event": "request",
+      "cookie": true,
+      "authorization": false
+    },
+    {
+      "port": 8787,
+      "path": "/",
+      "tag": "-",
+      "event": "finished"
+    },
+    {
+      "port": 8787,
+      "path": "/privacy",
+      "tag": "-",
+      "event": "request",
+      "cookie": false,
+      "authorization": false
+    },
+    {
+      "port": 8787,
+      "path": "/privacy",
+      "tag": "-",
+      "event": "finished"
+    },
+    {
+      "port": 8788,
+      "path": "/inspect",
+      "tag": "privacy-first",
+      "event": "request",
+      "cookie": false,
+      "authorization": false
+    },
+    {
+      "port": 8788,
+      "path": "/inspect",
+      "tag": "privacy-first",
+      "event": "finished"
+    },
+    {
+      "port": 8788,
+      "path": "/inspect",
+      "tag": "privacy-second",
+      "event": "request",
+      "cookie": false,
+      "authorization": false
+    },
+    {
+      "port": 8788,
+      "path": "/inspect",
+      "tag": "privacy-second",
+      "event": "finished"
+    },
+    {
+      "port": 8788,
+      "path": "/cache",
+      "tag": "privacy-cache",
+      "event": "request",
+      "cookie": false,
+      "authorization": false
+    },
+    {
+      "port": 8788,
+      "path": "/cache",
+      "tag": "privacy-cache",
+      "event": "finished"
+    },
+    {
+      "port": 8788,
+      "path": "/challenge",
+      "tag": "privacy-auth-4",
+      "event": "request",
+      "cookie": false,
+      "authorization": false
+    },
+    {
+      "port": 8788,
+      "path": "/challenge",
+      "tag": "privacy-auth-4",
+      "event": "finished"
+    },
+    {
+      "port": 8788,
+      "path": "/challenge",
+      "tag": "privacy-auth-5",
+      "event": "request",
+      "cookie": false,
+      "authorization": false
+    },
+    {
+      "port": 8788,
+      "path": "/challenge",
+      "tag": "privacy-auth-5",
+      "event": "finished"
+    }
+  ],
+  "cleanup": {
+    "errors": [],
+    "owned_fixture_stopped": true,
+    "owned_simulator_removed": true
+  },
+  "unit_commands": [
+    {
+      "argv": [
+        "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "scripts/tests",
+        "-v"
+      ],
+      "exit_code": 0,
+      "log": "runner-tests.log",
+      "name": "runner-tests"
+    },
+    {
+      "argv": [
+        "npm",
+        "ci",
+        "--prefix",
+        "openspec/tooling",
+        "--ignore-scripts",
+        "--no-audit",
+        "--no-fund"
+      ],
+      "exit_code": 0,
+      "log": "spec-install.log",
+      "name": "spec-install"
+    },
+    {
+      "argv": [
+        "npm",
+        "ci",
+        "--prefix",
+        "web",
+        "--no-audit",
+        "--no-fund"
+      ],
+      "exit_code": 0,
+      "log": "web-install.log",
+      "name": "web-install"
+    },
+    {
+      "argv": [
+        "npm",
+        "audit",
+        "--prefix",
+        "web",
+        "--audit-level=high"
+      ],
+      "exit_code": 0,
+      "log": "web-audit.log",
+      "name": "web-audit"
+    },
+    {
+      "argv": [
+        "node",
+        "protocol/v1/validate.cjs"
+      ],
+      "exit_code": 0,
+      "log": "protocol.log",
+      "name": "protocol"
+    },
+    {
+      "argv": [
+        "openspec/tooling/node_modules/.bin/openspec",
+        "validate",
+        "--all",
+        "--strict",
+        "--no-interactive",
+        "--json"
+      ],
+      "exit_code": 0,
+      "log": "openspec.log",
+      "name": "openspec"
+    },
+    {
+      "argv": [
+        "node",
+        "--test",
+        "backend/tests/arguments.test.mjs",
+        "backend/tests/fixtures.test.mjs",
+        "backend/tests/lifecycle.test.mjs",
+        "backend/tests/port-retry.test.mjs",
+        "backend/tests/static-cleanup.test.mjs"
+      ],
+      "exit_code": 0,
+      "log": "backend.log",
+      "name": "backend"
+    },
+    {
+      "argv": [
+        "swift",
+        "test",
+        "--package-path",
+        "native/TransportPackage",
+        "-Xswiftc",
+        "-warnings-as-errors"
+      ],
+      "exit_code": 0,
+      "log": "native.log",
+      "name": "native"
+    },
+    {
+      "argv": [
+        "swift",
+        "test",
+        "--package-path",
+        "ios",
+        "-Xswiftc",
+        "-warnings-as-errors"
+      ],
+      "exit_code": 0,
+      "log": "ios-package.log",
+      "name": "ios-package"
+    },
+    {
+      "argv": [
+        "npm",
+        "--prefix",
+        "web",
+        "test",
+        "--",
+        "--run"
+      ],
+      "exit_code": 0,
+      "log": "web-tests.log",
+      "name": "web-tests"
+    },
+    {
+      "argv": [
+        "npm",
+        "--prefix",
+        "web",
+        "run",
+        "typecheck"
+      ],
+      "exit_code": 0,
+      "log": "web-types.log",
+      "name": "web-types"
+    },
+    {
+      "argv": [
+        "web/node_modules/.bin/vite",
+        "build",
+        "web",
+        "--config",
+        "web/vite.acceptance.config.ts",
+        "--outDir",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/.artifacts/verify-unit-2ca66f55d0/diagnostics-web",
+        "--emptyOutDir"
+      ],
+      "exit_code": 0,
+      "log": "web-build-diagnostics.log",
+      "name": "web-build-diagnostics"
+    },
+    {
+      "argv": [
+        "npm",
+        "--prefix",
+        "web",
+        "run",
+        "build:a",
+        "--",
+        "--outDir",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/.artifacts/verify-unit-2ca66f55d0/web",
+        "--emptyOutDir"
+      ],
+      "exit_code": 0,
+      "log": "web-build-A.log",
+      "name": "web-build-A"
+    },
+    {
+      "argv": [
+        "npm",
+        "--prefix",
+        "web",
+        "run",
+        "build:b",
+        "--",
+        "--outDir",
+        "/Users/agent/hermes-clean-20260903/projects/web-native-bridge-lab/.worktrees/t_9d8fd391/.artifacts/verify-unit-2ca66f55d0/web",
+        "--emptyOutDir"
+      ],
+      "exit_code": 0,
+      "log": "web-build-B.log",
+      "name": "web-build-B"
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exit_code": 0,
+      "log": "diff-check.log",
+      "name": "diff-check"
+    }
+  ],
+  "unit_totals": {
+    "helpers": 6,
+    "backend": 41,
+    "native": 39,
+    "ios_package": 19,
+    "web": 23,
+    "audit_vulnerabilities": 0,
+    "strict_openspec": "PASS",
+    "typecheck": "PASS",
+    "builds": [
+      "A",
+      "B",
+      "acceptance"
+    ]
+  },
+  "mutation_control": {
+    "command": "python3 .artifacts/stage4-mutation/scripts/verify simulator-stage4-webkit-privacy",
+    "scope": "Ignored git-archive snapshot with candidate overlays; three separate guards removed simultaneously, LiveWebKitTests only; tracked production unchanged",
+    "mutations": [
+      "TrustedPagePolicy main-frame guard removed",
+      "WKBridgeAdapter prepareForAllowedNavigation lifecycle.revoke omitted",
+      "URLSession configuration shared cookies enabled"
+    ],
+    "runner_exit": 1,
+    "xcode_exit": 65,
+    "summary": {
+      "passedTests": 4,
+      "failedTests": 4,
+      "skippedTests": 0,
+      "totalTestCount": 8,
+      "result": "Failed"
+    },
+    "assertions": [
+      "-[BridgeLabTests.LiveWebKitTests testLiveNavigationCancelsSocketAndFreshIDOneIsIsolated] : failed - Timed out: actual old connection-close navigation",
+      "-[BridgeLabTests.LiveWebKitTests testLiveNavigationCancelsSocketAndFreshIDOneIsIsolated] : failed: caught error: \"Error Domain=LiveWebKitTests Code=1 \"actual old connection-close navigation\" UserInfo={NSLocalizedDescription=actual old connection-close navigation}\"",
+      "-[BridgeLabTests.LiveWebKitTests testLiveSameURLReloadCancelsSocketAndFreshIDOneRejectsStaleToken] : failed - Timed out: actual old connection-close reload",
+      "-[BridgeLabTests.LiveWebKitTests testLiveSameURLReloadCancelsSocketAndFreshIDOneRejectsStaleToken] : failed: caught error: \"Error Domain=LiveWebKitTests Code=1 \"actual old connection-close reload\" UserInfo={NSLocalizedDescription=actual old connection-close reload}\"",
+      "-[BridgeLabTests.LiveWebKitTests testRealFrameMetadataRejectedAtAdapterAfterTestOnlyNavigationBypass] : XCTAssertEqual failed: (\"nil\") is not equal to (\"Optional(\"ORIGIN_DENIED\")\") - frame hello denied",
+      "-[BridgeLabTests.LiveWebKitTests testRealFrameMetadataRejectedAtAdapterAfterTestOnlyNavigationBypass] : XCTAssertEqual failed: (\"Optional(\"UNSUPPORTED_RESPONSE\")\") is not equal to (\"Optional(\"ORIGIN_DENIED\")\") - frame request denied",
+      "-[BridgeLabTests.LiveWebKitTests testRealFrameMetadataRejectedAtAdapterAfterTestOnlyNavigationBypass] : XCTAssertTrue failed - no frame API admission",
+      "-[BridgeLabTests.LiveWebKitTests testSyntheticWebNativeCookiesCacheAndChallengeIsolation] : XCTAssertEqual failed: (\"Optional(true)\") is not equal to (\"Optional(false)\") - privacy-first no ambient cookie",
+      "-[BridgeLabTests.LiveWebKitTests testSyntheticWebNativeCookiesCacheAndChallengeIsolation] : XCTAssertEqual failed: (\"Optional(true)\") is not equal to (\"Optional(false)\") - privacy-second no ambient cookie",
+      "-[BridgeLabTests.LiveWebKitTests testSyntheticWebNativeCookiesCacheAndChallengeIsolation] : XCTAssertEqual failed: (\"Optional(true)\") is not equal to (\"Optional(false)\") - privacy-cache no ambient cookie",
+      "-[BridgeLabTests.LiveWebKitTests testSyntheticWebNativeCookiesCacheAndChallengeIsolation] : XCTAssertFalse failed - native did not persist response cookie"
+    ],
+    "cleanup": {
+      "errors": [],
+      "owned_fixture_stopped": true,
+      "owned_simulator_removed": true
+    }
+  },
+  "prior_attempts": [
+    {
+      "run": ".artifacts/stage4-compile.log",
+      "outcome": "compile failed: six async XCTest autoclosure sites, fixed via awaited locals"
+    },
+    {
+      "run": ".artifacts/verify-simulator-stage4-webkit-privacy-34aa85c11b",
+      "outcome": "48/49 passed, navigation harness assumption failed; cleaned"
+    },
+    {
+      "run": ".artifacts/verify-stage4-focused-a174716320",
+      "outcome": "focused expected failure; real callbacks established WebKit UI creation versus navigation boundary; cleaned"
+    }
+  ],
+  "resource_readback": [
+    {
+      "run": ".artifacts/verify-simulator-stage4-webkit-privacy-9cbc77f61d",
+      "udid": "3B5EEB70-6F68-4838-B36F-DF62E0C2C21E",
+      "fixture_pid": 74704,
+      "absent": true
+    },
+    {
+      "run": ".artifacts/stage4-mutation/.artifacts/verify-simulator-stage4-webkit-privacy-f468058aff",
+      "udid": "59E65984-D809-4EBC-8A3E-038A4581C013",
+      "fixture_pid": 77376,
+      "absent": true
+    },
+    {
+      "run": ".artifacts/verify-simulator-stage4-webkit-privacy-34aa85c11b",
+      "udid": "45A5DB2C-930B-413A-AF15-25168B74C3B7",
+      "fixture_pid": 71699,
+      "absent": true
+    },
+    {
+      "run": ".artifacts/verify-stage4-focused-a174716320",
+      "udid": "1C3EF581-FD7B-4F4E-81EF-0FF74FD812F3",
+      "fixture_pid": 73171,
+      "absent": true
+    }
+  ],
+  "ports_8787_8788_bind_listen": "PASS",
+  "routing": {
+    "worker_pid": 68515,
+    "profile": "iosimplementer",
+    "provider": "openai-codex",
+    "model": "gpt-6-astra",
+    "launch_effort": "high, observed argv --reasoning high",
+    "effective_reasoning_effort": "not independently measurable"
+  },
+  "limitations": [
+    "No actual OS WebContent process termination induced; inherited termination/deadline callbacks are seams",
+    "Held real didCommit and explicit inactive transition are ordering/framework seams; real frame messages",
+    "Window rejection observed at no-UI-delegate WebKit layer, not adapter nil-target navigation callback",
+    "Provisional failure navigation already revokes; redundant failure callback not independently isolated",
+    "Synthetic shared credential non-use/challenge cancellation is observed, not OS keychain instrumentation",
+    "No Stage1-3 installed-app rerun in this bounded stage",
+    "Production Diagnostics, runner adverse lifecycle and complete final matrix/review remain pending"
+  ]
+}
