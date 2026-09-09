@@ -6,21 +6,25 @@
   "branch": "web-native-bridge-lab/t_d9bcf406-per-85-explain-v2-runtime-implementer",
   "reviewed_parent": "2a90459975aa1923f65adcfcc8682da620f5dbef",
   "first_r_code_commit": "47c1d754b02c1b2a7b9d7d451d7a5d95d259b3d7",
+  "corrected_r_code_commit": "c15e62653861fa7d9bc7774078059bfe277a3375",
+  "five_width_runtime_commit": "3015179744842c6d4ef0fce75c879bee2b000e56",
+  "pending_disablement_runtime_commit": "eafb120fbaf9316955798e98d5d1e4e71d92ba28",
   "source_state": {
-    "runtime_source_recorded_head": "2a90459975aa1923f65adcfcc8682da620f5dbef",
-    "runtime_worktree_was_dirty": true,
-    "runtime_source_exact_commit_claimed": false,
-    "reason": "The successful sweep ran before commit. source.json recorded the N parent and tracked diff; the then-untracked layout test was omitted from diff stat, and README/task reconciliation followed the sweep.",
-    "reconciliation": "Tested code/test/runner files preceded successful XCTest execution and were committed as 47c1d75, but timing is not cryptographic exact-head proof. Fresh operations and Stage2/3 source records capture 47c1d75 plus the tracked lab-start ownership fix; the untracked evidence documents are absent from their diff summaries. Independent same-card/final acceptance reruns remain required."
+    "runtime_source_recorded_head": "eafb120fbaf9316955798e98d5d1e4e71d92ba28",
+    "runtime_worktree_was_dirty": false,
+    "runtime_source_exact_commit_claimed": true,
+    "working_diff": "",
+    "reason": "The corrective simulator-explain-v2 sweep ran from committed eafb120 with an empty working diff.",
+    "reconciliation": "This replaces the earlier dirty-source limitation for primary Explain runtime proof. Independent same-card review and final acceptance remain required."
   },
   "primary_runtime": {
     "command": "scripts/verify simulator-explain-v2",
     "exit_code": 0,
-    "evidence_directory": ".artifacts/verify-simulator-explain-v2-5871b54ed6",
+    "evidence_directory": ".artifacts/verify-simulator-explain-v2-c72da8b135",
     "result": "PASS",
     "simulator": {
-      "udid": "E9737698-FEC9-4FD8-B497-4B4A01A7672B",
-      "name": "PER85-Explain-fb34b87a",
+      "udid": "2D46586E-F7AE-4D2C-8E7D-D95173C17899",
+      "name": "PER85-Explain-4aca7607",
       "model": "iPhone 17 Pro",
       "runtime": "iOS 26.5",
       "owned_removed": true
@@ -30,6 +34,7 @@
       "layout_a_default": {"passed": 1, "failed": 0, "skipped": 0},
       "layout_a_assistive": {"passed": 1, "failed": 0, "skipped": 0},
       "layout_b": {"passed": 1, "failed": 0, "skipped": 0},
+      "layout_b_retry": {"passed": 1, "failed": 0, "skipped": 0},
       "installed_ui": {"passed": 1, "failed": 0, "skipped": 0}
     },
     "cleanup": {
@@ -56,8 +61,8 @@
     "same_container": true,
     "same_manifest": true,
     "file_count": 3,
-    "executable_sha256": "15d48f315744f0205b2bb955f00a9600de9b1a1c344c129bbe4817186fc7e1d0",
-    "manifest_sha256": "62b2c916dcc23fd39de47430c05d004f0fba9c11f78bb66a25d0bb75fc06e4da",
+    "executable_sha256": "b33f7dab37b88d93360386fd3e7533333cbe7994cbc64af0da521266cde8ded9",
+    "manifest_sha256": "a962e3c107b139c468edea3511be902b5fd4aff57bc218aa5d00ce02b44fcdcd",
     "bundle_version": "1.0",
     "bundle_build": "1"
   },
@@ -69,7 +74,13 @@
     "static_control_port": 8787
   },
   "layout": {
-    "component_viewports": ["320x740", "390x844", "1100x900"],
+    "component_viewports": ["320x740", "390x844", "430x932", "768x1024", "1100x900"],
+    "variant_a_states": ["introduction", "catalog-pending", "catalog-result", "unchanged", "final-comparison"],
+    "variant_a_retained_observations": 25,
+    "variant_b_states": ["cold", "quote-result"],
+    "variant_b_retained_observations": 10,
+    "variant_b_retry_viewports": ["320x740", "390x844", "430x932", "768x1024", "1100x900"],
+    "variant_b_retry_retained_observations": 5,
     "scroll_top_geometry_retained": true,
     "screenshots_retained": true,
     "horizontal_overflow": false,
@@ -80,7 +91,8 @@
     "installed_content_size": "accessibility-extra-large",
     "installed_safe_area_and_footer_frames_asserted": true,
     "visual_inspection": {
-      "result": "No visible route/current/action overlap or clipping in inspected default 320x740, 1100x900, and installed default snapshots.",
+      "method": "XCTest geometry assertions plus macOS Vision OCR over retained 320x740 and 1100x900 PNGs.",
+      "result": "Pending, final-comparison, and unavailable-API retry copy/actions were visible at narrow and wide widths; geometry reported no route/current/action overlap or horizontal overflow.",
       "enlarged_scope": "The enlarged component screenshot is after scrolling to the action; it does not prove route and action are simultaneously visible from scroll top."
     },
     "framework_warnings": [
@@ -95,12 +107,13 @@
     "EX-04": {"status": "implementer-pass", "evidence": ["A has no quote", "unchanged A reload", "real B replacement", "cold B no invented history", "repeat remains B"]},
     "EX-05": {"status": "implementer-pass", "evidence": ["actual emitted A/B entry paths", "Bundle 1.0/1", "external installed manifest equality"]},
     "EX-06": {"status": "implementer-pass", "evidence": ["actual B entry 404", "static Russian fallback", "no stale business action", "exact entry restore and reload recovery"]},
-    "EX-07": {"status": "implementer-pass-with-disclosed-scope", "evidence": ["three explicit WK frames", "screenshots and geometry", "reduced motion", "1.6x component text", "installed accessibility-extra-large scrolling"]},
-    "EX-08": {"status": "implementer-pass-review-pending", "evidence": ["production client/adapter", "static-only host control", "installed equality", "backend attribution", "unit/Stage5 retained", "fresh 14-test harness", "fresh operations", "fresh proportional Stage2/3"]}
+    "EX-07": {"status": "implementer-pass-with-disclosed-scope", "evidence": ["A introduction/pending/catalog/unchanged/final-comparison at 320/390/430/768/1100", "B cold/quote-result at 320/390/430/768/1100", "real API-unavailable retry at 320/390/430/768/1100", "screenshots and geometry", "reduced motion", "1.6x component text", "installed accessibility-extra-large scrolling"]},
+    "EX-08": {"status": "implementer-pass-review-pending", "evidence": ["production client/adapter", "static-only host control", "installed equality", "backend attribution", "unit/Stage5 retained", "fresh 15-test harness", "fresh operations", "fresh proportional Stage2/3"]}
   },
   "other_gates": [
-    {"command": "python3 -m unittest discover -s scripts/tests -v", "exit_code": 0, "tests": 14, "source": "47c1d75 plus tracked lab-start ownership fix"},
-    {"command": "scripts/verify unit", "exit_code": 0, "evidence_directory": ".artifacts/verify-unit-d331387f96", "runner_tests": 14},
+    {"command": "python3 -m unittest scripts.tests.test_verify.EvidenceTests.test_missing_entry_fault_is_cleanup_eligible_before_and_after_interrupted_move -v", "red_observed": true, "exit_code_after_fix": 0},
+    {"command": "python3 -m unittest discover -s scripts/tests -v", "exit_code": 0, "tests": 15, "source": "eafb120 via exact-clean unit gate"},
+    {"command": "scripts/verify unit", "exit_code": 0, "evidence_directory": ".artifacts/verify-unit-d1869b9b03", "runner_tests": 15, "source": "exact-clean eafb120"},
     {"command": "python3 scripts/tests/operations.py", "exit_code": 0, "evidence_directory": ".artifacts/verify-stage5-operations-bf8a12811b", "cleanup_verified": true},
     {"command": "scripts/verify simulator-stage5-production-ux", "exit_code": 0, "evidence_directory": ".artifacts/verify-simulator-stage5-production-ux-b20c1cac4f"},
     {"command": "scripts/verify simulator-stage2-outcomes", "exit_code": 0, "status": "PASS", "evidence_directory": ".artifacts/verify-simulator-stage2-outcomes-0c845d4b42", "same_container": true, "same_manifest": true, "cleanup_verified": true},
@@ -125,7 +138,7 @@
   "limitations": [
     "Simulator and synthetic loopback only.",
     "No real-device, cloud, authentication, secrets, publication, deployment, or App Store evidence.",
-    "Successful primary runtime evidence is precommit dirty-source evidence, not an exact clean-head acceptance run.",
+    "Primary runtime evidence is exact-clean eafb120 engineering proof, not independent final acceptance.",
     "Independent same-card review, final A acceptance, coordinator integration, and owner product acceptance remain pending."
   ]
 }
