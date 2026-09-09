@@ -22,6 +22,8 @@ describe("web-owned scenarios", () => {
     expect(interpretCatalog(ok('{"items":[{"sku":"notebook","title":"Notebook"}],"total":1}'))).toEqual({
       kind: "catalog",
       summary: "Notebook (notebook) — total 1",
+      items: [{ sku: "notebook", title: "Notebook" }],
+      total: 1,
     });
   });
 
@@ -35,7 +37,18 @@ describe("web-owned scenarios", () => {
     expect(interpretQuote(ok('{"quote":{"sku":"notebook","quantity":2,"totalMinor":1200,"currency":"USD"}}'))).toEqual({
       kind: "quote",
       summary: "notebook × 2 — USD 1200 minor units",
+      quote: { sku: "notebook", quantity: 2, totalMinor: 1200, currency: "USD" },
     });
+  });
+
+  it.each([
+    '{"quote":{"sku":"notebook","quantity":2,"totalMinor":-1,"currency":"USD"}}',
+    '{"quote":{"sku":"notebook","quantity":2,"totalMinor":1200,"currency":"usd"}}',
+    '{"quote":{"sku":"notebook","quantity":0,"totalMinor":1200,"currency":"USD"}}',
+  ])("rejects malformed money or quantity instead of creating a receipt", (body) => {
+    expect(() => interpretQuote(ok(body))).toThrowError(
+      expect.objectContaining<Partial<ResponseInterpretationError>>({ category: "business" }),
+    );
   });
 
   it.each<[InterpretationCategory, BridgeResponse]>([

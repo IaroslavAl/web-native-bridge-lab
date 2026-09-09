@@ -1,11 +1,15 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { App } from "./App";
-import { BridgeClient } from "./bridgeClient";
+import { App, describeDemoError } from "./App";
+import { BridgeClient, BridgeClientError, TransportError } from "./bridgeClient";
+import { ResponseInterpretationError } from "./scenarios";
 import { MockNativeBoundary } from "./test/MockNativeBoundary";
+import type { StoragePort, WebIdentity } from "./webIdentity";
 
 const session = "0123456789abcdef0123456789abcdef";
+const aIdentity: WebIdentity = { variant: "A", entryPath: "/assets/index-a.js" };
+const bIdentity: WebIdentity = { variant: "B", entryPath: "/assets/index-b.js" };
 
 function clientFor(handler: (message: Record<string, unknown>) => unknown): { client: BridgeClient; native: MockNativeBoundary } {
   const native = new MockNativeBoundary((message) =>
@@ -14,119 +18,182 @@ function clientFor(handler: (message: Record<string, unknown>) => unknown): { cl
   return { client: new BridgeClient(native), native };
 }
 
-describe("App with explicitly mocked native boundary", () => {
-  it("performs the document hello handshake on mount before user requests", async () => {
-    const { client, native } = clientFor(() => {
-      throw new Error("No request expected");
-    });
+function storageWith(raw: string | null = null): StoragePort & { current(): string | null } {
+  let value = raw;
+  return {
+    getItem: () => value,
+    setItem: (_key, next) => { value = next; },
+    removeItem: () => { value = null; },
+    current: () => value,
+  };
+}
 
-    render(<App client={client} variant="A" />);
+async function readyButton(name: string | RegExp) {
+  const button = await screen.findByRole("button", { name });
+  await vi.waitFor(() => expect(button).toBeEnabled());
+  return button;
+}
 
-    await vi.waitFor(() => expect(native.decodedMessages()).toEqual([{ v: 1, type: "hello" }]));
+describe("Explain demo with an explicitly mocked native boundary", () => {
+  it("shows the focused Russian A journey with one action and no engineering controls", async () => {
+    const { client } = clientFor(() => { throw new Error("No request expected"); });
+    render(<App createClient={() => client} variant="A" identity={aIdentity} storage={storageWith()} />);
+
+    expect(screen.getByRole("heading", { name: "Как это работает" })).toBeVisible();
+    const route = screen.getByLabelText("Путь запроса и ответа");
+    expect(route).toHaveTextContent("Экран");
+    expect(route).toHaveTextContent("Приложение");
+    expect(route).toHaveTextContent("Сервер");
+    expect(await readyButton("Получить каталог")).toBeVisible();
+    expect(screen.queryByText("Diagnostics")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Scenario")).not.toBeInTheDocument();
+    expect(screen.getAllByRole("button")).toHaveLength(1);
   });
 
-  it("variant A submits catalog and renders list business data", async () => {
+  it("renders actual returned catalog data and never renames an unknown item", async () => {
     const { client, native } = clientFor((message) => ({
-      v: 1,
-      type: "response",
-      id: message.id,
-      status: 200,
-      headers: { "content-type": "application/json" },
+      v: 1, type: "response", id: message.id, status: 200, headers: {},
+      body: '{"items":[{"sku":"marker","title":"Green marker"}],"total":1}',
+    }));
+    render(<App createClient={() => client} variant="A" identity={aIdentity} storage={storageWith()} />);
+
+    await userEvent.click(await readyButton("Получить каталог"));
+
+    expect(await screen.findByText("Green marker")).toBeVisible();
+    expect(screen.getByText("marker")).toBeVisible();
+    expect(screen.queryByText("Блокнот", { exact: true })).not.toBeInTheDocument();
+    expect(native.decodedMessages()[1]).toMatchObject({ method: "GET", url: expect.stringContaining("category=books") });
+    expect(screen.getByRole("button", { name: "Загрузить обновлённый экран" })).toBeVisible();
+  });
+
+  it("renders returned B quote quantity and validated minor-unit currency", async () => {
+    const { client } = clientFor((message) => ({
+      v: 1, type: "response", id: message.id, status: 200, headers: {},
+      body: '{"quote":{"sku":"notebook","quantity":3,"totalMinor":1357,"currency":"USD"}}',
+    }));
+    render(<App createClient={() => client} variant="B" identity={bIdentity} storage={storageWith()} />);
+
+    await userEvent.click(await readyButton("Рассчитать заказ"));
+
+    expect(await screen.findByText(/3\s+штуки/)).toBeVisible();
+    const total = screen.getByTestId("demo.quote-total");
+    expect(total).toHaveTextContent("13,57");
+    expect(total).toHaveAttribute("data-currency", "USD");
+    expect(total).toHaveAttribute("data-total-minor", "1357");
+    expect(screen.queryByText(/12,00/)).not.toBeInTheDocument();
+  });
+
+  it("shows an interpretation error instead of a receipt for malformed money", async () => {
+    const { client } = clientFor((message) => ({
+      v: 1, type: "response", id: message.id, status: 200, headers: {},
+      body: '{"quote":{"sku":"notebook","quantity":2,"totalMinor":-1,"currency":"USD"}}',
+    }));
+    render(<App createClient={() => client} variant="B" identity={bIdentity} storage={storageWith()} />);
+
+    await userEvent.click(await readyButton("Рассчитать заказ"));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Ответ получен, но экран не смог проверить данные");
+    expect(screen.queryByTestId("demo.quote-total")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Повторить расчёт" })).toBeVisible();
+  });
+
+  it("excludes duplicate activation synchronously and shows actual pending state", async () => {
+    let resolveRequest: ((value: unknown) => void) | undefined;
+    const { client, native } = clientFor((message) => new Promise((resolve) => {
+      resolveRequest = resolve;
+    }));
+    render(<App createClient={() => client} variant="A" identity={aIdentity} storage={storageWith()} />);
+    const button = await readyButton("Получить каталог");
+
+    fireEvent.click(button);
+    fireEvent.click(button);
+
+    expect(screen.getByRole("status")).toHaveTextContent("Ждём ответ через приложение");
+    await vi.waitFor(() => {
+      expect(native.decodedMessages().filter((message) => message.type === "request")).toHaveLength(1);
+    });
+    resolveRequest?.({ v: 1, type: "response", id: 1, status: 200, headers: {}, body: '{"items":[],"total":0}' });
+    expect(await screen.findByText("В каталоге нет товаров")).toBeVisible();
+  });
+
+  it("does not repaint a detached document after a late completion", async () => {
+    let resolveRequest: ((value: unknown) => void) | undefined;
+    const { client } = clientFor(() => new Promise((resolve) => { resolveRequest = resolve; }));
+    const view = render(<App createClient={() => client} variant="A" identity={aIdentity} storage={storageWith()} />);
+    await userEvent.click(await readyButton("Получить каталог"));
+    view.unmount();
+
+    resolveRequest?.({ v: 1, type: "response", id: 1, status: 200, headers: {}, body: '{"items":[{"sku":"late","title":"Late"}],"total":1}' });
+    await Promise.resolve();
+    expect(screen.queryByText("Late")).not.toBeInTheDocument();
+  });
+
+  it("creates a fresh client after a rejected handshake", async () => {
+    const rejected = new BridgeClient(new MockNativeBoundary(() => Promise.reject(new Error("rejected"))));
+    const recovered = clientFor(() => { throw new Error("No request expected"); });
+    const createClient = vi.fn()
+      .mockReturnValueOnce(rejected)
+      .mockReturnValueOnce(recovered.client);
+    render(<App createClient={createClient} variant="A" identity={aIdentity} storage={storageWith()} />);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Не удалось подключить веб-экран к приложению");
+    await userEvent.click(screen.getByRole("button", { name: "Повторить подключение" }));
+
+    expect(await readyButton("Получить каталог")).toBeEnabled();
+    expect(createClient).toHaveBeenCalledTimes(2);
+    expect(recovered.native.decodedMessages()).toEqual([{ v: 1, type: "hello" }]);
+  });
+
+  it("persists current A identity before a real document reload", async () => {
+    const { client } = clientFor((message) => ({
+      v: 1, type: "response", id: message.id, status: 200, headers: {},
       body: '{"items":[{"sku":"notebook","title":"Notebook"}],"total":1}',
     }));
-    render(<App client={client} variant="A" />);
+    const storage = storageWith();
+    const reload = vi.fn();
+    render(<App createClient={() => client} variant="A" identity={aIdentity} storage={storage} reload={reload} />);
+    await userEvent.click(await readyButton("Получить каталог"));
+    await userEvent.click(await screen.findByRole("button", { name: "Загрузить обновлённый экран" }));
 
-    expect(screen.getByTestId("lab.variant")).toHaveTextContent("Variant A");
-    await userEvent.click(screen.getByTestId("lab.submit"));
-
-    expect(await screen.findByTestId("lab.result")).toHaveTextContent("Notebook");
-    expect(native.decodedMessages()[1]).toMatchObject({ method: "GET", url: expect.stringContaining("/api/catalog?category=books") });
+    expect(JSON.parse(storage.current() ?? "null")).toMatchObject({ previous: aIdentity, catalogSeen: true, updateRequested: true });
+    expect(reload).toHaveBeenCalledTimes(1);
   });
 
-  it("variant B defaults to quote, builds POST in web, and renders nested quote", async () => {
-    const { client, native } = clientFor((message) => ({
-      v: 1,
-      type: "response",
-      id: message.id,
-      status: 200,
-      headers: { "content-type": "application/json" },
-      body: '{"quote":{"sku":"notebook","quantity":2,"totalMinor":1200,"currency":"USD"}}',
-    }));
-    render(<App client={client} variant="B" />);
+  it("reports unchanged A only after consuming a real reload record", async () => {
+    const raw = JSON.stringify({ v: 1, previous: aIdentity, catalogSeen: true, updateRequested: true });
+    const { client } = clientFor(() => { throw new Error("No request expected"); });
+    render(<App createClient={() => client} variant="A" identity={aIdentity} storage={storageWith(raw)} />);
 
-    expect(screen.getByTestId("lab.scenario")).toHaveValue("quote");
-    await userEvent.click(screen.getByTestId("lab.submit"));
-
-    expect(await screen.findByTestId("lab.result")).toHaveTextContent("USD 1200 minor units");
-    expect(native.decodedMessages()[1]).toMatchObject({ method: "POST", url: "http://127.0.0.1:8788/api/quote" });
+    expect(await screen.findByText("Загружен прежний веб-экран")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Проверить обновление ещё раз" })).toBeVisible();
+    expect(screen.queryByText(/не опубликован/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Рассчитать заказ" })).not.toBeInTheDocument();
   });
 
-  it.each([
-    ["HTTP error", "HTTP", 503, '{"error":{"code":"UNAVAILABLE","message":"Try later"}}'],
-    ["Business error", "business", 200, '{"error":{"code":"OUT_OF_STOCK","message":"Not available"}}'],
-    ["Malformed JSON", "JSON parse", 200, '{"broken":'],
-  ])("renders the %s category as web-owned UI", async (buttonName, category, status, body) => {
-    const { client } = clientFor((message) => ({
-      v: 1,
-      type: "response",
-      id: message.id,
-      status,
-      headers: { "content-type": "application/json" },
-      body,
-    }));
-    render(<App client={client} variant="A" />);
+  it("keeps changed A catalog-only and does not invent A history on cold B", async () => {
+    const raw = JSON.stringify({ v: 1, previous: aIdentity, catalogSeen: true, updateRequested: true });
+    const changedA = clientFor(() => { throw new Error("No request expected"); });
+    const first = render(<App createClient={() => changedA.client} variant="A" identity={{ ...aIdentity, entryPath: "/assets/index-a2.js" }} storage={storageWith(raw)} />);
+    expect(await screen.findByText("Веб-экран обновлён; расчёт пока недоступен")).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Рассчитать заказ" })).not.toBeInTheDocument();
+    first.unmount();
 
-    await userEvent.click(screen.getByRole("button", { name: buttonName }));
-
-    expect(await screen.findByTestId("lab.error")).toHaveTextContent(category);
+    const coldB = clientFor(() => { throw new Error("No request expected"); });
+    render(<App createClient={() => coldB.client} variant="B" identity={bIdentity} storage={storageWith()} />);
+    expect(await readyButton("Рассчитать заказ")).toBeVisible();
+    expect(screen.getByText("Этот экран умеет рассчитать заказ из двух блокнотов")).toBeVisible();
+    expect(screen.queryByText(/раньше.*каталог/i)).not.toBeInTheDocument();
   });
 
-  it("keeps fast and slow requests correlated and cancels only the slow request", async () => {
-    let settleSlow: ((value: unknown) => void) | undefined;
-    const { client, native } = clientFor((message) => {
-      if (message.type === "cancel") {
-        settleSlow?.({ v: 1, type: "error", id: message.id, code: "CANCELLED", message: "Cancelled" });
-        return { v: 1, type: "cancelAck", id: message.id, cancelled: true };
-      }
-      const url = message.url as string;
-      if (url.includes("label=slow")) return new Promise((resolve) => { settleSlow = resolve; });
-      return {
-        v: 1,
-        type: "response",
-        id: message.id,
-        status: 200,
-        headers: { "content-type": "application/json" },
-        body: '{"label":"fast","delayedMs":10}',
-      };
-    });
-    render(<App client={client} variant="A" />);
-
-    await userEvent.click(screen.getByRole("button", { name: "Run concurrent requests" }));
-    // A human must have time to see loading and activate Cancel (not a one-second race).
-    expect(native.decodedMessages().find((message) => String(message.url).includes("label=slow")))
-      .toMatchObject({ url: "http://127.0.0.1:8788/fixtures/delay?ms=10000&label=slow", timeoutMs: 15000 });
-    expect(await screen.findByText(/fast — 10 ms/)).toBeVisible();
-    expect(screen.getByTestId("lab.loading")).toHaveTextContent("1 request");
-    await userEvent.click(screen.getByTestId("lab.cancel"));
-    expect(await screen.findByTestId("lab.error")).toHaveTextContent("transport CANCELLED");
-    expect(screen.getByText(/fast — 10 ms/)).toBeVisible();
-  });
-
-  it("renders hostile opaque HTTP body as literal text in the production error panel", async () => {
-    const body = '<img src=x onerror="document.title=\'injected\'"> <script>alert(1)</script>';
-    const { client } = clientFor((message) => ({ v: 1, type: "response", id: message.id,
-      status: 503, headers: { "content-type": "text/plain" }, body }));
-    render(<App client={client} variant="A" />);
-    await userEvent.click(screen.getByRole("button", { name: "HTTP error" }));
-    const panel = await screen.findByTestId("lab.error");
-    expect(panel).toHaveTextContent(body);
-    expect(panel.querySelector("img,script")).toBeNull();
-    expect(document.title).not.toBe("injected");
-  });
-
-  it("shows bridge unavailable without a substitute network path", () => {
-    render(<App client={null} variant="A" startupError="Bridge unavailable: open this page in BridgeLab." />);
-    expect(screen.getByTestId("lab.error")).toHaveTextContent("Bridge unavailable");
-    expect(screen.getByTestId("lab.submit")).toBeDisabled();
+  it("maps response, transport and bridge failures to distinct truthful Russian categories", () => {
+    expect(describeDemoError(new ResponseInterpretationError("HTTP", "HTTP 503: body", 503)).title).toBe("Сервер вернул ошибку HTTP 503");
+    expect(describeDemoError(new ResponseInterpretationError("business", "OUT_OF_STOCK")).title).toBe("Ответ получен, но действие отклонено");
+    expect(describeDemoError(new ResponseInterpretationError("JSON parse", "bad")).title).toBe("Ответ получен, но экран не смог прочитать данные");
+    expect(describeDemoError(new TransportError("TIMEOUT", "late", 1)).title).toBe("Время ожидания ответа истекло");
+    expect(describeDemoError(new TransportError("CANCELLED", "cancel", 1)).title).toBe("Запрос отменён");
+    expect(describeDemoError(new TransportError("NETWORK_ERROR", "offline", 1)).title).toBe("Не удалось связаться с сервером");
+    expect(describeDemoError(new TransportError("URL_DENIED", "denied", 1)).title).toBe("Приложение отклонило запрос");
+    expect(describeDemoError(new BridgeClientError("BRIDGE_UNAVAILABLE", "missing")).title).toBe("Связь с приложением недоступна");
+    expect(describeDemoError(new BridgeClientError("PROTOCOL_ERROR", "bad")).title).toBe("Приложение вернуло непонятный ответ");
   });
 });

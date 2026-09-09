@@ -3,10 +3,19 @@ import type { BridgeRequestInput, BridgeResponse } from "./bridgeClient";
 export type ScenarioName = "catalog" | "quote";
 export type InterpretationCategory = "HTTP" | "business" | "JSON parse";
 
-export interface ScenarioResult {
-  kind: "catalog" | "quote" | "diagnostic";
-  summary: string;
-}
+export type ScenarioResult =
+  | {
+      kind: "catalog";
+      summary: string;
+      items: Array<{ sku: string; title: string }>;
+      total: number;
+    }
+  | {
+      kind: "quote";
+      summary: string;
+      quote: { sku: string; quantity: number; totalMinor: number; currency: string };
+    }
+  | { kind: "diagnostic"; summary: string };
 
 export class ResponseInterpretationError extends Error {
   constructor(
@@ -100,10 +109,17 @@ export function interpretCatalog(response: BridgeResponse): ScenarioResult {
     if (!isRecord(item) || typeof item.sku !== "string" || typeof item.title !== "string") {
       return invalidBusinessShape("catalog item");
     }
-    return `${item.title} (${item.sku})`;
+    return { sku: item.sku, title: item.title };
   });
-  const itemSummary = items.length > 0 ? items.join(", ") : "No items";
-  return { kind: "catalog", summary: `${itemSummary} — total ${decoded.total as number}` };
+  const itemSummary = items.length > 0
+    ? items.map((item) => `${item.title} (${item.sku})`).join(", ")
+    : "No items";
+  return {
+    kind: "catalog",
+    summary: `${itemSummary} — total ${decoded.total as number}`,
+    items,
+    total: decoded.total as number,
+  };
 }
 
 export function interpretQuote(response: BridgeResponse): ScenarioResult {
@@ -114,15 +130,24 @@ export function interpretQuote(response: BridgeResponse): ScenarioResult {
   const quote = decoded.quote;
   if (
     typeof quote.sku !== "string" ||
-    !Number.isInteger(quote.quantity) ||
-    !Number.isInteger(quote.totalMinor) ||
-    typeof quote.currency !== "string"
+    !Number.isSafeInteger(quote.quantity) ||
+    (quote.quantity as number) < 1 ||
+    !Number.isSafeInteger(quote.totalMinor) ||
+    (quote.totalMinor as number) < 0 ||
+    typeof quote.currency !== "string" ||
+    !/^[A-Z]{3}$/.test(quote.currency)
   ) {
     return invalidBusinessShape("quote");
   }
   return {
     kind: "quote",
     summary: `${quote.sku} × ${quote.quantity as number} — ${quote.currency} ${quote.totalMinor as number} minor units`,
+    quote: {
+      sku: quote.sku,
+      quantity: quote.quantity as number,
+      totalMinor: quote.totalMinor as number,
+      currency: quote.currency,
+    },
   };
 }
 

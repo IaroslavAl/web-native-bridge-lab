@@ -1,21 +1,48 @@
 import ReactDOM from "react-dom/client";
-import { App, type LabVariant } from "./App";
+import { App } from "./App";
 import { BridgeClient, createWebKitNativeBoundary } from "./bridgeClient";
+import { TechnicalPanel } from "./TechnicalPanel";
+import {
+  clearDemoHistory,
+  createLoadedIdentity,
+  selectWebSurface,
+  type LabVariant,
+  type StoragePort,
+} from "./webIdentity";
 import "./styles.css";
 
 const variant: LabVariant = __LAB_VARIANT__;
-let client: BridgeClient | null = null;
-let startupError: string | undefined;
+const identity = createLoadedIdentity(variant, import.meta.url);
+const surface = selectWebSurface(window.location.search);
+const createClient = () => new BridgeClient(createWebKitNativeBoundary(window));
 
-try {
-  client = new BridgeClient(createWebKitNativeBoundary(window));
-} catch (error) {
-  startupError = error instanceof Error ? error.message : "Bridge unavailable.";
+function sessionStorageIfAvailable(): StoragePort | undefined {
+  try { return window.sessionStorage; } catch { return undefined; }
 }
 
 const root = document.getElementById("root");
 if (!root) throw new Error("Missing root element");
 
-ReactDOM.createRoot(root).render(
-  <App client={client} variant={variant} startupError={startupError} />,
-);
+if (surface === "diagnostics") {
+  const storage = sessionStorageIfAvailable();
+  if (storage) clearDemoHistory(storage);
+  let client: BridgeClient | null = null;
+  let startupError: string | undefined;
+  try {
+    client = createClient();
+  } catch (error) {
+    startupError = error instanceof Error ? error.message : "Bridge unavailable.";
+  }
+  ReactDOM.createRoot(root).render(
+    <TechnicalPanel client={client} variant={variant} startupError={startupError} />,
+  );
+} else {
+  ReactDOM.createRoot(root).render(
+    <App
+      createClient={createClient}
+      variant={variant}
+      identity={identity}
+      storage={sessionStorageIfAvailable()}
+    />,
+  );
+}

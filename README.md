@@ -102,6 +102,15 @@ errors, native timeout, visible loading and independent slow cancellation with t
 fast result preserved. The slow diagnostic now waits10s (15s native deadline),
 giving the user time to cancel. It does not load the opt-in acceptance React page.
 
+Explain v2 moves these controls out of the participant journey into the opt-in
+`?mode=diagnostics` surface. The browser URL is explanatory only: a normal browser
+has no native bridge. Installed-app entry is PENDING the N slice: long-press the
+native version footer and choose `Диагностика` (`lab.openDiagnostics`), or use its
+equivalent named VoiceOver action. Native reload/retry will preserve that selected
+fixed destination, and `Вернуться к демо` (`lab.openDemo`) will load the fixed demo
+root. Until N is independently reviewed, do not claim this ingress or the updated
+Stage5 command as passing on Explain v2 source.
+
 The operations gate deliberately interrupts fresh owned runner processes before
 and after service ownership, injects a failing command, checks actual service
 signals with active work and repeat start/stop, and proves a synthetic foreign
@@ -128,7 +137,15 @@ Build with the checked-in project, using a dedicated Simulator you own (replace 
     xcrun simctl install <owned-UDID> .artifacts/manual-derived/Build/Products/Debug-iphonesimulator/BridgeLab.app
     xcrun simctl launch <owned-UDID> lab.webnative.BridgeLab
 
-Tap “Send through native HTTP”: catalog shows `Notebook (notebook) — total 1`. Then run `npm --prefix web run build:b`, tap native Reload and submit again: quote shows `notebook × 2 — USD 1200 minor units`. Keep the app installed throughout. Both variants also expose the scenario selector and Diagnostics. Finish with:
+In A, tap `Получить каталог`. The result displays the actual returned title/SKU.
+The presenter then runs `npm --prefix web run build:b` separately; only completed
+served web assets are replaced. The participant taps `Загрузить обновлённый экран`,
+which performs a same-origin document reload. In B, tap `Рассчитать заказ`; the
+receipt uses the returned quantity, minor units and currency. Keep the app installed
+throughout. A never exposes quote in the main demo; a cold B starts directly with
+quote and does not invent A history. Opening Diagnostics in the installed shell is
+pending the N footer mechanism described above, not a visible web-demo button.
+Finish with:
 
     scripts/lab stop
     scripts/lab status
