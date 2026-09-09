@@ -176,6 +176,49 @@ class EvidenceTests(unittest.TestCase):
         self.assertTrue(ownership['running'])
         self.assertTrue(ownership['start_attempted'])
 
+    def test_missing_entry_fault_is_cleanup_eligible_before_and_after_interrupted_move(self):
+        move = self.helper('move_entry_for_fault')
+        restore = self.helper('restore_entry_after_fault')
+
+        class HiddenEntry:
+            moved = False
+            restored = False
+
+            def exists(self):
+                return self.moved
+
+            def replace(self, entry):
+                self.restored = True
+                self.moved = False
+
+        class InterruptingEntry:
+            def __init__(self, hidden, ownership, after_move):
+                self.hidden = hidden
+                self.ownership = ownership
+                self.after_move = after_move
+
+            def replace(self, hidden):
+                self.assert_registered(hidden)
+                if self.after_move:
+                    hidden.moved = True
+                raise KeyboardInterrupt('fault move interrupted')
+
+            def assert_registered(self, hidden):
+                if self.ownership.get('paths') != (self, hidden):
+                    raise AssertionError('cleanup ownership was not registered before move')
+
+        for after_move in (False, True):
+            with self.subTest(after_move=after_move):
+                ownership = {'paths': None}
+                hidden = HiddenEntry()
+                entry = InterruptingEntry(hidden, ownership, after_move)
+                with self.assertRaises(KeyboardInterrupt):
+                    move(entry, hidden, ownership)
+                self.assertEqual(ownership['paths'], (entry, hidden))
+                restore(ownership)
+                self.assertIsNone(ownership['paths'])
+                self.assertEqual(hidden.restored, after_move)
+
 
 if __name__ == '__main__':
     unittest.main()

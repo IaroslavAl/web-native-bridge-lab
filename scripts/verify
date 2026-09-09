@@ -129,6 +129,23 @@ def web_entry(files):
     return entries[0]
 
 
+def move_entry_for_fault(entry, hidden, ownership):
+    """Register restoration ownership before the destructive move can be interrupted."""
+    assert ownership['paths'] is None, 'missing-entry restoration already registered'
+    ownership['paths'] = (entry, hidden)
+    entry.replace(hidden)
+
+
+def restore_entry_after_fault(ownership):
+    paths = ownership['paths']
+    if paths is None:
+        return
+    entry, hidden = paths
+    if hidden.exists():
+        hidden.replace(entry)
+    ownership['paths'] = None
+
+
 def require_free_ports():
     sockets = []
     try:
@@ -280,7 +297,7 @@ class Run:
         test_log = None
         static_web = None
         static_log = None
-        missing_entry = None
+        missing_entry = {'paths': None}
         lab = ['node', str(ROOT / 'scripts/lab')]
         options = ['--state-dir', str(self.out / 'lab'), '--web-root', str(self.out / 'web')]
         try:
@@ -295,13 +312,46 @@ class Run:
             base = ['xcodebuild', '-project', 'ios/BridgeLab.xcodeproj', '-destination', 'platform=iOS Simulator,id=' + udid,
                     '-derivedDataPath', str(self.out / 'derived'), 'CODE_SIGNING_ALLOWED=NO', '-parallel-testing-enabled', 'NO']
             if explain:
+                import urllib.request
+
                 a_web = self.web('A')
+                layout_control = self.out / 'web/stage1'
+                layout_control.mkdir()
+                (layout_control / 'layout-b-ready.txt').write_text('actual A result ready for replacement')
                 self.command_lab_start('lab-start', lab + ['start'] + options, lab_ownership)
                 self.command_retry('lab-status', lab + ['status'] + options)
                 layout = base + ['-scheme', 'BridgeLab']
-                self.command('layout-a-default', layout + [
+                layout_a_args = layout + [
                     '-only-testing:BridgeLabTests/ExplainLayoutTests/testVariantARequiredViewportsAndRealStates',
-                    '-resultBundlePath', self.out / 'layout-a-default.xcresult', 'test'], timeout=900)
+                    '-resultBundlePath', self.out / 'layout-a-default.xcresult', 'test']
+                layout_record = {'name': 'layout-a-default', 'argv': [str(arg) for arg in layout_a_args],
+                                 'log': 'layout-a-default.log'}
+                self.commands.append(layout_record); save(self.out / 'commands.json', self.commands)
+                test_log = (self.out / 'layout-a-default.log').open('w')
+                tester = self.spawn(layout_a_args, test_log)
+                try:
+                    server_log = self.out / 'lab/server.log'
+                    deadline = time.monotonic() + 180
+                    while 'GET /stage1/layout-b-ready.txt 200' not in server_log.read_text():
+                        if tester.poll() is not None:
+                            raise RuntimeError(f'layout A exited {tester.returncode} before B replacement')
+                        if time.monotonic() >= deadline:
+                            raise RuntimeError('layout A did not request real B replacement')
+                        time.sleep(0.2)
+                    b_transition_web = self.web('B')
+                    layout_control.mkdir()
+                    (layout_control / 'layout-b-release.txt').write_text('actual B assets served')
+                    code = tester.wait(timeout=900)
+                    layout_record['exit_code'] = code
+                    save(self.out / 'commands.json', self.commands)
+                    assert code == 0, f'layout-a-default exit_code={code}; see layout-a-default.log'
+                finally:
+                    self.stop_child(tester)
+                    tester = None
+                    test_log.close(); test_log = None
+                assert web_entry(a_web) != web_entry(b_transition_web), 'coordinated A/B entry paths match'
+
+                a_web = self.web('A')
                 self.command('reduce-motion-on', ['xcrun', 'simctl', 'spawn', udid, 'defaults', 'write',
                              'com.apple.Accessibility', 'ReduceMotionEnabled', '-bool', 'YES'])
                 self.command('reduce-motion-notify', ['xcrun', 'simctl', 'spawn', udid, 'notifyutil', '-p',
@@ -314,7 +364,45 @@ class Run:
                     '-only-testing:BridgeLabTests/ExplainLayoutTests/testVariantBRequiredViewportsColdResultAndRepeat',
                     '-resultBundlePath', self.out / 'layout-b.xcresult', 'test'], timeout=900)
                 assert web_entry(a_web) != web_entry(b_layout_web), 'actual A/B entry paths match'
-                for name in ('layout-a-default', 'layout-a-assistive', 'layout-b'):
+
+                self.command('layout-api-fault-stop-lab', lab + ['stop'] + options)
+                lab_ownership['running'] = False
+                require_free_ports()
+                static_args = [sys.executable, '-m', 'http.server', '8787', '--bind', '127.0.0.1',
+                               '--directory', str(self.out / 'web')]
+                static_record = {'name': 'layout-static-web-only', 'argv': static_args,
+                                 'log': 'layout-static-web-only.log'}
+                self.commands.append(static_record); save(self.out / 'commands.json', self.commands)
+                static_log = (self.out / 'layout-static-web-only.log').open('w')
+                static_web = self.spawn(static_args, static_log, {**self.env, 'PYTHONUNBUFFERED': '1'})
+                static_record['pid'] = static_web.pid
+                save(self.out / 'commands.json', self.commands)
+                deadline = time.monotonic() + 10
+                while True:
+                    assert static_web.poll() is None, 'layout static-only server exited before readiness'
+                    try:
+                        with urllib.request.urlopen('http://127.0.0.1:8787/', timeout=1) as response:
+                            assert response.status == 200
+                        break
+                    except OSError:
+                        if time.monotonic() >= deadline:
+                            raise RuntimeError('layout static-only readiness deadline')
+                        time.sleep(0.05)
+                with socket.socket() as probe:
+                    assert probe.connect_ex(('127.0.0.1', 8788)) != 0, 'API available during retry layout proof'
+                self.command('layout-b-retry', layout + [
+                    '-only-testing:BridgeLabTests/ExplainLayoutTests/testVariantBRetryRequiredViewports',
+                    '-resultBundlePath', self.out / 'layout-b-retry.xcresult', 'test'], timeout=900)
+                self.stop_child(static_web)
+                static_record['exit_code'] = static_web.returncode
+                static_web = None
+                static_log.close(); static_log = None
+                save(self.out / 'commands.json', self.commands)
+                require_free_ports()
+                self.command_lab_start('layout-api-recovery-start-lab', lab + ['start'] + options, lab_ownership)
+                self.command_retry('layout-api-recovery-status', lab + ['status'] + options)
+
+                for name in ('layout-a-default', 'layout-a-assistive', 'layout-b', 'layout-b-retry'):
                     self.command(name + '-attachments', ['xcrun', 'xcresulttool', 'export', 'attachments',
                                  '--path', self.out / (name + '.xcresult'), '--output-path', self.out / (name + '-attachments')])
                 self.command('reduce-motion-off', ['xcrun', 'simctl', 'spawn', udid, 'defaults', 'write',
@@ -403,8 +491,6 @@ class Run:
                     (control / (name + '.txt')).write_text(name)
             (control / 'finish.txt').write_text('release')
             if explain:
-                import urllib.request
-
                 fault_evidence = {'static_control_port': 8787, 'business_api_port': 8788}
                 wait_event('api-failure-ready')
                 self.command('api-fault-stop-lab', lab + ['stop'] + options)
@@ -450,13 +536,11 @@ class Run:
                 entry = self.out / 'web' / web_entry(b_web)
                 hidden = entry.with_name(entry.name + '.missing')
                 assert entry.is_file() and not hidden.exists(), 'built B entry unavailable for fault'
-                entry.replace(hidden)
-                missing_entry = (entry, hidden)
+                move_entry_for_fault(entry, hidden, missing_entry)
                 fault_evidence['missing_entry'] = entry.relative_to(self.out / 'web').as_posix()
                 (control / 'asset-failure-release.txt').write_text('entry removed after complete B build')
                 wait_event('asset-failure-observed')
-                hidden.replace(entry)
-                missing_entry = None
+                restore_entry_after_fault(missing_entry)
                 assert manifest(self.out / 'web')[web_entry(b_web)] == b_web[web_entry(b_web)], 'restored B entry differs'
                 (control / 'asset-recovery-release.txt').write_text('exact B entry restored')
 
@@ -511,7 +595,7 @@ class Run:
                 assert summary['passedTests'] > 0, f'{name} passedTests=0'
                 assert summary['skippedTests'] == 0, f'{name} skippedTests={summary["skippedTests"]}'
             if explain:
-                for name in ('layout-a-default', 'layout-a-assistive', 'layout-b'):
+                for name in ('layout-a-default', 'layout-a-assistive', 'layout-b', 'layout-b-retry'):
                     summary = json.loads(self.capture(['xcrun', 'xcresulttool', 'get', 'test-results', 'summary',
                                                        '--path', str(self.out / (name + '.xcresult')), '--format', 'json']))
                     save(self.out / (name + '-summary.json'), summary)
@@ -526,7 +610,7 @@ class Run:
                 result['stage5_production_ux'] = 'PASS'
             if explain:
                 result['explain_v2_runtime'] = 'PASS'
-                result['layout_component_tests'] = 3
+                result['layout_component_tests'] = 4
                 result['faults'] = fault_evidence
             if stage2:
                 result['stage2_outcomes'] = 'PASS'
@@ -542,11 +626,9 @@ class Run:
                 self.stop_child(tester)
             if test_log is not None:
                 test_log.close()
-            if missing_entry is not None:
+            if missing_entry['paths'] is not None:
                 try:
-                    entry, hidden = missing_entry
-                    if hidden.exists():
-                        hidden.replace(entry)
+                    restore_entry_after_fault(missing_entry)
                 except Exception as error:
                     cleanup_errors.append(str(error))
             if static_web is not None:

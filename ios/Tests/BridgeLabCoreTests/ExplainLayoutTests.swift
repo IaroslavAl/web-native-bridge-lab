@@ -35,10 +35,8 @@ final class ExplainLayoutTests: XCTestCase {
         XCTAssertFalse(initialQuote, "A must not expose quote")
         try await observeEverySize(state: "a-introduction")
 
-        try await host.installPendingRecorder()
-        try await host.click("Получить каталог")
-        try await host.wait("real catalog result") { try await self.host.exists("[data-testid='demo.catalog-result']") }
-        try assertPendingObservation(try await host.pendingObservation())
+        try await observePendingEverySize(action: "Получить каталог", result: "[data-testid='demo.catalog-result']",
+                                          state: "a-catalog-pending")
         try await observeEverySize(state: "a-catalog-result")
 
         try await host.click("Загрузить обновлённый экран")
@@ -48,6 +46,22 @@ final class ExplainLayoutTests: XCTestCase {
         let unchangedQuote = try await host.exists("button", containing: "Рассчитать заказ")
         XCTAssertFalse(unchangedQuote, "unchanged A must not unlock quote")
         try await observeEverySize(state: "a-unchanged")
+
+        try await host.signalHost("layout-b-ready")
+        try await host.waitForHost("layout-b-release")
+        try await host.click("Проверить обновление ещё раз")
+        try await host.wait("actual B with valid A history") {
+            let identity = try await self.host.bodyContains("Веб B ·")
+            let history = try await self.host.bodyContains("Раньше вы получили каталог")
+            return identity && history
+        }
+        try await host.click("Рассчитать заказ")
+        try await host.wait("real final comparison result") {
+            let result = try await self.host.exists("[data-testid='demo.quote-total']")
+            let comparison = try await self.host.exists(".comparison")
+            return result && comparison
+        }
+        try await observeEverySize(state: "b-final-comparison")
     }
 
     func testReducedMotionAndEnlargedTextRemainUsable() async throws {
@@ -102,6 +116,52 @@ final class ExplainLayoutTests: XCTestCase {
         }
         let repeatedIdentity = try await host.text("[data-testid='lab.variant']")
         XCTAssertTrue(repeatedIdentity.hasPrefix("Веб B ·"), "repeat stays on actual B")
+    }
+
+    func testVariantBRetryRequiredViewports() async throws {
+        let initialIdentity = try await host.text("[data-testid='lab.variant']")
+        XCTAssertTrue(initialIdentity.hasPrefix("Веб B ·"))
+        try await host.click("Рассчитать заказ")
+        try await host.wait("real unavailable-API retry") {
+            let error = try await self.host.exists(".error-card")
+            let retry = try await self.host.exists("button", containing: "Повторить расчёт")
+            return error && retry
+        }
+        let unavailableCopy = try await host.bodyContains("Не удалось связаться с сервером")
+        XCTAssertTrue(unavailableCopy)
+        try await observeEverySize(state: "b-api-retry")
+    }
+
+    private func observePendingEverySize(action: String, result: String, state: String) async throws {
+        for size in sizes {
+            host.close()
+            host = ExplainLayoutHost(holdCompletions: true)
+            try await host.load()
+            try await host.wait("production Explain action") {
+                try await self.host.boolean("document.querySelector('.outcome button')?.disabled === false")
+            }
+            host.view.frame = CGRect(origin: .zero, size: size)
+            host.view.layoutIfNeeded()
+            try await host.wait("pending WK viewport \(Int(size.width))x\(Int(size.height))") {
+                let width = try await self.host.number("innerWidth")
+                let height = try await self.host.number("innerHeight")
+                return abs(width - Double(size.width)) <= 1 && abs(height - Double(size.height)) <= 1
+            }
+            try await host.scrollTop()
+            host.holdNextCompletion()
+            try await host.click(action)
+            try await host.wait("real response held while pending") {
+                let pending = try await self.host.exists("button", containing: "Ждём ответ…")
+                return self.host.hasHeldCompletion && pending
+            }
+            let observation = try await host.observation()
+            try assertDefaultLayout(observation, expected: size, state: state)
+            try await retain(state: "\(state)-\(Int(size.width))x\(Int(size.height))", observation: observation)
+            host.releaseCompletion()
+            try await host.wait("real response result after pending observation") {
+                try await self.host.exists(result)
+            }
+        }
     }
 
     private func observeEverySize(state: String) async throws {
@@ -182,12 +242,17 @@ final class ExplainLayoutTests: XCTestCase {
 private final class ExplainLayoutHost: NSObject, WKNavigationDelegate {
     let view: WKWebView
     private var adapter: WKBridgeAdapter?
+    private let completionHolder: CompletionHoldingNetworkClient?
     private var finished = false
 
-    override init() {
+    init(holdCompletions: Bool = false) {
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = .nonPersistent()
-        let executor = HTTPExecutor(policy: .init(allowedOrigin: URL(string: "http://127.0.0.1:8788")!))
+        let holder = holdCompletions ? CompletionHoldingNetworkClient() : nil
+        completionHolder = holder
+        let policy = TransportPolicy(allowedOrigin: URL(string: "http://127.0.0.1:8788")!)
+        let executor = holder.map { HTTPExecutor(policy: policy, networkClient: $0) }
+            ?? HTTPExecutor(policy: policy)
         adapter = WKBridgeAdapter(engine: BridgeEngine(executor: executor), policy: .production)
         view = WKWebView(frame: CGRect(x: 0, y: 0, width: 390, height: 844), configuration: configuration)
         super.init()
@@ -284,6 +349,34 @@ private final class ExplainLayoutHost: NSObject, WKNavigationDelegate {
         return try XCTUnwrap(value, "pending state was not observed")
     }
 
+    var hasHeldCompletion: Bool { completionHolder?.hasHeldCompletion == true }
+    func holdNextCompletion() { completionHolder?.holdNextCompletion() }
+    func releaseCompletion() { completionHolder?.releaseCompletion() }
+
+    func signalHost(_ name: String) async throws {
+        let available = try await control(name)
+        XCTAssertTrue(available, "host did not expose \(name)")
+    }
+
+    func waitForHost(_ name: String) async throws {
+        try await wait("host control \(name)") { try await self.control(name) }
+    }
+
+    private func control(_ name: String) async throws -> Bool {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.urlCache = nil
+        let session = URLSession(configuration: configuration)
+        defer { session.invalidateAndCancel() }
+        let request = URLRequest(url: URL(string: "http://127.0.0.1:8787/stage1/\(name).txt")!,
+                                 cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 2)
+        do {
+            let (_, response) = try await session.data(for: request)
+            return (response as? HTTPURLResponse)?.statusCode == 200
+        } catch {
+            return false
+        }
+    }
+
     func click(_ label: String) async throws {
         let clicked = try await script("""
             const button = [...document.querySelectorAll('button')].find(value => value.textContent.trim() === label);
@@ -320,6 +413,58 @@ private final class ExplainLayoutHost: NSObject, WKNavigationDelegate {
 
     private func script(_ body: String, _ arguments: [String: Any] = [:]) async throws -> Any {
         try await view.callAsyncJavaScript(body, arguments: arguments, in: nil, contentWorld: .page) as Any
+    }
+}
+
+private final class CompletionHoldingNetworkClient: HTTPNetworkClient, @unchecked Sendable {
+    private let underlying = URLSessionNetworkClient()
+    private let lock = NSLock()
+    private var shouldHold = false
+    private var heldCompletion: (@Sendable () -> Void)?
+
+    var hasHeldCompletion: Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return heldCompletion != nil
+    }
+
+    func holdNextCompletion() {
+        lock.lock()
+        precondition(!shouldHold && heldCompletion == nil)
+        shouldHold = true
+        lock.unlock()
+    }
+
+    func releaseCompletion() {
+        lock.lock()
+        let completion = heldCompletion
+        heldCompletion = nil
+        lock.unlock()
+        precondition(completion != nil)
+        completion?()
+    }
+
+    func makeTask(
+        request: URLRequest,
+        eventHandler: @escaping @Sendable (NetworkEvent) -> Void
+    ) -> HTTPNetworkTask {
+        underlying.makeTask(request: request) { [weak self] event in
+            guard let self else {
+                eventHandler(event)
+                return
+            }
+            if case .complete = event {
+                self.lock.lock()
+                if self.shouldHold {
+                    self.shouldHold = false
+                    self.heldCompletion = { eventHandler(event) }
+                    self.lock.unlock()
+                    return
+                }
+                self.lock.unlock()
+            }
+            eventHandler(event)
+        }
     }
 }
 #endif
