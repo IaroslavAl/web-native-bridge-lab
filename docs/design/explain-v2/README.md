@@ -1,0 +1,7 @@
+# Explain v2 — retained design reference, NOT production
+
+`explain-v2.html` and `explain-v2-README.md` are unchanged copies of the owner's selected standalone reference from the primary checkout's `.artifacts/design-concepts/`. The HTML has a permanent simulation banner. Its timers, data, version counter, publication checkbox and reset are NOT implementation instructions or runtime evidence. The brief's QA statements are historical author claims, not new verification by this planning task; the referenced QA JSON is not part of this retained packet.
+
+The source `CONCEPT.md` was also inspected read-only; it is not duplicated. Its historical design-only hold and the copied brief's last section are superseded by explicit implementation authorization recorded in [the follow-up mission](../../agent/EXPLAIN_V2_MISSION.md). No repeated owner design approval is needed.
+
+The reviewed implementation contract is [implement-explain-v2](../../../openspec/changes/implement-explain-v2/design.md), not this simulated HTML. Key deliberate departures: coarse observable request phases rather than timed server claims; actual loaded asset identity and native Bundle labels rather than counters; real page navigation rather than a publication flag; reset cannot turn B into A; actual response data rather than a prefilled receipt. Preserve the bright Russian layout, permanent route, adjacent outcome/action and explicit before/after explanation.
