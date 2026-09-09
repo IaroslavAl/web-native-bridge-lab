@@ -111,9 +111,9 @@ function routeState(operation: Operation) {
     return { direction: "back", text: "Ответ получен, но успешного результата нет" } as const;
   }
   if (operation.kind === "pending" && operation.action === "reload") {
-    return { direction: "neutral", text: "Загружаем веб-экран. Это не запрос к API" } as const;
+    return { direction: "neutral", text: "Загружаем веб-экран. Запрос к серверу не отправляется" } as const;
   }
-  return { direction: "neutral", text: "Экран задаёт действие; приложение выполняет HTTP-запрос" } as const;
+  return { direction: "neutral", text: "Экран задаёт действие; приложение передаёт запрос" } as const;
 }
 
 export function App({ createClient, variant, identity, storage, reload }: AppProps) {
@@ -176,9 +176,9 @@ export function App({ createClient, variant, identity, storage, reload }: AppPro
   }, []);
 
   let action: DemoAction = loaded.capability;
-  if (operation.kind === "result" && operation.action === "catalog") action = "reload";
+  if (operation.kind === "pending" || operation.kind === "error") action = operation.action;
+  else if (operation.kind === "result" && operation.action === "catalog") action = "reload";
   else if (loaded.capability === "catalog" && loaded.update !== "none" && operation.kind === "idle") action = "reload";
-  else if (operation.kind === "error") action = operation.action;
 
   function runAction() {
     if (busy.current || connection !== "ready" || !client.current) return;
@@ -231,7 +231,7 @@ export function App({ createClient, variant, identity, storage, reload }: AppPro
       <header className="explain-header">
         <p className="eyebrow">Веб · приложение · сервер</p>
         <h1>Как это работает</h1>
-        <p className="intro-copy">Веб-экран просит приложение выполнить HTTP-запрос, получает непрозрачный ответ и сам объясняет результат.</p>
+        <p className="intro-copy">Экран отправляет запрос через приложение и показывает ответ сервера.</p>
         <p className="web-identity" data-testid="lab.variant">{displayIdentity(identity, variant)}</p>
       </header>
 
@@ -239,7 +239,7 @@ export function App({ createClient, variant, identity, storage, reload }: AppPro
         <ol className="route">
           <li><span aria-hidden="true">▣</span><strong>Экран</strong><small>задаёт действие</small></li>
           <li className="route-arrow" aria-hidden="true">→</li>
-          <li><span aria-hidden="true">▤</span><strong>Приложение</strong><small>передаёт HTTP</small></li>
+          <li><span aria-hidden="true">▤</span><strong>Приложение</strong><small>передаёт запрос</small></li>
           <li className="route-arrow" aria-hidden="true">→</li>
           <li><span aria-hidden="true">▰</span><strong>Сервер</strong><small>возвращает ответ</small></li>
         </ol>
@@ -277,7 +277,7 @@ export function App({ createClient, variant, identity, storage, reload }: AppPro
               {new Intl.NumberFormat("ru-RU", { style: "currency", currency: currentResult.quote.currency })
                 .format(currentResult.quote.totalMinor / 100)}
             </b></p>
-            {loaded.observedCatalog && <p className="comparison">Изменился веб-экран: каталог дополнился расчётом. Установленное приложение использует прежнюю HTTP-возможность; проверка идентичности приложения выполняется снаружи.</p>}
+            {loaded.observedCatalog && <p className="comparison">Веб-экран изменился: теперь вместо каталога он умеет рассчитать заказ. Оба действия проходят через уже доступную связь приложения с сервером.</p>}
           </div>
         )}
 

@@ -6,7 +6,7 @@ Candidate phase: W only. This record does not claim native N, integrated runtime
 
 - The production demo is a compact Russian Screen → Application → Server journey with one current action, adjacent live status/result/error, and no engineering controls in the main flow.
 - A exposes only the real catalog request. B exposes only the real notebook quantity-2 quote request. Structured response values remain web-owned; returned catalog identity and validated quote quantity/minor units/currency drive the visible result.
-- Pending and result copy follows BridgeClient Promise events without fake acknowledgement, server progress, publication state, timers, fetch fallback, or minimum animation duration.
+- Pending and result copy follows BridgeClient Promise events without fake acknowledgement, server progress, publication state, timers, fetch fallback, or minimum animation duration. Reload pending preserves its own action and cannot show business-request waiting or success copy. Main journey and A→B comparison copy use plain Russian while technical detail stays in the engineering surface.
 - Duplicate activation is excluded synchronously. Detached/reloaded documents cannot repaint from stale completions. A failed handshake retry creates a fresh production BridgeClient instead of reusing its cached rejected session Promise.
 - Loaded identity is the compiled variant plus the emitted `import.meta.url` asset path. The bounded, closed `per85.explain.v1` session record is continuity only, consumed once after a bridge startup attempt, and never grants B capability.
 - The participant update action writes valid continuity when possible and calls same-origin `window.location.reload()`. Same A, changed A, observed A→B, cold B, and unavailable/corrupt storage are distinguished without binary-integrity or presenter-publication claims.
@@ -20,8 +20,8 @@ All commands ran from exact source branch `web-native-bridge-lab/t_72d67948-per-
 
 - `npm --prefix web test -- --run` — PASS: 6 files, 54 tests.
 - `npm --prefix web run typecheck` — PASS.
-- `npm --prefix web run build:a -- --outDir ../.artifacts/explain-web-a` — PASS; emitted `/assets/index-DubVqWui.js`.
-- `npm --prefix web run build:b -- --outDir ../.artifacts/explain-web-b` — PASS; emitted `/assets/index-BcCQ-vej.js`.
+- `npm --prefix web run build:a -- --outDir ../.artifacts/explain-web-a` — PASS; emitted `/assets/index-B02rsMN0.js`.
+- `npm --prefix web run build:b -- --outDir ../.artifacts/explain-web-b` — PASS; emitted `/assets/index-BQCeerPS.js`.
 - `node protocol/v1/validate.cjs` — PASS: 36 vectors (14 valid, 15 invalid, 7 semantic-only classifications; semantic-only codes are not runtime proof).
 - `OPENSPEC_TELEMETRY=0 openspec/tooling/node_modules/.bin/openspec validate --all --strict --no-interactive` — PASS: 2 changes, 0 failures.
 - `git diff --check` — PASS.
@@ -30,8 +30,8 @@ All commands ran from exact source branch `web-native-bridge-lab/t_72d67948-per-
 
 The final isolated A/B outputs have distinct emitted entry paths and bytes:
 
-- A SHA-256: `3e865183b967a15d9fc9a7ecd3fa6806d835579e22a70d344e00d4423ebb514f`
-- B SHA-256: `de970aeb6e86e7b586ffae7ca23421671f912f418d919cf4ee501983b7467bc8`
+- A SHA-256: `647633da29c7ce1b8518b1e9928e42030d9834d0b31c96a662aac10d49dc15ff`
+- B SHA-256: `4709a62a193c3ae47336a5d8cc09eb4645f31caa893048e7c86cc830a1152cf5`
 
 Readback confirmed each built HTML references its corresponding content-hashed entry and retains the static Russian bootstrap fallback. Search of each compiled entry confirmed its own compiled variant is paired with `import.meta.url`, and that continuity, diagnostics selection, catalog copy, and quote copy are present. `cmp` confirmed the entries differ. Production `web/src` contains no `fetch(`, `innerHTML`, or `dangerouslySetInnerHTML` use.
 

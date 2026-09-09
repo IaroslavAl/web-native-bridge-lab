@@ -45,6 +45,9 @@ describe("Explain demo with an explicitly mocked native boundary", () => {
     expect(route).toHaveTextContent("Приложение");
     expect(route).toHaveTextContent("Сервер");
     expect(await readyButton("Получить каталог")).toBeVisible();
+    expect(screen.getByText("Экран отправляет запрос через приложение и показывает ответ сервера.")).toBeVisible();
+    expect(route).toHaveTextContent("передаёт запрос");
+    expect(screen.queryByText(/HTTP|непрозрачн/i)).not.toBeInTheDocument();
     expect(screen.queryByText("Diagnostics")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Scenario")).not.toBeInTheDocument();
     expect(screen.getAllByRole("button")).toHaveLength(1);
@@ -71,7 +74,8 @@ describe("Explain demo with an explicitly mocked native boundary", () => {
       v: 1, type: "response", id: message.id, status: 200, headers: {},
       body: '{"quote":{"sku":"notebook","quantity":3,"totalMinor":1357,"currency":"USD"}}',
     }));
-    render(<App createClient={() => client} variant="B" identity={bIdentity} storage={storageWith()} />);
+    const history = JSON.stringify({ v: 1, previous: aIdentity, catalogSeen: true, updateRequested: true });
+    render(<App createClient={() => client} variant="B" identity={bIdentity} storage={storageWith(history)} />);
 
     await userEvent.click(await readyButton("Рассчитать заказ"));
 
@@ -81,6 +85,8 @@ describe("Explain demo with an explicitly mocked native boundary", () => {
     expect(total).toHaveAttribute("data-currency", "USD");
     expect(total).toHaveAttribute("data-total-minor", "1357");
     expect(screen.queryByText(/12,00/)).not.toBeInTheDocument();
+    expect(screen.getByText("Веб-экран изменился: теперь вместо каталога он умеет рассчитать заказ. Оба действия проходят через уже доступную связь приложения с сервером.")).toBeVisible();
+    expect(screen.queryByText(/HTTP|идентичност/i)).not.toBeInTheDocument();
   });
 
   it("shows an interpretation error instead of a receipt for malformed money", async () => {
@@ -155,6 +161,10 @@ describe("Explain demo with an explicitly mocked native boundary", () => {
     await userEvent.click(await readyButton("Получить каталог"));
     await userEvent.click(await screen.findByRole("button", { name: "Загрузить обновлённый экран" }));
 
+    expect(screen.getByRole("button", { name: "Загружаем веб-экран…" })).toBeDisabled();
+    expect(screen.getByRole("status")).toHaveTextContent("Загружаем веб-экран. Запрос к серверу не отправляется");
+    expect(screen.getByRole("status")).not.toHaveTextContent("Успешный результат");
+    expect(screen.queryByRole("button", { name: "Ждём ответ…" })).not.toBeInTheDocument();
     expect(JSON.parse(storage.current() ?? "null")).toMatchObject({ previous: aIdentity, catalogSeen: true, updateRequested: true });
     expect(reload).toHaveBeenCalledTimes(1);
   });
