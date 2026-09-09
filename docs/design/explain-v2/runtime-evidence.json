@@ -1,0 +1,131 @@
+{
+  "schema_version": 1,
+  "phase": "R",
+  "final_acceptance": false,
+  "owner_acceptance": false,
+  "branch": "web-native-bridge-lab/t_d9bcf406-per-85-explain-v2-runtime-implementer",
+  "reviewed_parent": "2a90459975aa1923f65adcfcc8682da620f5dbef",
+  "first_r_code_commit": "47c1d754b02c1b2a7b9d7d451d7a5d95d259b3d7",
+  "source_state": {
+    "runtime_source_recorded_head": "2a90459975aa1923f65adcfcc8682da620f5dbef",
+    "runtime_worktree_was_dirty": true,
+    "runtime_source_exact_commit_claimed": false,
+    "reason": "The successful sweep ran before commit. source.json recorded the N parent and tracked diff; the then-untracked layout test was omitted from diff stat, and README/task reconciliation followed the sweep.",
+    "reconciliation": "Tested code/test/runner files preceded successful XCTest execution and were committed as 47c1d75, but timing is not cryptographic exact-head proof. Fresh operations and Stage2/3 source records capture 47c1d75 plus the tracked lab-start ownership fix; the untracked evidence documents are absent from their diff summaries. Independent same-card/final acceptance reruns remain required."
+  },
+  "primary_runtime": {
+    "command": "scripts/verify simulator-explain-v2",
+    "exit_code": 0,
+    "evidence_directory": ".artifacts/verify-simulator-explain-v2-5871b54ed6",
+    "result": "PASS",
+    "simulator": {
+      "udid": "E9737698-FEC9-4FD8-B497-4B4A01A7672B",
+      "name": "PER85-Explain-fb34b87a",
+      "model": "iPhone 17 Pro",
+      "runtime": "iOS 26.5",
+      "owned_removed": true
+    },
+    "xcresults": {
+      "unit": {"passed": 42, "failed": 0, "skipped": 0},
+      "layout_a_default": {"passed": 1, "failed": 0, "skipped": 0},
+      "layout_a_assistive": {"passed": 1, "failed": 0, "skipped": 0},
+      "layout_b": {"passed": 1, "failed": 0, "skipped": 0},
+      "installed_ui": {"passed": 1, "failed": 0, "skipped": 0}
+    },
+    "cleanup": {
+      "errors": [],
+      "owned_services_stopped": true,
+      "owned_simulator_removed": true,
+      "ports": [8787, 8788]
+    }
+  },
+  "web_assets": {
+    "A": {
+      "entry": "assets/index-B02rsMN0.js",
+      "entry_sha256": "647633da29c7ce1b8518b1e9928e42030d9834d0b31c96a662aac10d49dc15ff",
+      "index_sha256": "016f30d2f494dd1348b82d6f8e94936c8f63ce279d901e98805e6f83c32a7cea"
+    },
+    "B": {
+      "entry": "assets/index-BQCeerPS.js",
+      "entry_sha256": "4709a62a193c3ae47336a5d8cc09eb4645f31caa893048e7c86cc830a1152cf5",
+      "index_sha256": "8ca649054773ec510d7c1de5fd9fd019c4805ce1df82379745ac3b106424d14b"
+    },
+    "shared_css_sha256": "5485f28ff3fa7a9155600790bd1aefba2f0a4a4f6064210634eec3e475b0ce47"
+  },
+  "installed_app": {
+    "same_container": true,
+    "same_manifest": true,
+    "file_count": 3,
+    "executable_sha256": "15d48f315744f0205b2bb955f00a9600de9b1a1c344c129bbe4817186fc7e1d0",
+    "manifest_sha256": "62b2c916dcc23fd39de47430c05d004f0fba9c11f78bb66a25d0bb75fc06e4da",
+    "bundle_version": "1.0",
+    "bundle_build": "1"
+  },
+  "backend_events": {
+    "catalog_scenario_a": 1,
+    "quote_scenario_b": 4,
+    "missing_entry_http_status": 404,
+    "api_unavailable_port": 8788,
+    "static_control_port": 8787
+  },
+  "layout": {
+    "component_viewports": ["320x740", "390x844", "1100x900"],
+    "scroll_top_geometry_retained": true,
+    "screenshots_retained": true,
+    "horizontal_overflow": false,
+    "minimum_action_points": 44,
+    "reduced_motion_observed_animation": "none",
+    "component_text_scale": 1.6,
+    "installed_device_points": "402x874",
+    "installed_content_size": "accessibility-extra-large",
+    "installed_safe_area_and_footer_frames_asserted": true,
+    "visual_inspection": {
+      "result": "No visible route/current/action overlap or clipping in inspected default 320x740, 1100x900, and installed default snapshots.",
+      "enlarged_scope": "The enlarged component screenshot is after scrolling to the action; it does not prove route and action are simultaneously visible from scroll top."
+    },
+    "framework_warnings": [
+      "_UIGravityWellEffectAnchorView private UIKit/SwiftUI hierarchy warning",
+      "_UIReparentingView private UIKit/SwiftUI hierarchy warning"
+    ]
+  },
+  "requirements": {
+    "EX-01": {"status": "implementer-pass", "evidence": ["installed A/B screenshots", "WK component screenshots", "single-action accessibility trees"]},
+    "EX-02": {"status": "implementer-pass-review-pending", "evidence": ["real pending recorder", "real catalog/quote responses", "actual same-origin reload", "retained N Stage4 lifecycle proof"]},
+    "EX-03": {"status": "implementer-pass", "evidence": ["returned Notebook", "quantity 2", "totalMinor 1200", "USD", "API unavailable error and fresh retry", "retained unit/Stage5 categories"]},
+    "EX-04": {"status": "implementer-pass", "evidence": ["A has no quote", "unchanged A reload", "real B replacement", "cold B no invented history", "repeat remains B"]},
+    "EX-05": {"status": "implementer-pass", "evidence": ["actual emitted A/B entry paths", "Bundle 1.0/1", "external installed manifest equality"]},
+    "EX-06": {"status": "implementer-pass", "evidence": ["actual B entry 404", "static Russian fallback", "no stale business action", "exact entry restore and reload recovery"]},
+    "EX-07": {"status": "implementer-pass-with-disclosed-scope", "evidence": ["three explicit WK frames", "screenshots and geometry", "reduced motion", "1.6x component text", "installed accessibility-extra-large scrolling"]},
+    "EX-08": {"status": "implementer-pass-review-pending", "evidence": ["production client/adapter", "static-only host control", "installed equality", "backend attribution", "unit/Stage5 retained", "fresh 14-test harness", "fresh operations", "fresh proportional Stage2/3"]}
+  },
+  "other_gates": [
+    {"command": "python3 -m unittest discover -s scripts/tests -v", "exit_code": 0, "tests": 14, "source": "47c1d75 plus tracked lab-start ownership fix"},
+    {"command": "scripts/verify unit", "exit_code": 0, "evidence_directory": ".artifacts/verify-unit-d331387f96", "runner_tests": 14},
+    {"command": "python3 scripts/tests/operations.py", "exit_code": 0, "evidence_directory": ".artifacts/verify-stage5-operations-bf8a12811b", "cleanup_verified": true},
+    {"command": "scripts/verify simulator-stage5-production-ux", "exit_code": 0, "evidence_directory": ".artifacts/verify-simulator-stage5-production-ux-b20c1cac4f"},
+    {"command": "scripts/verify simulator-stage2-outcomes", "exit_code": 0, "status": "PASS", "evidence_directory": ".artifacts/verify-simulator-stage2-outcomes-0c845d4b42", "same_container": true, "same_manifest": true, "cleanup_verified": true},
+    {"command": "scripts/verify simulator-stage3-trust-limits", "exit_code": 0, "status": "PASS", "evidence_directory": ".artifacts/verify-simulator-stage3-trust-limits-ad9e904ef1", "same_container": true, "same_manifest": true, "cleanup_verified": true},
+    {"command": "scripts/verify simulator-stage4-webkit-privacy", "exit_code": null, "status": "retained-reviewed-N-evidence; not rerun because R changes no product native source"}
+  ],
+  "failed_attempts": [
+    {"evidence_directory": ".artifacts/verify-simulator-explain-v2-d764d14575", "exit_code": 65, "reason": "brittle enlarged heading scroll-position assertion before content-size application", "cleanup_passed": true},
+    {"evidence_directory": ".artifacts/verify-simulator-explain-v2-26c87f65e5", "exit_code": 65, "reason": "brittle heading movement assertion despite reachable action", "cleanup_passed": true},
+    {"evidence_directory": ".artifacts/verify-simulator-explain-v2-90a8bbb40d", "exit_code": 65, "reason": "running app did not adopt Simulator content size; footer remained 14.33 points", "cleanup_passed": true}
+  ],
+  "run_timeout": {
+    "elapsed_seconds": 5423,
+    "task_limit_seconds": 5400,
+    "stage": "duplicate post-commit operations rerun",
+    "product_gate_failure": false,
+    "prior_operations_exit_code": 0,
+    "coordinator_verified_no_descendants": true,
+    "coordinator_verified_ports_free": true,
+    "coordinator_verified_recorded_simulators_absent": true
+  },
+  "limitations": [
+    "Simulator and synthetic loopback only.",
+    "No real-device, cloud, authentication, secrets, publication, deployment, or App Store evidence.",
+    "Successful primary runtime evidence is precommit dirty-source evidence, not an exact clean-head acceptance run.",
+    "Independent same-card review, final A acceptance, coordinator integration, and owner product acceptance remain pending."
+  ]
+}

@@ -48,8 +48,9 @@ The mode rebuilds served assets but does not rebuild or reinstall the native app
 between A and B. It records exact installed-file equality, built asset hashes,
 attributable backend events, fault facts and teardown under a fresh ignored
 `.artifacts/verify-simulator-explain-v2-*/` directory. The run remains Simulator-only
-and synthetic; it is not independent acceptance or release authorization. See
-[Explain v2 runtime evidence](docs/design/explain-v2/runtime-evidence.md).
+and synthetic; it is not independent acceptance or release authorization. See the
+[Explain v2 runtime evidence](docs/design/explain-v2/runtime-evidence.md) and its
+[machine-readable ledger](docs/design/explain-v2/runtime-evidence.json).
 
 ## Actual Simulator A/B proof (Stage 1 only)
 
@@ -136,10 +137,12 @@ destination. `Вернуться к демо` (`lab.openDemo`) loads the fixed d
 The shell disables web interaction until the selected top-level document finishes.
 A load failure revokes that document, keeps stale content non-interactive, and shows
 a native error with `Повторить` plus a return-to-demo path when Diagnostics was
-selected. The current N candidate passes the unchanged Stage4 and Stage5 commands;
-independent review, later runtime/layout evidence and final acceptance remain pending.
-See [Explain v2 native evidence](docs/design/explain-v2/native-evidence.md) for the
-exact N scope, executed gates and deliberate limits.
+selected. The reviewed N candidate passed the unchanged Stage4 and Stage5 commands. The R
+candidate adds focused Explain runtime/layout evidence and proportional Stage2/3
+regressions; independent R review and final acceptance remain pending. See
+[Explain v2 native evidence](docs/design/explain-v2/native-evidence.md) for the exact
+N scope and [Explain v2 runtime evidence](docs/design/explain-v2/runtime-evidence.md)
+for the R scope, executed gates and deliberate limits.
 
 The operations gate deliberately interrupts fresh owned runner processes before
 and after service ownership, injects a failing command, checks actual service
@@ -147,8 +150,11 @@ signals with active work and repeat start/stop, and proves a synthetic foreign
 listener survives occupied-port refusal. Expected child failures must still yield
 an overall gate PASS and verified cleanup. Only newly created process groups,
 canonical owned lab state and recorded dedicated Simulators may be stopped.
-SIGKILL/crash and instruction-level startup races are not automatically recoverable
-guarantees; see [Stage5 evidence, recovery and limits](docs/integration/STAGE5_UX_OPERATIONS.md).
+The runner marks its unique lab state cleanup-eligible before the interruptible start
+command; a deterministic regression covers that ordering, while the operations gate
+covers cleanup after startup and service ownership. SIGKILL and host crashes remain
+outside automatic recovery guarantees; see
+[Stage5 evidence, recovery and limits](docs/integration/STAGE5_UX_OPERATIONS.md).
 The final matrix and observed candidate evidence distinguish full exact-source
 regression from the still-independent review/acceptance gates.
 

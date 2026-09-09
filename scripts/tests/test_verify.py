@@ -159,6 +159,23 @@ class EvidenceTests(unittest.TestCase):
         self.assertEqual([record['exit_code'] for record in attempts], [1, 0])
         self.assertEqual(run.children, [])
 
+    def test_lab_start_marks_cleanup_ownership_before_interruptible_command(self):
+        run = self.helper('Run')('unit-lab-start-ownership')
+        ownership = {'running': False, 'start_attempted': False}
+
+        def interrupted(name, args):
+            self.assertEqual(name, 'lab-start')
+            self.assertEqual(args, ['ignored'])
+            self.assertTrue(ownership['running'])
+            self.assertTrue(ownership['start_attempted'])
+            raise KeyboardInterrupt('between start completion and caller bookkeeping')
+
+        run.command = interrupted
+        with self.assertRaises(KeyboardInterrupt):
+            run.command_lab_start('lab-start', ['ignored'], ownership)
+        self.assertTrue(ownership['running'])
+        self.assertTrue(ownership['start_attempted'])
+
 
 if __name__ == '__main__':
     unittest.main()

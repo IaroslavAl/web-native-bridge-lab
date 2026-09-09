@@ -231,6 +231,12 @@ class Run:
                 time.sleep(pause)
         raise RuntimeError(f'{name} remained unavailable after {attempts} recorded attempts')
 
+    def command_lab_start(self, name, args, ownership):
+        """Make a unique lab state eligible for cleanup before start can be interrupted."""
+        ownership['start_attempted'] = True
+        ownership['running'] = True
+        return self.command(name, args)
+
     def web(self, variant):
         self.command('web-build-' + variant, ['npm', '--prefix', 'web', 'run', 'build:' + variant.lower(),
                      '--', '--outDir', self.out / 'web', '--emptyOutDir'])
@@ -269,8 +275,7 @@ class Run:
     def simulator(self, stage2=False, stage3=False, stage5=False, explain=False):
         require_free_ports() # before creating resources; never steal existing lab services
         udid = None
-        started = False
-        services_created = False
+        lab_ownership = {'running': False, 'start_attempted': False}
         tester = None
         test_log = None
         static_web = None
@@ -291,9 +296,7 @@ class Run:
                     '-derivedDataPath', str(self.out / 'derived'), 'CODE_SIGNING_ALLOWED=NO', '-parallel-testing-enabled', 'NO']
             if explain:
                 a_web = self.web('A')
-                self.command('lab-start', lab + ['start'] + options)
-                started = True
-                services_created = True
+                self.command_lab_start('lab-start', lab + ['start'] + options, lab_ownership)
                 self.command_retry('lab-status', lab + ['status'] + options)
                 layout = base + ['-scheme', 'BridgeLab']
                 self.command('layout-a-default', layout + [
@@ -337,10 +340,8 @@ class Run:
             control.mkdir()
             for name in ('ready', 'a-observed', 'b-observed') + (explain_control_names() if explain else ()):
                 (control / (name + '.txt')).write_text(name)
-            if not started:
-                self.command('lab-start', lab + ['start'] + options)
-                started = True
-                services_created = True
+            if not lab_ownership['running']:
+                self.command_lab_start('lab-start', lab + ['start'] + options, lab_ownership)
                 self.command_retry('lab-status', lab + ['status'] + options)
             args = base + ['-scheme', 'BridgeLabAcceptance', '-resultBundlePath', str(self.out / 'ab.xcresult'), 'test-without-building']
             record = {'name': 'ab-ui', 'argv': args, 'log': 'ab-ui.log'}
@@ -407,7 +408,7 @@ class Run:
                 fault_evidence = {'static_control_port': 8787, 'business_api_port': 8788}
                 wait_event('api-failure-ready')
                 self.command('api-fault-stop-lab', lab + ['stop'] + options)
-                started = False
+                lab_ownership['running'] = False
                 require_free_ports()
                 static_args = [sys.executable, '-m', 'http.server', '8787', '--bind', '127.0.0.1',
                                '--directory', str(self.out / 'web')]
@@ -440,9 +441,7 @@ class Run:
                 static_log.close(); static_log = None
                 save(self.out / 'commands.json', self.commands)
                 require_free_ports()
-                self.command('api-recovery-start-lab', lab + ['start'] + options)
-                started = True
-                services_created = True
+                self.command_lab_start('api-recovery-start-lab', lab + ['start'] + options, lab_ownership)
                 self.command_retry('api-recovery-status', lab + ['status'] + options)
                 (control / 'api-recovery-release.txt').write_text('owned API restored')
                 wait_event('api-recovery-observed')
@@ -557,9 +556,10 @@ class Run:
                     cleanup_errors.append(str(error))
             if static_log is not None:
                 static_log.close()
-            if started:
+            if lab_ownership['running']:
                 try:
                     self.command('lab-stop', lab + ['stop'] + options)
+                    lab_ownership['running'] = False
                     require_free_ports()
                     self.command('lab-stopped-status', lab + ['status'] + options, allowed=(1,))
                 except Exception as error:
@@ -576,7 +576,7 @@ class Run:
                 except Exception as error:
                     cleanup_errors.append(str(error))
             save(self.out / 'cleanup.json', {'errors': cleanup_errors, 'owned_simulator_removed': bool(udid) and not cleanup_errors,
-                                            'owned_services_stopped': services_created and not cleanup_errors})
+                                            'owned_services_stopped': lab_ownership['start_attempted'] and not cleanup_errors})
             if cleanup_errors:
                 raise RuntimeError('cleanup failed: ' + '; '.join(cleanup_errors))
         # Never emit a successful result if cleanup failed.
