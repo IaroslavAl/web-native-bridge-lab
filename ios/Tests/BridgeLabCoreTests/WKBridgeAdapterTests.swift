@@ -44,7 +44,7 @@ final class WKBridgeAdapterTests: XCTestCase {
         XCTAssertEqual(cancelAllCount, 0)
     }
 
-    func testProvisionalFailureRevokesDocument() async {
+    func testProvisionalFailureRevokesDocumentAndShellRecoversSelectedClosedSurface() async {
         let executor = AdapterExecutor()
         let adapter = makeAdapter(executor: executor)
         _ = await activate(adapter)
@@ -55,6 +55,83 @@ final class WKBridgeAdapterTests: XCTestCase {
 
         XCTAssertEqual(denied["code"] as? String, "ORIGIN_DENIED")
         XCTAssertEqual(cancelAllCount, 1)
+
+        assertClosedSurfaceDestinationsAndNativeIdentity()
+        assertTypedLoadEventsDoNotFinishRevokedDocument()
+        assertShellSelectionFailureRetryReturnAndInteraction()
+    }
+
+    private func assertClosedSurfaceDestinationsAndNativeIdentity() {
+        XCTAssertEqual(WebSurface.demo.url.absoluteString, "http://127.0.0.1:8787/")
+        XCTAssertEqual(WebSurface.diagnostics.url.absoluteString, "http://127.0.0.1:8787/?mode=diagnostics")
+        XCTAssertEqual(WebSurface.allCases, [.demo, .diagnostics])
+
+        let available = NativeVersionIdentity(infoDictionary: [
+            "CFBundleShortVersionString": "1.2",
+            "CFBundleVersion": "34"
+        ])
+        let unavailable = NativeVersionIdentity(infoDictionary: nil)
+        XCTAssertEqual(available.displayText, "Версия приложения 1.2 · сборка 34")
+        XCTAssertEqual(unavailable.displayText, "Версия приложения недоступна · сборка недоступна")
+    }
+
+    private func assertTypedLoadEventsDoNotFinishRevokedDocument() {
+        let executor = AdapterExecutor()
+        let adapter = makeAdapter(executor: executor)
+        let webView = WKWebView(frame: .zero, configuration: WKWebViewConfiguration())
+        var events: [WKBridgeLoadEvent] = []
+        adapter.install(on: webView) { events.append($0) }
+
+        XCTAssertEqual(adapter.navigationPolicy(for: trustedURL, targetIsMainFrame: true), .allow)
+        adapter.navigationDidCommit(url: trustedURL)
+        adapter.webView(webView, didFinish: nil)
+        XCTAssertEqual(events, [.started, .finished])
+
+        XCTAssertEqual(adapter.navigationPolicy(for: trustedURL, targetIsMainFrame: true), .allow)
+        adapter.provisionalNavigationFailed()
+        XCTAssertEqual(events, [.started, .finished, .started, .failed(.contentUnavailable)])
+
+        adapter.webView(webView, didFinish: nil)
+        XCTAssertEqual(events, [.started, .finished, .started, .failed(.contentUnavailable)],
+                       "a revoked failed document cannot later publish finish")
+    }
+
+    private func assertShellSelectionFailureRetryReturnAndInteraction() {
+        var requests: [URLRequest] = []
+        let model = BridgeWebViewModel(requestLoader: { _, request in requests.append(request) })
+        defer { model.close() }
+
+        XCTAssertEqual(model.selectedSurface, .demo)
+        XCTAssertEqual(requests.map(\.url), [WebSurface.demo.url])
+        XCTAssertEqual(model.loadState, .loading)
+        XCTAssertFalse(model.webView.isUserInteractionEnabled)
+
+        model.handleLoadEvent(.finished)
+        XCTAssertEqual(model.loadState, .loaded)
+        XCTAssertTrue(model.webView.isUserInteractionEnabled)
+
+        model.openDiagnostics()
+        XCTAssertEqual(model.selectedSurface, .diagnostics)
+        XCTAssertEqual(requests.last?.url, WebSurface.diagnostics.url)
+        XCTAssertEqual(model.loadState, .loading)
+        XCTAssertFalse(model.webView.isUserInteractionEnabled)
+
+        model.handleLoadEvent(.failed(.contentUnavailable))
+        guard case .failed(let message) = model.loadState else {
+            return XCTFail("Expected failed load state")
+        }
+        XCTAssertEqual(message, "Не удалось загрузить веб-экран.")
+        XCTAssertFalse(model.webView.isUserInteractionEnabled)
+
+        model.reload()
+        XCTAssertEqual(requests.last?.url, WebSurface.diagnostics.url)
+        XCTAssertEqual(model.loadState, .loading)
+
+        model.openDemo()
+        XCTAssertEqual(model.selectedSurface, .demo)
+        XCTAssertEqual(requests.last?.url, WebSurface.demo.url)
+        XCTAssertTrue(requests.allSatisfy { $0.cachePolicy == .reloadIgnoringLocalCacheData })
+        XCTAssertTrue(requests.allSatisfy { $0.timeoutInterval == 10 })
     }
 
     func testCommittedNavigationFailureRevokesDocument() async {

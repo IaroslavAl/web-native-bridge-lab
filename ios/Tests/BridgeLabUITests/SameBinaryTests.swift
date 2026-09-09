@@ -46,20 +46,26 @@ final class SameBinaryTests: XCTestCase {
         app.launch()
         try await waitForHost("ready") // existence request signals host to hash installed app
         try await waitForHost("a-release")
-        try requireText("Catalog default", in: app)
-        let submit = app.webViews.buttons["Send through native HTTP"]
-        XCTAssertTrue(submit.waitForExistence(timeout: 10))
-        submit.tap()
-        try requireText("Notebook (notebook) — total 1", in: app)
+        try requireText("Сначала запросим настоящий каталог", in: app)
+        let catalog = app.webViews.buttons["Получить каталог"]
+        XCTAssertTrue(catalog.waitForExistence(timeout: 10))
+        catalog.tap()
+        try requireText("Ответ каталога", in: app)
+        try requireText("Notebook", in: app)
         let a = XCTAttachment(screenshot: app.screenshot())
         a.name = "Actual React catalog A"; a.lifetime = .keepAlways; add(a)
         try await waitForHost("a-observed")
         try await waitForHost("b-release")
         // No launch, native build, install or application configuration change between A and B.
-        app.buttons["lab.reload"].tap()
-        try requireText("Quote default", in: app)
-        submit.tap()
-        try requireText("notebook × 2 — USD 1200 minor units", in: app)
+        let update = app.webViews.buttons["Загрузить обновлённый экран"]
+        XCTAssertTrue(update.waitForExistence(timeout: 10))
+        update.tap()
+        try requireText("Раньше вы получили каталог", in: app)
+        let quote = app.webViews.buttons["Рассчитать заказ"]
+        XCTAssertTrue(quote.waitForExistence(timeout: 10))
+        quote.tap()
+        try requireText("Расчёт получен", in: app)
+        try requireText("Блокнот", in: app)
         let b = XCTAttachment(screenshot: app.screenshot())
         b.name = "Actual React quote B"; b.lifetime = .keepAlways; add(b)
         try await waitForHost("b-observed")
@@ -128,6 +134,16 @@ final class SameBinaryTests: XCTestCase {
             XCTAssertTrue(button.isHittable, "Production button not hittable: \(label)")
             button.tap()
         }
+        let footer = app.staticTexts["lab.nativeVersion"]
+        XCTAssertTrue(footer.waitForExistence(timeout: 10), "Native version footer missing")
+        XCTAssertTrue(footer.label.contains("Версия приложения 1.0"), "Actual Bundle version missing: \(footer.label)")
+        footer.press(forDuration: 1)
+        let openDiagnostics = app.buttons["lab.openDiagnostics"]
+        XCTAssertTrue(openDiagnostics.waitForExistence(timeout: 5), "Diagnostics context action missing")
+        XCTAssertEqual(openDiagnostics.label, "Диагностика")
+        openDiagnostics.tap()
+        try requireText("Diagnostics", in: app)
+        app.buttons["lab.reload"].tap()
         try requireText("Diagnostics", in: app)
         XCTAssertFalse(app.webViews.buttons["Cancel active request"].isEnabled)
         tap("HTTP error")
@@ -155,5 +171,14 @@ final class SameBinaryTests: XCTestCase {
         evidence.name = "Actual production Diagnostics UI"
         evidence.lifetime = .keepAlways
         add(evidence)
+
+        footer.press(forDuration: 1)
+        let openDemo = app.buttons["lab.openDemo"]
+        XCTAssertTrue(openDemo.waitForExistence(timeout: 5), "Return-to-demo context action missing")
+        XCTAssertEqual(openDemo.label, "Вернуться к демо")
+        openDemo.tap()
+        try requireText("Этот экран умеет рассчитать заказ", in: app)
+        XCTAssertTrue(app.webViews.buttons["Рассчитать заказ"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.webViews.buttons["HTTP error"].exists, "Diagnostics controls remained in demo")
     }
 }

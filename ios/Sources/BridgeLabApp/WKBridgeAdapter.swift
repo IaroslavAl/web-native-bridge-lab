@@ -1,6 +1,19 @@
 import Foundation
 import WebKit
 
+enum WKBridgeLoadFailure: Equatable {
+    case originDenied
+    case contentUnavailable
+    case navigationFailed
+    case processTerminated
+}
+
+enum WKBridgeLoadEvent: Equatable {
+    case started
+    case finished
+    case failed(WKBridgeLoadFailure)
+}
+
 @MainActor
 final class WKBridgeAdapter: NSObject {
     static let handlerName = "nativeHTTP"
@@ -14,7 +27,7 @@ final class WKBridgeAdapter: NSObject {
     private var committedURL: URL?
     private var documentIsActive = false
 
-    private var onLoadFailure: ((String?) -> Void)?
+    private var onLoadEvent: ((WKBridgeLoadEvent) -> Void)?
     private var didClose = false
 
     init(
@@ -36,10 +49,10 @@ final class WKBridgeAdapter: NSObject {
         close()
     }
 
-    func install(on webView: WKWebView, onLoadFailure: @escaping (String?) -> Void) {
+    func install(on webView: WKWebView, onLoadEvent: @escaping (WKBridgeLoadEvent) -> Void) {
         precondition(self.webView == nil && !didClose, "WKBridgeAdapter may only be installed once")
         self.webView = webView
-        self.onLoadFailure = onLoadFailure
+        self.onLoadEvent = onLoadEvent
         let proxy = WeakReplyMessageHandler(delegate: self)
         self.proxy = proxy
         webView.configuration.userContentController.addScriptMessageHandler(
@@ -65,7 +78,7 @@ final class WKBridgeAdapter: NSObject {
         }
         self.webView = nil
         proxy = nil
-        onLoadFailure = nil
+        onLoadEvent = nil
         lifecycle.revoke()
     }
 
@@ -74,12 +87,13 @@ final class WKBridgeAdapter: NSObject {
         documentIsActive = false
         committedURL = nil
         lifecycle.revoke()
+        onLoadEvent?(.started)
     }
 
     private func activateCommittedDocument(_ url: URL?) {
         guard !didClose else { return }
         guard policy.allowsMainNavigation(to: url, targetIsMainFrame: true) else {
-            failDocumentLoad("Bridge origin denied")
+            failDocumentLoad(.originDenied)
             return
         }
         committedURL = url
@@ -87,12 +101,12 @@ final class WKBridgeAdapter: NSObject {
         lifecycle.commit()
     }
 
-    private func failDocumentLoad(_ message: String) {
+    private func failDocumentLoad(_ failure: WKBridgeLoadFailure) {
         guard !didClose else { return }
         documentIsActive = false
         committedURL = nil
         lifecycle.revoke()
-        onLoadFailure?(message)
+        onLoadEvent?(.failed(failure))
     }
 
     fileprivate func receive(
@@ -140,15 +154,15 @@ final class WKBridgeAdapter: NSObject {
     }
 
     func provisionalNavigationFailed() {
-        failDocumentLoad("Local web content is unavailable")
+        failDocumentLoad(.contentUnavailable)
     }
 
     func navigationFailed() {
-        failDocumentLoad("Local web content failed to load")
+        failDocumentLoad(.navigationFailed)
     }
 
     func webContentProcessTerminated() {
-        failDocumentLoad("Web content process terminated")
+        failDocumentLoad(.processTerminated)
     }
 
 }
@@ -168,7 +182,8 @@ extension WKBridgeAdapter: WKNavigationDelegate {
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        onLoadFailure?(nil)
+        guard documentIsActive else { return }
+        onLoadEvent?(.finished)
     }
 
     func webView(

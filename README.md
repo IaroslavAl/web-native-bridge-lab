@@ -104,12 +104,20 @@ giving the user time to cancel. It does not load the opt-in acceptance React pag
 
 Explain v2 moves these controls out of the participant journey into the opt-in
 `?mode=diagnostics` surface. The browser URL is explanatory only: a normal browser
-has no native bridge. Installed-app entry is PENDING the N slice: long-press the
-native version footer and choose `Диагностика` (`lab.openDiagnostics`), or use its
-equivalent named VoiceOver action. Native reload/retry will preserve that selected
-fixed destination, and `Вернуться к демо` (`lab.openDemo`) will load the fixed demo
-root. Until N is independently reviewed, do not claim this ingress or the updated
-Stage5 command as passing on Explain v2 source.
+has no native bridge. In the installed app, long-press the native footer labelled
+`Версия приложения <short version> · сборка <build>` and choose `Диагностика`
+(`lab.openDiagnostics`), or use the equivalent named VoiceOver action. Version and
+build come from the installed Bundle; a missing value is labelled unavailable rather
+than invented. Native reload and failed-load retry preserve the selected fixed
+destination. `Вернуться к демо` (`lab.openDemo`) loads the fixed demo root.
+
+The shell disables web interaction until the selected top-level document finishes.
+A load failure revokes that document, keeps stale content non-interactive, and shows
+a native error with `Повторить` plus a return-to-demo path when Diagnostics was
+selected. The current N candidate passes the unchanged Stage4 and Stage5 commands;
+independent review, later runtime/layout evidence and final acceptance remain pending.
+See [Explain v2 native evidence](docs/design/explain-v2/native-evidence.md) for the
+exact N scope, executed gates and deliberate limits.
 
 The operations gate deliberately interrupts fresh owned runner processes before
 and after service ownership, injects a failing command, checks actual service
@@ -143,8 +151,8 @@ served web assets are replaced. The participant taps `Загрузить обн�
 which performs a same-origin document reload. In B, tap `Рассчитать заказ`; the
 receipt uses the returned quantity, minor units and currency. Keep the app installed
 throughout. A never exposes quote in the main demo; a cold B starts directly with
-quote and does not invent A history. Opening Diagnostics in the installed shell is
-pending the N footer mechanism described above, not a visible web-demo button.
+quote and does not invent A history. Open Diagnostics through the native footer
+mechanism described above, not through a visible web-demo button.
 Finish with:
 
     scripts/lab stop
