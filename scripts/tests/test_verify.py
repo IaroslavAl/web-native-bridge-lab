@@ -1,6 +1,7 @@
 """Tests for fail-closed same-installed-app evidence helpers (no Simulator mocks)."""
 import hashlib
 import runpy
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -103,6 +104,60 @@ class EvidenceTests(unittest.TestCase):
                              ('files', {'BridgeLab': 'exe', 'Info.plist': 'changed'})]:
             with self.subTest(field=field), self.assertRaisesRegex(AssertionError, field):
                 same(first, {**first, field: value})
+
+    def test_explain_mode_reuses_owned_simulator_path_and_static_control_files(self):
+        modes = self.helper('SIMULATOR_MODES')
+        controls = self.helper('explain_control_names')()
+        self.assertEqual(modes['simulator-explain-v2'], {'explain': True})
+        self.assertEqual(controls, (
+            'explain-enabled', 'api-failure-ready', 'api-failure-observed', 'api-recovery-observed',
+            'asset-failure-ready', 'asset-failure-observed',
+            'large-text-ready', 'matrix-observed',
+        ))
+        self.assertTrue(all('/' not in name for name in controls))
+
+    def test_explain_log_requires_real_catalog_quote_retry_and_cold_repeat(self):
+        check = self.helper('require_explain_events')
+        catalog = 'GET /api/catalog 200 tag=scenario-a'
+        quote = 'POST /api/quote 200 tag=scenario-b'
+        lines = [catalog, quote, quote, quote, quote]
+        self.assertEqual(check('\n'.join(lines)), {'catalog': 1, 'quote': 4})
+        for mutation in [lines[1:], lines[:-1], lines + [catalog], lines + [quote]]:
+            with self.assertRaises(AssertionError):
+                check('\n'.join(mutation))
+
+    def test_web_entry_requires_one_built_hashed_javascript_asset(self):
+        entry = self.helper('web_entry')
+        manifest = {'index.html': 'html', 'assets/index-Ab12.js': 'entry', 'assets/index-Cd34.css': 'css'}
+        self.assertEqual(entry(manifest), 'assets/index-Ab12.js')
+        for invalid in [
+            {'index.html': 'html'},
+            {'assets/index-a.js': 'a', 'assets/index-b.js': 'b'},
+            {'assets/other.js': 'other'},
+        ]:
+            with self.assertRaises(AssertionError):
+                entry(invalid)
+
+    def test_command_failure_records_real_exit_and_reaps_owned_process_group(self):
+        run = self.helper('Run')('unit-explain-command-failure')
+        with self.assertRaisesRegex(RuntimeError, 'exit 7'):
+            run.command('expected-failure', [sys.executable, '-c', 'raise SystemExit(7)'], timeout=5)
+        self.assertEqual(run.commands[-1]['exit_code'], 7)
+        self.assertEqual(run.children, [])
+
+    def test_retry_command_records_transient_failure_and_real_success(self):
+        run = self.helper('Run')('unit-explain-command-retry')
+        with tempfile.TemporaryDirectory() as directory:
+            marker = Path(directory) / 'attempt'
+            script = (
+                "from pathlib import Path; import sys; "
+                f"p=Path({str(marker)!r}); exists=p.exists(); p.write_text('seen'); "
+                "raise SystemExit(0 if exists else 1)"
+            )
+            run.command_retry('flaky-status', [sys.executable, '-c', script], attempts=2, pause=0)
+        attempts = [record for record in run.commands if record['name'].startswith('flaky-status')]
+        self.assertEqual([record['exit_code'] for record in attempts], [1, 0])
+        self.assertEqual(run.children, [])
 
 
 if __name__ == '__main__':

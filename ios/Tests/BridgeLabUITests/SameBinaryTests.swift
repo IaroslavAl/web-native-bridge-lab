@@ -40,13 +40,47 @@ final class SameBinaryTests: XCTestCase {
     }
 
     @MainActor
+    private func retain(_ name: String, in app: XCUIApplication) {
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = name
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+        let tree = XCTAttachment(string: app.debugDescription)
+        tree.name = name + " accessibility tree"
+        tree.lifetime = .keepAlways
+        add(tree)
+    }
+
+    @MainActor
+    private func assertInstalledLayout(action label: String, name: String, in app: XCUIApplication) {
+        let bounds = app.windows.firstMatch.frame
+        let webView = app.webViews.firstMatch
+        let action = app.webViews.buttons[label]
+        let footer = app.staticTexts["lab.nativeVersion"]
+        XCTAssertTrue(webView.exists, "Installed WKWebView missing")
+        XCTAssertTrue(action.waitForExistence(timeout: 10), "Current action missing: \(label)")
+        XCTAssertTrue(action.isHittable, "Current action must be visible and usable from scroll top: \(label)")
+        XCTAssertTrue(footer.waitForExistence(timeout: 10), "Native identity missing")
+        XCTAssertGreaterThanOrEqual(webView.frame.minY, bounds.minY + 20, "native top safe area/chrome")
+        XCTAssertLessThanOrEqual(webView.frame.maxY, footer.frame.minY + 1, "web content must not overlap footer")
+        XCTAssertLessThanOrEqual(footer.frame.maxY, bounds.maxY - 10, "native footer respects bottom safe area")
+        XCTAssertTrue(webView.frame.contains(action.frame), "current action lies inside visible WKWebView")
+        retain(name, in: app)
+    }
+
+    @MainActor
     func testWebOnlyUpdateOnSameInstalledApplication() async throws {
         continueAfterFailure = false
         let app = XCUIApplication(bundleIdentifier: "lab.webnative.BridgeLab")
         app.launch()
         try await waitForHost("ready") // existence request signals host to hash installed app
         try await waitForHost("a-release")
+        let explain = (try? await control("explain-enabled")) == true
         try requireText("Сначала запросим настоящий каталог", in: app)
+        if explain {
+            XCTAssertFalse(app.webViews.buttons["Рассчитать заказ"].exists, "A must not expose quote")
+            assertInstalledLayout(action: "Получить каталог", name: "Installed default A layout", in: app)
+        }
         let catalog = app.webViews.buttons["Получить каталог"]
         XCTAssertTrue(catalog.waitForExistence(timeout: 10))
         catalog.tap()
@@ -54,10 +88,18 @@ final class SameBinaryTests: XCTestCase {
         try requireText("Notebook", in: app)
         let a = XCTAttachment(screenshot: app.screenshot())
         a.name = "Actual React catalog A"; a.lifetime = .keepAlways; add(a)
+        if explain {
+            let unchanged = app.webViews.buttons["Загрузить обновлённый экран"]
+            XCTAssertTrue(unchanged.waitForExistence(timeout: 10))
+            unchanged.tap()
+            try requireText("Загружен прежний веб-экран", in: app)
+            XCTAssertFalse(app.webViews.buttons["Рассчитать заказ"].exists, "unchanged A must not expose quote")
+            assertInstalledLayout(action: "Проверить обновление ещё раз", name: "Installed unchanged A layout", in: app)
+        }
         try await waitForHost("a-observed")
         try await waitForHost("b-release")
         // No launch, native build, install or application configuration change between A and B.
-        let update = app.webViews.buttons["Загрузить обновлённый экран"]
+        let update = app.webViews.buttons[explain ? "Проверить обновление ещё раз" : "Загрузить обновлённый экран"]
         XCTAssertTrue(update.waitForExistence(timeout: 10))
         update.tap()
         try requireText("Раньше вы получили каталог", in: app)
@@ -66,10 +108,20 @@ final class SameBinaryTests: XCTestCase {
         quote.tap()
         try requireText("Расчёт получен", in: app)
         try requireText("Блокнот", in: app)
+        if explain {
+            try requireText("12,00", in: app)
+            assertInstalledLayout(action: "Рассчитать снова", name: "Installed default B result layout", in: app)
+        }
         let b = XCTAttachment(screenshot: app.screenshot())
         b.name = "Actual React quote B"; b.lifetime = .keepAlways; add(b)
         try await waitForHost("b-observed")
         try await waitForHost("finish") // host hashes B before test runner terminates the app
+        if explain {
+            let defaultFooterHeight = app.staticTexts["lab.nativeVersion"].frame.height
+            try await explainRuntimeEvidence(in: app, defaultFooterHeight: defaultFooterHeight)
+            try await waitForHost("matrix-observed")
+            return
+        }
         if try await control("production-ux-enabled") {
             try productionDiagnostics(in: app)
             try await waitForHost("matrix-observed")
@@ -121,6 +173,68 @@ final class SameBinaryTests: XCTestCase {
             outcomes.lifetime = .keepAlways
             add(outcomes)
         }
+    }
+
+    @MainActor
+    private func explainRuntimeEvidence(in app: XCUIApplication, defaultFooterHeight: CGFloat) async throws {
+        try await waitForHost("api-failure-ready")
+        try await waitForHost("api-failure-release")
+        app.webViews.buttons["Рассчитать снова"].tap()
+        try requireText("Не удалось связаться с сервером", in: app)
+        XCTAssertTrue(app.webViews.buttons["Повторить расчёт"].isHittable)
+        retain("Installed unavailable API error", in: app)
+        try await waitForHost("api-failure-observed")
+        try await waitForHost("api-recovery-release")
+        app.webViews.buttons["Повторить расчёт"].tap()
+        try requireText("Расчёт получен", in: app)
+        try await waitForHost("api-recovery-observed")
+
+        try await waitForHost("asset-failure-ready")
+        try await waitForHost("asset-failure-release")
+        app.buttons["lab.reload"].tap()
+        try requireText("Веб-экран не запустился", in: app)
+        XCTAssertFalse(app.webViews.buttons["Рассчитать заказ"].exists, "missing entry cannot retain a business action")
+        retain("Installed missing entry fallback", in: app)
+        try await waitForHost("asset-failure-observed")
+        try await waitForHost("asset-recovery-release")
+        app.buttons["lab.reload"].tap()
+        try requireText("Этот экран умеет рассчитать заказ", in: app)
+
+        let footer = app.staticTexts["lab.nativeVersion"]
+        footer.press(forDuration: 1)
+        let diagnostics = app.buttons["lab.openDiagnostics"]
+        XCTAssertTrue(diagnostics.waitForExistence(timeout: 5))
+        diagnostics.tap()
+        try requireText("Diagnostics", in: app)
+        footer.press(forDuration: 1)
+        let demo = app.buttons["lab.openDemo"]
+        XCTAssertTrue(demo.waitForExistence(timeout: 5))
+        demo.tap()
+        try requireText("Этот экран умеет рассчитать заказ", in: app)
+        XCTAssertFalse(app.webViews.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "Раньше вы получили каталог")).firstMatch.exists,
+                       "cold B must not invent catalog history")
+
+        app.webViews.buttons["Рассчитать заказ"].tap()
+        try requireText("Расчёт получен", in: app)
+        app.webViews.buttons["Рассчитать снова"].tap()
+        try requireText("Расчёт получен", in: app)
+
+        try await waitForHost("large-text-ready")
+        try await waitForHost("large-text-release")
+        app.terminate()
+        app.launch()
+        try requireText("Этот экран умеет рассчитать заказ", in: app)
+        let heading = app.webViews.staticTexts["Как это работает"].firstMatch
+        XCTAssertTrue(heading.waitForExistence(timeout: 10), "enlarged Explain heading remains readable")
+        let currentAction = app.webViews.buttons["Рассчитать заказ"]
+        for _ in 0..<6 where !currentAction.isHittable {
+            app.webViews.firstMatch.swipeUp()
+        }
+        XCTAssertTrue(currentAction.isHittable, "enlarged-text current action remains reachable")
+        XCTAssertTrue(footer.exists, "native identity remains available at enlarged text")
+        XCTAssertGreaterThan(footer.frame.height, defaultFooterHeight,
+                             "owned Simulator content-size setting enlarges installed native identity")
+        retain("Installed enlarged text scrolling", in: app)
     }
 
     @MainActor

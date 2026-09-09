@@ -20,8 +20,8 @@
 
 ## 4. R — Runtime evidence
 
-- [ ] 4.1 Add tested simulator-explain-v2 mode by reusing existing proof/cleanup; cover unchanged update, real B, failures/retry and missing-asset recovery.
-- [ ] 4.2 Verify default viewport, scroll-top, reduced-motion, assistive/large-text and actual WK safe-area layout; retain screenshots and limitations.
+- [x] 4.1 Add tested simulator-explain-v2 mode by reusing existing proof/cleanup; cover unchanged update, real B, failures/retry and missing-asset recovery.
+- [x] 4.2 Verify default viewport, scroll-top, reduced-motion, assistive/large-text and actual WK safe-area layout; retain screenshots and limitations.
 - [ ] 4.3 Run R command gates, record diff-based additional regression selection, full installed-file identity/backend attribution and teardown; request same-card review.
 
 ## 5. Independent acceptance and later closure

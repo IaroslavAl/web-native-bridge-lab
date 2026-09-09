@@ -19,6 +19,7 @@ Installs pinned local tooling, audits the complete web dependency tree, runs sch
 The [final requirement/scenario matrix](docs/integration/FINAL_MATRIX.md) is the current cross-layer coverage map. Stage1–5 reports below are historical checkpoints, not five outstanding product phases. Run separately and serially after the unit command:
 
     python3 scripts/tests/operations.py
+    scripts/verify simulator-explain-v2
     scripts/verify simulator-stage2-outcomes
     scripts/verify simulator-stage3-trust-limits
     scripts/verify simulator-stage4-webkit-privacy
@@ -28,6 +29,27 @@ The [final requirement/scenario matrix](docs/integration/FINAL_MATRIX.md) is the
       -derivedDataPath "$PWD/.artifacts/final-build" CODE_SIGNING_ALLOWED=NO build analyze
 
 Each installed-shell mode includes the entire A/B proof, so Stage1 alone need not be repeated. WebKit mode now includes eleven live tests (53 with inherited tests), including remaining redirect/Location, decoded gzip/header/escaped-reply boundaries and streaming deadline vectors. Individual commands may take minutes; use a bounded background process on hosts with short foreground caps, retain its handle and verify its real exit/cleanup. Do not abandon an owned Simulator after a tool timeout. Current exact-source results are retained in `docs/integration/final-candidate-evidence.json` when produced and the same-card review handoff; absence of that record means final-source verification is pending. No runner grants independent review, product acceptance or an owner RC decision.
+
+## Explain v2 runtime acceptance
+
+    scripts/verify simulator-explain-v2
+
+This bounded mode creates one owned iPhone Simulator and reuses the production
+loopback lab, installed-app hash proof and cleanup contract. It runs the real built
+A and B assets in focused WKWebView layout tests at 320×740, 390×844 and 1100×900,
+plus reduced-motion and enlarged-text coverage. It then installs one production
+shell and proves unchanged A, served B, real catalog/quote values, cold B/repeat,
+API unavailability/retry, missing-entry fallback/recovery, native safe areas and an
+accessibility-extra-large installed-shell pass. Static-port control files coordinate
+the XCTest runner but never supply API results or inject JavaScript into the installed
+app. Result bundles retain screenshots, geometry and accessibility trees.
+
+The mode rebuilds served assets but does not rebuild or reinstall the native app
+between A and B. It records exact installed-file equality, built asset hashes,
+attributable backend events, fault facts and teardown under a fresh ignored
+`.artifacts/verify-simulator-explain-v2-*/` directory. The run remains Simulator-only
+and synthetic; it is not independent acceptance or release authorization. See
+[Explain v2 runtime evidence](docs/design/explain-v2/runtime-evidence.md).
 
 ## Actual Simulator A/B proof (Stage 1 only)
 
