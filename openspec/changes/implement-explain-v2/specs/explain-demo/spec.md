@@ -86,7 +86,7 @@ Document loading SHALL be distinguished from business HTTP. Initial/update load 
 
 #### Scenario: Failed update navigation
 - **WHEN** update loading fails provisionally or after navigation, or the web process terminates
-- **THEN** the shell presents a Russian error and retry beside each other, suppresses old-document interaction, preserves the native version label and retries the existing trusted root with cache bypass
+- **THEN** the shell presents a Russian error and retry beside each other, suppresses old-document interaction, preserves the native version label and retries the selected fixed trusted destination with cache bypass (demo root by default, diagnostics only after explicit native selection)
 
 #### Scenario: Missing JavaScript or static error page
 - **WHEN** the HTML finishes but React does not boot because assets are missing, or the static server returns an error
@@ -106,11 +106,23 @@ The route, current outcome and action SHALL be grouped visibly from scroll top a
 
 ### Requirement: EX-08 Retained reliability and attributable proof
 
-The implementation SHALL preserve existing technical error/cancellation/concurrency/hostile-text assertions outside the main demo, exact origins/limits/wire/lifecycle protections, and reproducible installed-shell evidence. Mock UI and historical results SHALL NOT be relabelled as new runtime acceptance.
+The implementation SHALL preserve existing technical error/cancellation/concurrency/hostile-text assertions outside the main demo, exact origins/limits/wire/lifecycle protections, and reproducible installed-shell evidence. The installed production shell SHALL offer opt-in engineering entry and return through its version-footer context menu and equivalent named accessibility actions, using only fixed same-origin demo/diagnostics destinations. Reload and failed-load retry SHALL preserve the selected destination. Mock UI and historical results SHALL NOT be relabelled as new runtime acceptance.
+
+#### Scenario: Installed production engineering entry and return
+- **GIVEN** the real installed app has completed catalog A → actually served B quote without native rebuild, reinstall or relaunch
+- **WHEN** the tester long-presses the native version footer and selects Diagnostics, then uses native reload
+- **THEN** the production engineering surface loads through the same installed WKWebView/client and stays selected after reload; HTTP status/body, business/JSON categories, timeout, and slow-only cancellation with the fast result retained remain asserted before returning through the same menu to the currently served B demo without diagnostic controls
+- **AND** installed-file/container equality and real backend attribution remain checked after those actions, without an arbitrary URL input, browser fallback, production JavaScript injection or replacement by the raw acceptance page
+
+#### Scenario: Accessible entry and failed engineering navigation
+- **GIVEN** the native footer exposes named Diagnostics and Return to demo accessibility actions equivalent to its context-menu choices
+- **WHEN** diagnostics navigation fails before React boots and the user retries
+- **THEN** the footer/actions and native reload remain available, retry targets only the fixed diagnostics URL, the revoked old page is not interactive, and Return to demo loads the fixed demo root even if diagnostics never booted; no business success, web publication or app-replacement claim follows from this navigation
 
 #### Scenario: Engineering surface
 - **WHEN** the explicit engineering surface is opened
 - **THEN** HTTP/body, business, JSON, timeout, fast/slow correlation and slow-only cancellation remain executable through the production client, with hostile bodies inert and no browser fallback
+- **AND** relocated hostile-body tests still assert literal text and absence of injected DOM/side effects; retaining those tests and the separate raw hostile probe is not misreported as a new installed Stage5 hostile-response test
 
 #### Scenario: Runtime handoff
 - **WHEN** the candidate is submitted for independent acceptance
