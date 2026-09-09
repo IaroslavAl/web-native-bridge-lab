@@ -69,10 +69,15 @@ describe("Explain demo with an explicitly mocked native boundary", () => {
     expect(screen.getByRole("button", { name: "Загрузить обновлённый экран" })).toBeVisible();
   });
 
-  it("renders returned B quote quantity and validated minor-unit currency", async () => {
+  it.each([
+    ["USD", 1357, /13,57/],
+    ["EUR", 2468, /24,68/],
+    ["JPY", 1201, /1\s201/],
+    ["KWD", 1201, /1,201/],
+  ])("renders returned %s quote using its minor-unit exponent", async (currency, totalMinor, displayedAmount) => {
     const { client } = clientFor((message) => ({
       v: 1, type: "response", id: message.id, status: 200, headers: {},
-      body: '{"quote":{"sku":"notebook","quantity":3,"totalMinor":1357,"currency":"USD"}}',
+      body: JSON.stringify({ quote: { sku: "notebook", quantity: 3, totalMinor, currency } }),
     }));
     const history = JSON.stringify({ v: 1, previous: aIdentity, catalogSeen: true, updateRequested: true });
     render(<App createClient={() => client} variant="B" identity={bIdentity} storage={storageWith(history)} />);
@@ -81,18 +86,31 @@ describe("Explain demo with an explicitly mocked native boundary", () => {
 
     expect(await screen.findByText(/3\s+штуки/)).toBeVisible();
     const total = screen.getByTestId("demo.quote-total");
-    expect(total).toHaveTextContent("13,57");
-    expect(total).toHaveAttribute("data-currency", "USD");
-    expect(total).toHaveAttribute("data-total-minor", "1357");
-    expect(screen.queryByText(/12,00/)).not.toBeInTheDocument();
+    expect(total).toHaveTextContent(displayedAmount);
+    expect(total).toHaveAttribute("data-currency", currency);
+    expect(total).toHaveAttribute("data-total-minor", String(totalMinor));
     expect(screen.getByText("Веб-экран изменился: теперь вместо каталога он умеет рассчитать заказ. Оба действия проходят через уже доступную связь приложения с сервером.")).toBeVisible();
     expect(screen.queryByText(/HTTP|идентичност/i)).not.toBeInTheDocument();
   });
 
-  it("shows an interpretation error instead of a receipt for malformed money", async () => {
+  it("rejects an unsupported currency without leaving a receipt and keeps retry usable", async () => {
     const { client } = clientFor((message) => ({
       v: 1, type: "response", id: message.id, status: 200, headers: {},
-      body: '{"quote":{"sku":"notebook","quantity":2,"totalMinor":-1,"currency":"USD"}}',
+      body: '{"quote":{"sku":"notebook","quantity":2,"totalMinor":1200,"currency":"ZZZ"}}',
+    }));
+    render(<App createClient={() => client} variant="B" identity={bIdentity} storage={storageWith()} />);
+
+    await userEvent.click(await readyButton("Рассчитать заказ"));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Ответ получен, но экран не смог проверить данные");
+    expect(screen.queryByTestId("demo.quote-total")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Повторить расчёт" })).toBeEnabled();
+  });
+
+  it.each([-1, 1.5])("shows an interpretation error instead of a receipt for malformed totalMinor %s", async (totalMinor) => {
+    const { client } = clientFor((message) => ({
+      v: 1, type: "response", id: message.id, status: 200, headers: {},
+      body: JSON.stringify({ quote: { sku: "notebook", quantity: 2, totalMinor, currency: "USD" } }),
     }));
     render(<App createClient={() => client} variant="B" identity={bIdentity} storage={storageWith()} />);
 

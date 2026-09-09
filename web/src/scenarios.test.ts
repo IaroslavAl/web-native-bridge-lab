@@ -37,13 +37,14 @@ describe("web-owned scenarios", () => {
     expect(interpretQuote(ok('{"quote":{"sku":"notebook","quantity":2,"totalMinor":1200,"currency":"USD"}}'))).toEqual({
       kind: "quote",
       summary: "notebook × 2 — USD 1200 minor units",
-      quote: { sku: "notebook", quantity: 2, totalMinor: 1200, currency: "USD" },
+      quote: { sku: "notebook", quantity: 2, totalMinor: 1200, currency: "USD", minorUnitExponent: 2 },
     });
   });
 
   it.each([
     '{"quote":{"sku":"notebook","quantity":2,"totalMinor":-1,"currency":"USD"}}',
     '{"quote":{"sku":"notebook","quantity":2,"totalMinor":1200,"currency":"usd"}}',
+    '{"quote":{"sku":"notebook","quantity":2,"totalMinor":1200,"currency":"ZZZ"}}',
     '{"quote":{"sku":"notebook","quantity":0,"totalMinor":1200,"currency":"USD"}}',
   ])("rejects malformed money or quantity instead of creating a receipt", (body) => {
     expect(() => interpretQuote(ok(body))).toThrowError(

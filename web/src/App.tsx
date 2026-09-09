@@ -5,6 +5,7 @@ import {
   TransportError,
 } from "./bridgeClient";
 import { classifyLoadedDemo, type LoadedDemo } from "./demoState";
+import { formatMinorUnits } from "./money";
 import {
   ResponseInterpretationError,
   buildCatalogRequest,
@@ -274,8 +275,11 @@ export function App({ createClient, variant, identity, storage, reload }: AppPro
             <p className="total"><span>Итого</span><b data-testid="demo.quote-total"
               data-currency={currentResult.quote.currency}
               data-total-minor={currentResult.quote.totalMinor}>
-              {new Intl.NumberFormat("ru-RU", { style: "currency", currency: currentResult.quote.currency })
-                .format(currentResult.quote.totalMinor / 100)}
+              {formatMinorUnits(
+                currentResult.quote.totalMinor,
+                currentResult.quote.currency,
+                currentResult.quote.minorUnitExponent,
+              )}
             </b></p>
             {loaded.observedCatalog && <p className="comparison">Веб-экран изменился: теперь вместо каталога он умеет рассчитать заказ. Оба действия проходят через уже доступную связь приложения с сервером.</p>}
           </div>

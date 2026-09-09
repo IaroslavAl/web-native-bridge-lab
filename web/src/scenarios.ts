@@ -1,4 +1,5 @@
 import type { BridgeRequestInput, BridgeResponse } from "./bridgeClient";
+import { currencyMinorUnitExponent } from "./money";
 
 export type ScenarioName = "catalog" | "quote";
 export type InterpretationCategory = "HTTP" | "business" | "JSON parse";
@@ -13,7 +14,7 @@ export type ScenarioResult =
   | {
       kind: "quote";
       summary: string;
-      quote: { sku: string; quantity: number; totalMinor: number; currency: string };
+      quote: { sku: string; quantity: number; totalMinor: number; currency: string; minorUnitExponent: number };
     }
   | { kind: "diagnostic"; summary: string };
 
@@ -128,6 +129,9 @@ export function interpretQuote(response: BridgeResponse): ScenarioResult {
   if (error) throw error;
   if (!isRecord(decoded) || !isRecord(decoded.quote)) return invalidBusinessShape("quote");
   const quote = decoded.quote;
+  const minorUnitExponent = typeof quote.currency === "string"
+    ? currencyMinorUnitExponent(quote.currency)
+    : null;
   if (
     typeof quote.sku !== "string" ||
     !Number.isSafeInteger(quote.quantity) ||
@@ -135,7 +139,7 @@ export function interpretQuote(response: BridgeResponse): ScenarioResult {
     !Number.isSafeInteger(quote.totalMinor) ||
     (quote.totalMinor as number) < 0 ||
     typeof quote.currency !== "string" ||
-    !/^[A-Z]{3}$/.test(quote.currency)
+    minorUnitExponent === null
   ) {
     return invalidBusinessShape("quote");
   }
@@ -147,6 +151,7 @@ export function interpretQuote(response: BridgeResponse): ScenarioResult {
       quantity: quote.quantity as number,
       totalMinor: quote.totalMinor as number,
       currency: quote.currency,
+      minorUnitExponent,
     },
   };
 }

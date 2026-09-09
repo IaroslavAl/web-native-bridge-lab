@@ -41,3 +41,21 @@ Readback confirmed each built HTML references its corresponding content-hashed e
 - Existing native SameBinaryTests still expect the old visible controls and labels. N owns the native footer entry, native version/build label, generic load recovery, and shared UI-harness alignment before Stage5 can pass on Explain v2.
 - R owns real served A→B/update/failure/layout evidence. A remains the independent exact-candidate acceptance gate. The active OpenSpec change is not archived here.
 - No protocol, bridge client, native, backend, runner, tracked dist, profile, remote, or original mission-graph changes were made.
+
+## A105 EX-03 currency correction
+
+Independent final acceptance rejected exact head `f548b4e6deef85ad413544094423442fbf920856`: the rendered App divided every `totalMinor` by 100 and accepted Intl's fallback formatting for an unknown currency. The bounded correction keeps money interpretation in web and uses an explicit demo policy: USD and EUR have exponent 2, JPY has exponent 0, and KWD has exponent 3. Every other currency code is unsupported. Unsupported codes and malformed money follow the existing business interpretation error path, produce no receipt, and leave quote retry usable.
+
+Formatting now decomposes the accepted nonnegative safe integer into integer major/fraction parts before localized `Intl.NumberFormat.formatToParts` assembly. It does not convert the whole amount through a floating-point decimal division, and a regression at `Number.MAX_SAFE_INTEGER` verifies that the last minor unit is retained. The policy adds no rates, conversion, runtime currency discovery, dependency, wire field, or native/backend behavior. It deliberately supports only the four listed currencies; adding another requires an explicit exponent plus tests. The iOS 17.0 deployment target provides the required Intl API.
+
+Executed from `web-native-bridge-lab/t_9be8ef17-per-85-explain-v2-currency-f1-implemente` after the correction:
+
+- `npm --prefix web test -- --run` — PASS: 7 files, 69 tests, including rendered USD/EUR/JPY/KWD, unsupported ZZZ, malformed totals, changed nonconstant amounts, and the maximum-safe-integer rounding boundary.
+- `npm --prefix web run typecheck` — PASS.
+- `npm --prefix web run build:a -- --outDir ../.artifacts/currency-fix-web-a` — PASS; emitted `/assets/index-DQkfC30N.js`.
+- `npm --prefix web run build:b -- --outDir ../.artifacts/currency-fix-web-b` — PASS; emitted `/assets/index-CK5AntnY.js`.
+- `node protocol/v1/validate.cjs` — PASS: 36 vectors (14 valid, 15 invalid, 7 semantic-only classifications).
+- `OPENSPEC_TELEMETRY=0 openspec/tooling/node_modules/.bin/openspec validate --all --strict --no-interactive` — PASS: 2 changes, 0 failures.
+- `node .artifacts/explain-currency-fix/probe-currency.mjs` — PASS against the actual App/BridgeClient/interpreter with an explicitly mocked native response: `totalMinor=1200` rendered USD `12,00`, EUR `12,00`, JPY `1 200`, KWD `1,200`; ZZZ rendered no receipt and the adjacent interpretation error. Output: `.artifacts/explain-currency-fix/currency-probe.json`.
+
+This focused probe is not live backend, WKWebView, Simulator, or final acceptance evidence. The held independent A gate must rerun the changed runtime after same-card review of the correction.

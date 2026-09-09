@@ -11,6 +11,7 @@
 - [x] 2.2 Implement coarse real-event states, structured web interpretation, Russian errors/retry and one action/result surface.
 - [x] 2.3 Implement actual loaded identity/reload comparison, A/B capability gating, cold B and honest repeat; static bootstrap fallback.
 - [x] 2.4 Run W command gates and inspect actual A/B output identity; request independent same-card review with exact head and pending integrated gates disclosed.
+- [x] 2.5 Correct the A105 EX-03 finding with an explicit USD/EUR/JPY/KWD minor-unit policy, rendered supported/unsupported/malformed regressions and integer-safe formatting evidence; preserve the same-card review and held final-A gates.
 
 ## 3. N — Native shell and shared harness
 
