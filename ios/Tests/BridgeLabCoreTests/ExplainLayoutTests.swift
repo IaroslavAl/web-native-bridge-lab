@@ -154,7 +154,8 @@ final class ExplainLayoutTests: XCTestCase {
             try await host.click(action)
             try await host.wait("real response held while pending") {
                 let pending = try await self.host.exists("button", containing: "Ждём ответ…")
-                return self.host.hasHeldCompletion && pending
+                let disabled = try await self.host.boolean("document.querySelector('.outcome button')?.disabled === true")
+                return self.host.hasHeldCompletion && pending && disabled
             }
             let observation = try await host.observation()
             try assertDefaultLayout(observation, expected: size, state: state)
