@@ -11,6 +11,8 @@ final class ExplainLayoutTests: XCTestCase {
     private let sizes = [
         CGSize(width: 320, height: 740),
         CGSize(width: 390, height: 844),
+        CGSize(width: 430, height: 932),
+        CGSize(width: 768, height: 1024),
         CGSize(width: 1100, height: 900),
     ]
     private var host: ExplainLayoutHost!
