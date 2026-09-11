@@ -139,9 +139,15 @@ A load failure revokes that document, keeps stale content non-interactive, and s
 a native error with `Повторить` plus a return-to-demo path when Diagnostics was
 selected. The reviewed N candidate passed the unchanged Stage4 and Stage5 commands. The R
 candidate adds focused Explain runtime/layout evidence and proportional Stage2/3
-regressions. Independent R review and the fresh Astra/xhigh technical acceptance
-passed on the final implementation candidate `6ef85571005bb42c7f3bd6e3be6158d338f4b0c1`;
-owner product/aesthetic acceptance remains separate. See
+regressions. Independent R review and the original fresh Astra/xhigh technical acceptance
+passed on `6ef85571005bb42c7f3bd6e3be6158d338f4b0c1`. Following PR-review corrections,
+independent exact-source acceptance run 119 passed on
+`de84102d5aaa271808911d50f372bac792bec0bd`, including a fresh
+`scripts/verify simulator-explain-v2` run. Any later documentation-only evidence
+reconciliation, including this README change, changes commit identity without changing
+production, test, or runtime inputs from `de84102`; that acceptance remains
+applicable and is not relabeled as execution on the documentation-only commit. Owner
+product/aesthetic acceptance remains separate. See
 [Explain v2 native evidence](docs/design/explain-v2/native-evidence.md) for the exact
 N scope and [Explain v2 runtime evidence](docs/design/explain-v2/runtime-evidence.md)
 for the R scope, executed gates and deliberate limits.
