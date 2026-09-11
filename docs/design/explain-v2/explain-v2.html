@@ -87,7 +87,7 @@ function draw(){
  (stage==='done'?'<div class="receipt"><span>Итого за заказ</span><strong>12,00 $</strong></div>':'')+'</section>'+
  (error?'<div class="result error" role="alert"><b>Сервер не ответил</b>Данные не получены. Проверьте, что сервер запущен, и повторите запрос.</div>':'')+
  (waiting?'<div class="result wait" role="status"><b>Новый экран ещё не опубликован</b>Пока ничего не изменилось. Дождитесь обновления от ведущего.</div>':'')+
- 
+
  (stage==='done'?'<div class="change"><div>ИЗМЕНИЛОСЬ<b>Веб-экран и действие</b></div><span>≠</span><div>НЕ МЕНЯЛОСЬ<b>Установленное приложение</b></div></div>':'')+
  '<button class="cta" id="primary" '+(busy?'disabled':'')+'>'+(busy?'Показываем действие…':error?'Повторить запрос':primary[stage])+'</button>'+
  '<p class="next-hint">'+(stage==='catalog'?'Ведущий публикует экран. Эта кнопка только загружает его.':stage==='done'?'Меняется веб-сценарий, а не нативные возможности.':'Результат появится здесь, без перехода на другой экран.')+'</p>';

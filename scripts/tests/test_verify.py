@@ -1,5 +1,6 @@
 """Tests for fail-closed same-installed-app evidence helpers (no Simulator mocks)."""
 import hashlib
+import re
 import runpy
 import sys
 import tempfile
@@ -145,6 +146,22 @@ class EvidenceTests(unittest.TestCase):
         for marker in ('Как это работает', 'Рассчитать заказ',
                        'Этот экран умеет рассчитать заказ из двух блокнотов'):
             self.assertIn(marker, javascript)
+
+    def test_missing_javascript_fallback_names_native_reload_control(self):
+        native_source = (ROOT / 'ios' / 'Sources' / 'BridgeLabApp' / 'BridgeScreen.swift').read_text()
+        reload_control = re.search(
+            r'Button\("([^"]+)"\)\s*\{\s*model\.reload\(\)\s*\}.*?'
+            r'\.accessibilityIdentifier\("lab\.reload"\)',
+            native_source,
+            re.DOTALL,
+        )
+        if reload_control is None:
+            self.fail('native reload control not found')
+        native_label = reload_control.group(1)
+        self.assertEqual(native_label, 'Обновить')
+
+        fallback = (ROOT / 'web' / 'index.html').read_text()
+        self.assertIn(f'Используйте «{native_label}» в установленном приложении.', fallback)
 
     def test_web_entry_requires_one_built_hashed_javascript_asset(self):
         entry = self.helper('web_entry')
