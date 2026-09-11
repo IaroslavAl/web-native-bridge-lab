@@ -1,4 +1,5 @@
 """Tests for fail-closed same-installed-app evidence helpers (no Simulator mocks)."""
+import ast
 import hashlib
 import re
 import runpy
@@ -97,11 +98,11 @@ class EvidenceTests(unittest.TestCase):
             with self.assertRaises(AssertionError):
                 check(mutation)
 
-    def test_stage4_excludes_explain_layout_suite_and_keeps_53_test_contract(self):
+    def test_stage4_excludes_explain_layout_suite_and_keeps_56_test_contract(self):
         selection = self.helper('stage4_test_selection')()
         self.assertEqual(selection, ('-skip-testing:BridgeLabTests/ExplainLayoutTests',))
         self.assertIn("*stage4_test_selection(),", SCRIPT.read_text())
-        self.assertIn("summary['passedTests'] == 53", SCRIPT.read_text())
+        self.assertIn("summary['passedTests'] == 56", SCRIPT.read_text())
 
     def test_same_app_rejects_container_change_and_non_executable_change(self):
         same = self.helper('require_same_app')
@@ -163,6 +164,24 @@ class EvidenceTests(unittest.TestCase):
         fallback = (ROOT / 'web' / 'index.html').read_text()
         self.assertIn(f'Используйте «{native_label}» в установленном приложении.', fallback)
 
+    def test_response_direction_does_not_depend_on_localized_title_prefix(self):
+        source = (ROOT / 'web' / 'src' / 'App.tsx').read_text()
+        self.assertNotIn('title.startsWith("Ответ получен")', source)
+
+    def test_readme_acceptance_paragraph_is_commit_neutral(self):
+        readme = (ROOT / 'README.md').read_text()
+        stable = (
+            'The linked evidence documents preserve revision-scoped historical runs and their explicit limits. '
+            'Any later candidate must be evaluated from its own recorded source revision; this README neither '
+            'designates a final candidate nor carries prior acceptance onto changed production, test, runner, '
+            'specification, or operational-contract content. Independent technical review and owner '
+            'product/aesthetic acceptance remain separate.'
+        )
+        self.assertIn(stable, ' '.join(readme.splitlines()))
+        paragraph = next(block for block in readme.split('\n\n') if 'The linked evidence documents' in block)
+        self.assertNotRegex(paragraph, r'\b[0-9a-f]{40}\b')
+        self.assertNotRegex(paragraph.lower(), r'current exact head|final sha')
+
     def test_web_entry_requires_one_built_hashed_javascript_asset(self):
         entry = self.helper('web_entry')
         manifest = {'index.html': 'html', 'assets/index-Ab12.js': 'entry', 'assets/index-Cd34.css': 'css'}
@@ -212,6 +231,65 @@ class EvidenceTests(unittest.TestCase):
             run.command_lab_start('lab-start', ['ignored'], ownership)
         self.assertTrue(ownership['running'])
         self.assertTrue(ownership['start_attempted'])
+        self.assertFalse(ownership.get('created', False))
+
+    def test_static_start_marks_cleanup_ownership_before_interruptible_spawn(self):
+        run = self.helper('Run')('unit-static-start-ownership')
+        ownership = {'running': False, 'start_attempted': False}
+
+        def interrupted(args, log, env=None):
+            self.assertEqual(args, ['ignored'])
+            self.assertTrue(ownership['start_attempted'])
+            raise KeyboardInterrupt('before static spawn returns')
+
+        run.spawn = interrupted
+        with self.assertRaises(KeyboardInterrupt):
+            run.spawn_owned_service(['ignored'], None, ownership)
+        self.assertTrue(ownership['start_attempted'])
+        self.assertFalse(ownership.get('created', False))
+
+    def test_cleanup_port_helper_is_once_only_applicable_and_fail_closed(self):
+        verify = self.helper('verify_released_ports')
+        errors = []
+        calls = []
+
+        self.assertIsNone(verify(False, errors, lambda: calls.append('unused')))
+        self.assertEqual(calls, [])
+        self.assertTrue(verify(True, errors, lambda: calls.append('checked')))
+        self.assertEqual(calls, ['checked'])
+        self.assertEqual(errors, [])
+
+        def occupied():
+            calls.append('occupied')
+            raise RuntimeError('loopback port 8787 unavailable; foreign listeners untouched')
+
+        self.assertFalse(verify(True, errors, occupied))
+        self.assertEqual(calls, ['checked', 'occupied'])
+        self.assertEqual(errors, [
+            'fixed-port release check failed: loopback port 8787 unavailable; foreign listeners untouched'
+        ])
+
+    def test_simulator_finally_verifies_ports_after_service_cleanup_branches(self):
+        source = SCRIPT.read_text()
+        tree = ast.parse(source)
+        run_class = next(node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == 'Run')
+        simulator = next(node for node in run_class.body if isinstance(node, ast.FunctionDef) and node.name == 'simulator')
+        cleanup = next(node.finalbody for node in simulator.body if isinstance(node, ast.Try) and node.finalbody)
+        snippets = [ast.get_source_segment(source, node) or '' for node in cleanup]
+        static_index = next(index for index, text in enumerate(snippets) if text.startswith('if static_web is not None:'))
+        lab_index = next(index for index, text in enumerate(snippets) if text.startswith("if lab_ownership['running']:"))
+        port_indices = [
+            index for index, node in enumerate(cleanup)
+            if isinstance(node, ast.Assign)
+            and any(isinstance(target, ast.Name) and target.id == 'ports_released' for target in node.targets)
+            and isinstance(node.value, ast.Call)
+            and isinstance(node.value.func, ast.Name)
+            and node.value.func.id == 'verify_released_ports'
+        ]
+        self.assertEqual(len(port_indices), 1, 'one top-level final cleanup port verification required')
+        port_index = port_indices[0]
+        self.assertGreater(port_index, static_index)
+        self.assertGreater(port_index, lab_index)
 
     def test_missing_entry_fault_is_cleanup_eligible_before_and_after_interrupted_move(self):
         move = self.helper('move_entry_for_fault')

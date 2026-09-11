@@ -21,8 +21,8 @@ The demo SHALL drive request state from actual client/response/interpreter event
 - **THEN** the route explains the forward direction and the UI says it is waiting through the application, without advancing through timed server stages, showing a receipt or accepting duplicate primary activation
 
 #### Scenario: Received response
-- **WHEN** a correlated valid response reaches web
-- **THEN** the response direction is explained and only successful web interpretation can display a successful business result; an immediate response requires no minimum animation duration
+- **WHEN** a correlated response reaches web, including non-2xx, business-error and malformed or invalid response bodies
+- **THEN** the reverse response direction is explained without implying business success, and only successful web interpretation can display a successful business result; an immediate response requires no minimum animation duration
 
 #### Scenario: Lifecycle revocation
 - **WHEN** the user reloads or leaves while a request is active

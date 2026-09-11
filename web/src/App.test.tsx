@@ -105,6 +105,38 @@ describe("Explain demo with an explicitly mocked native boundary", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Ответ получен, но экран не смог проверить данные");
     expect(screen.queryByTestId("demo.quote-total")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Повторить расчёт" })).toBeEnabled();
+    expect(screen.getByLabelText("Путь запроса и ответа")).toHaveAttribute("data-direction", "back");
+  });
+
+  it("keeps reverse response direction for a correlated HTTP 503", async () => {
+    const { client } = clientFor((message) => ({
+      v: 1, type: "response", id: message.id, status: 503, headers: {}, body: '{"error":"unavailable"}',
+    }));
+    render(<App createClient={() => client} variant="B" identity={bIdentity} storage={storageWith()} />);
+
+    await userEvent.click(await readyButton("Рассчитать заказ"));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Сервер вернул ошибку HTTP 503");
+    expect(screen.queryByTestId("demo.quote-total")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Повторить расчёт" })).toBeEnabled();
+    expect(screen.getByLabelText("Путь запроса и ответа")).toHaveAttribute("data-direction", "back");
+    expect(screen.getByRole("status")).toHaveTextContent("Ответ получен, но успешного результата нет");
+  });
+
+  it.each([
+    ['{"error":{"code":"OUT_OF_STOCK","message":"Unavailable"}}', "Ответ получен, но действие отклонено"],
+    ["{", "Ответ получен, но экран не смог прочитать данные"],
+  ])("keeps reverse response direction for interpreted response failure %s", async (body, title) => {
+    const { client } = clientFor((message) => ({
+      v: 1, type: "response", id: message.id, status: 200, headers: {}, body,
+    }));
+    render(<App createClient={() => client} variant="B" identity={bIdentity} storage={storageWith()} />);
+
+    await userEvent.click(await readyButton("Рассчитать заказ"));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(title);
+    expect(screen.getByLabelText("Путь запроса и ответа")).toHaveAttribute("data-direction", "back");
+    expect(screen.queryByTestId("demo.quote-total")).not.toBeInTheDocument();
   });
 
   it.each([-1, 1.5])("shows an interpretation error instead of a receipt for malformed totalMinor %s", async (totalMinor) => {
@@ -119,6 +151,7 @@ describe("Explain demo with an explicitly mocked native boundary", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Ответ получен, но экран не смог проверить данные");
     expect(screen.queryByTestId("demo.quote-total")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Повторить расчёт" })).toBeVisible();
+    expect(screen.getByLabelText("Путь запроса и ответа")).toHaveAttribute("data-direction", "back");
   });
 
   it("excludes duplicate activation synchronously and shows actual pending state", async () => {
@@ -161,6 +194,7 @@ describe("Explain demo with an explicitly mocked native boundary", () => {
     render(<App createClient={createClient} variant="A" identity={aIdentity} storage={storageWith()} />);
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Не удалось подключить веб-экран к приложению");
+    expect(screen.getByLabelText("Путь запроса и ответа")).toHaveAttribute("data-direction", "neutral");
     await userEvent.click(screen.getByRole("button", { name: "Повторить подключение" }));
 
     expect(await readyButton("Получить каталог")).toBeEnabled();
@@ -238,14 +272,35 @@ describe("Explain demo with an explicitly mocked native boundary", () => {
   });
 
   it("maps response, transport and bridge failures to distinct truthful Russian categories", () => {
-    expect(describeDemoError(new ResponseInterpretationError("HTTP", "HTTP 503: body", 503)).title).toBe("Сервер вернул ошибку HTTP 503");
-    expect(describeDemoError(new ResponseInterpretationError("business", "OUT_OF_STOCK")).title).toBe("Ответ получен, но действие отклонено");
-    expect(describeDemoError(new ResponseInterpretationError("JSON parse", "bad")).title).toBe("Ответ получен, но экран не смог прочитать данные");
-    expect(describeDemoError(new TransportError("TIMEOUT", "late", 1)).title).toBe("Время ожидания ответа истекло");
-    expect(describeDemoError(new TransportError("CANCELLED", "cancel", 1)).title).toBe("Запрос отменён");
-    expect(describeDemoError(new TransportError("NETWORK_ERROR", "offline", 1)).title).toBe("Не удалось связаться с сервером");
-    expect(describeDemoError(new TransportError("URL_DENIED", "denied", 1)).title).toBe("Приложение отклонило запрос");
-    expect(describeDemoError(new BridgeClientError("BRIDGE_UNAVAILABLE", "missing")).title).toBe("Связь с приложением недоступна");
-    expect(describeDemoError(new BridgeClientError("PROTOCOL_ERROR", "bad")).title).toBe("Приложение вернуло непонятный ответ");
+    expect(describeDemoError(new ResponseInterpretationError("HTTP", "HTTP 503: body", 503))).toMatchObject({
+      title: "Сервер вернул ошибку HTTP 503", responseReceived: true,
+    });
+    expect(describeDemoError(new ResponseInterpretationError("business", "OUT_OF_STOCK"))).toMatchObject({
+      title: "Ответ получен, но действие отклонено", responseReceived: true,
+    });
+    expect(describeDemoError(new ResponseInterpretationError("JSON parse", "bad"))).toMatchObject({
+      title: "Ответ получен, но экран не смог прочитать данные", responseReceived: true,
+    });
+    expect(describeDemoError(new TransportError("TIMEOUT", "late", 1))).toMatchObject({
+      title: "Время ожидания ответа истекло", responseReceived: false,
+    });
+    expect(describeDemoError(new TransportError("CANCELLED", "cancel", 1))).toMatchObject({
+      title: "Запрос отменён", responseReceived: false,
+    });
+    expect(describeDemoError(new TransportError("NETWORK_ERROR", "offline", 1))).toMatchObject({
+      title: "Не удалось связаться с сервером", responseReceived: false,
+    });
+    expect(describeDemoError(new TransportError("URL_DENIED", "denied", 1))).toMatchObject({
+      title: "Приложение отклонило запрос", responseReceived: false,
+    });
+    expect(describeDemoError(new BridgeClientError("BRIDGE_UNAVAILABLE", "missing"))).toMatchObject({
+      title: "Связь с приложением недоступна", responseReceived: false,
+    });
+    expect(describeDemoError(new BridgeClientError("PROTOCOL_ERROR", "bad"))).toMatchObject({
+      title: "Приложение вернуло непонятный ответ", responseReceived: false,
+    });
+    expect(describeDemoError(new Error("unknown"))).toMatchObject({
+      title: "Не удалось выполнить действие", responseReceived: false,
+    });
   });
 });

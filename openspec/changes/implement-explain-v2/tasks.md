@@ -30,3 +30,10 @@
 - [x] 5.1 Fresh Astra/xhigh verifier independently checked exact implementation candidate `6ef85571005bb42c7f3bd6e3be6158d338f4b0c1` against the requirements/evidence matrix; A110 passed after the independently reviewed currency correction.
 - [x] 5.2 Coordinator reconciled reviewed source/tests/specs and active baseline lifecycle without mutating the old mission graph, preserved the final handoff, and prepared the accepted candidate for integration. Historical phase reports remain snapshots of their own heads.
 - [ ] 5.3 Record owner product acceptance separately; do not equate a validated plan, technical gate or mockup QA with accepted Explain UI.
+
+## 6. Post-review corrections
+
+- [x] 6.1 Make tokenless main-frame HTTP response policy side-effect free, require exact non-nil navigation identity for delegate mutations, and retain real current-503 failure/recovery coverage.
+- [x] 6.2 Preserve typed response provenance in web presentation state so correlated HTTP, business and parse failures retain reverse direction without localized-title inference.
+- [x] 6.3 Make fixed-port release an explicit post-cleanup invariant after owned lab/static stop attempts, including exceptional paths and evidence fields.
+- [ ] 6.4 Run all required exact-head static, unit, build, Operations, Stage4, Explain and Stage5 gates and obtain fresh independent same-card review before publication.

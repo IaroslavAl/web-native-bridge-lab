@@ -114,7 +114,7 @@ final class WKBridgeAdapter: NSObject {
     }
 
     private func isCurrentNavigation(_ navigation: WKNavigation?) -> Bool {
-        guard let navigation else { return true }
+        guard let navigation, let activeNavigation else { return false }
         return navigation === activeNavigation
     }
 
@@ -166,7 +166,6 @@ final class WKBridgeAdapter: NSObject {
             return .allow
         }
         guard (200..<300).contains(httpResponse.statusCode) else {
-            failDocumentLoad(.contentUnavailable)
             return .cancel
         }
         return .allow

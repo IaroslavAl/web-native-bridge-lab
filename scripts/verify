@@ -168,6 +168,18 @@ def require_free_ports():
             sock.close()
 
 
+def verify_released_ports(start_attempted, cleanup_errors, checker=require_free_ports):
+    """Record the final fixed-port invariant after all owned service stop attempts."""
+    if not start_attempted:
+        return None
+    try:
+        checker()
+    except Exception as error:
+        cleanup_errors.append(f'fixed-port release check failed: {error}')
+        return False
+    return True
+
+
 class Run:
     def __init__(self, mode):
         self.out = ROOT / '.artifacts' / ('verify-' + mode + '-' + uuid.uuid4().hex[:10])
@@ -191,6 +203,13 @@ class Run:
         child = subprocess.Popen(args, cwd=ROOT, env=env or self.env, stdout=log,
                                  stderr=subprocess.STDOUT, start_new_session=True)
         self.children.append(child)
+        return child
+
+    def spawn_owned_service(self, args, log, ownership, env=None):
+        """Make fixed-port cleanup proof applicable before a spawn can be interrupted."""
+        ownership['start_attempted'] = True
+        child = self.spawn(args, log, env)
+        ownership['created'] = True
         return child
 
     def stop_child(self, child):
@@ -257,7 +276,9 @@ class Run:
         """Make a unique lab state eligible for cleanup before start can be interrupted."""
         ownership['start_attempted'] = True
         ownership['running'] = True
-        return self.command(name, args)
+        code = self.command(name, args)
+        ownership['created'] = True
+        return code
 
     def web(self, variant):
         self.command('web-build-' + variant, ['npm', '--prefix', 'web', 'run', 'build:' + variant.lower(),
@@ -297,7 +318,7 @@ class Run:
     def simulator(self, stage2=False, stage3=False, stage5=False, explain=False):
         require_free_ports() # before creating resources; never steal existing lab services
         udid = None
-        lab_ownership = {'running': False, 'start_attempted': False}
+        lab_ownership = {'running': False, 'start_attempted': False, 'created': False}
         tester = None
         test_log = None
         static_web = None
@@ -379,7 +400,9 @@ class Run:
                                  'log': 'layout-static-web-only.log'}
                 self.commands.append(static_record); save(self.out / 'commands.json', self.commands)
                 static_log = (self.out / 'layout-static-web-only.log').open('w')
-                static_web = self.spawn(static_args, static_log, {**self.env, 'PYTHONUNBUFFERED': '1'})
+                static_web = self.spawn_owned_service(
+                    static_args, static_log, lab_ownership, {**self.env, 'PYTHONUNBUFFERED': '1'}
+                )
                 static_record['pid'] = static_web.pid
                 save(self.out / 'commands.json', self.commands)
                 deadline = time.monotonic() + 10
@@ -507,7 +530,9 @@ class Run:
                                  'log': 'static-web-only.log'}
                 self.commands.append(static_record); save(self.out / 'commands.json', self.commands)
                 static_log = (self.out / 'static-web-only.log').open('w')
-                static_web = self.spawn(static_args, static_log, {**self.env, 'PYTHONUNBUFFERED': '1'})
+                static_web = self.spawn_owned_service(
+                    static_args, static_log, lab_ownership, {**self.env, 'PYTHONUNBUFFERED': '1'}
+                )
                 static_record['pid'] = static_web.pid
                 save(self.out / 'commands.json', self.commands)
                 deadline = time.monotonic() + 10
@@ -627,6 +652,7 @@ class Run:
                 result['full_security_lifecycle_matrix'] = 'PENDING'
         finally:
             cleanup_errors = []
+            service_cleanup_succeeded = True
             if tester is not None:
                 self.stop_child(tester)
             if test_log is not None:
@@ -640,6 +666,7 @@ class Run:
                 try:
                     self.stop_child(static_web)
                 except Exception as error:
+                    service_cleanup_succeeded = False
                     cleanup_errors.append(str(error))
             if static_log is not None:
                 static_log.close()
@@ -647,10 +674,11 @@ class Run:
                 try:
                     self.command('lab-stop', lab + ['stop'] + options)
                     lab_ownership['running'] = False
-                    require_free_ports()
                     self.command('lab-stopped-status', lab + ['status'] + options, allowed=(1,))
                 except Exception as error:
+                    service_cleanup_succeeded = False
                     cleanup_errors.append(str(error))
+            ports_released = verify_released_ports(lab_ownership['start_attempted'], cleanup_errors)
             if udid:
                 try:
                     states = json.loads(self.capture(['xcrun', 'simctl', 'list', 'devices', '-j']))['devices']
@@ -663,7 +691,8 @@ class Run:
                 except Exception as error:
                     cleanup_errors.append(str(error))
             save(self.out / 'cleanup.json', {'errors': cleanup_errors, 'owned_simulator_removed': bool(udid) and not cleanup_errors,
-                                            'owned_services_stopped': lab_ownership['start_attempted'] and not cleanup_errors})
+                                            'owned_services_stopped': lab_ownership['created'] and service_cleanup_succeeded and ports_released is True,
+                                            'ports_released': ports_released})
             if cleanup_errors:
                 raise RuntimeError('cleanup failed: ' + '; '.join(cleanup_errors))
         # Never emit a successful result if cleanup failed.
@@ -707,7 +736,7 @@ class Run:
             save(self.out / 'webkit-summary.json', summary)
             assert summary['failedTests'] == 0, f'webkit failedTests={summary["failedTests"]}'
             assert summary['skippedTests'] == 0, f'webkit skippedTests={summary["skippedTests"]}'
-            assert summary['passedTests'] == 53, f'webkit passedTests={summary["passedTests"]}, expected 42 regression + 11 live tests'
+            assert summary['passedTests'] == 56, f'webkit passedTests={summary["passedTests"]}, expected 44 regression + 12 live tests'
             require_stage4_events(json.loads((self.out / 'events.json').read_text()))
         finally:
             if fixture:

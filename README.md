@@ -137,13 +137,11 @@ destination. `Вернуться к демо` (`lab.openDemo`) loads the fixed d
 The shell disables web interaction until the selected top-level document finishes.
 A load failure revokes that document, keeps stale content non-interactive, and shows
 a native error with `Повторить` plus a return-to-demo path when Diagnostics was
-selected. The reviewed N candidate passed the unchanged Stage4 and Stage5 commands. The R
-candidate adds focused Explain runtime/layout evidence and proportional Stage2/3
-regressions. Independent R review and the historical original Astra/xhigh technical
-acceptance passed on `6ef85571005bb42c7f3bd6e3be6158d338f4b0c1`. Later PR-review
-corrections are subject to independent verification and external review on the current
-exact head before publication; historical runs are not relabeled as execution on a
-newer commit. Owner product/aesthetic acceptance remains separate. See
+selected. The linked evidence documents preserve revision-scoped historical runs and their
+explicit limits. Any later candidate must be evaluated from its own recorded source
+revision; this README neither designates a final candidate nor carries prior acceptance
+onto changed production, test, runner, specification, or operational-contract content.
+Independent technical review and owner product/aesthetic acceptance remain separate. See
 [Explain v2 native evidence](docs/design/explain-v2/native-evidence.md) for the exact
 N scope and [Explain v2 runtime evidence](docs/design/explain-v2/runtime-evidence.md)
 for the R scope, executed gates and deliberate limits.

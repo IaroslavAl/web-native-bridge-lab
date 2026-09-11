@@ -29,7 +29,7 @@ Main states: connecting → A intro → catalog pending → catalog result → u
 | User selects catalog/quote, operation pending | “Ждём ответ через приложение”; forward Screen → Application → Server route labelled as explanatory | native admitted, server received, server is calculating |
 | Valid correlated response Promise resolves | reverse Server → Application → Screen, “Ответ получен” | HTTP response equals business success |
 | Web interpreter returns valid business result | adjacent actual item/quantity/amount, “Экран показывает результат” | placeholder data becoming a receipt |
-| HTTP/business/parse failure after response | reverse route may remain, category-specific Russian error, no successful receipt | “Сервер не ответил” for an actual HTTP response |
+| HTTP/business/parse failure after response | reverse route remains for correlated non-2xx, business-error and malformed/invalid response bodies; category-specific Russian error, no successful receipt | “Сервер не ответил” for an actual HTTP response |
 | Transport/protocol/bridge rejection | stop pending, neutral route and truthful category-specific error | pinpoint the failure at server without evidence |
 | Page reload requested | “Загружаем веб-экран”; route retained as explanation, not active business transfer | nativeHTTP request / publication success |
 
