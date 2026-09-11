@@ -149,6 +149,20 @@ final class WKBridgeAdapter: NSObject {
         return .allow
     }
 
+    func navigationResponsePolicy(
+        for response: URLResponse,
+        isForMainFrame: Bool
+    ) -> WKNavigationResponsePolicy {
+        guard isForMainFrame, let httpResponse = response as? HTTPURLResponse else {
+            return .allow
+        }
+        guard (200..<300).contains(httpResponse.statusCode) else {
+            failDocumentLoad(.contentUnavailable)
+            return .cancel
+        }
+        return .allow
+    }
+
     func navigationDidCommit(url: URL?) {
         activateCommittedDocument(url)
     }
@@ -175,6 +189,17 @@ extension WKBridgeAdapter: WKNavigationDelegate {
     ) {
         let targetIsMainFrame = navigationAction.targetFrame?.isMainFrame
         decisionHandler(navigationPolicy(for: navigationAction.request.url, targetIsMainFrame: targetIsMainFrame))
+    }
+
+    func webView(
+        _ webView: WKWebView,
+        decidePolicyFor navigationResponse: WKNavigationResponse,
+        decisionHandler: @escaping (WKNavigationResponsePolicy) -> Void
+    ) {
+        decisionHandler(navigationResponsePolicy(
+            for: navigationResponse.response,
+            isForMainFrame: navigationResponse.isForMainFrame
+        ))
     }
 
     func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {

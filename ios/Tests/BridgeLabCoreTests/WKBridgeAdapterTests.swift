@@ -44,7 +44,7 @@ final class WKBridgeAdapterTests: XCTestCase {
         XCTAssertEqual(cancelAllCount, 0)
     }
 
-    func testProvisionalFailureRevokesDocumentAndShellRecoversSelectedClosedSurface() async {
+    func testProvisionalFailureRevokesDocumentAndShellRecoversSelectedClosedSurface() async throws {
         let executor = AdapterExecutor()
         let adapter = makeAdapter(executor: executor)
         _ = await activate(adapter)
@@ -59,6 +59,7 @@ final class WKBridgeAdapterTests: XCTestCase {
         assertClosedSurfaceDestinationsAndNativeIdentity()
         assertTypedLoadEventsDoNotFinishRevokedDocument()
         assertShellSelectionFailureRetryReturnAndInteraction()
+        try await assertMainFrameHTTPResponseRequires2xxWhileSubframesRemainAllowed()
     }
 
     private func assertClosedSurfaceDestinationsAndNativeIdentity() {
@@ -145,6 +146,68 @@ final class WKBridgeAdapterTests: XCTestCase {
 
         XCTAssertEqual(denied["code"] as? String, "ORIGIN_DENIED")
         XCTAssertEqual(cancelAllCount, 1)
+    }
+
+    private func assertMainFrameHTTPResponseRequires2xxWhileSubframesRemainAllowed() async throws {
+        for status in [404, 503] {
+            let executor = AdapterExecutor()
+            let adapter = makeAdapter(executor: executor)
+            let webView = WKWebView(frame: .zero, configuration: WKWebViewConfiguration())
+            var events: [WKBridgeLoadEvent] = []
+            adapter.install(on: webView) { events.append($0) }
+            _ = await activate(adapter)
+            let response = try XCTUnwrap(HTTPURLResponse(
+                url: trustedURL,
+                statusCode: status,
+                httpVersion: "HTTP/1.1",
+                headerFields: nil
+            ))
+
+            XCTAssertEqual(adapter.navigationResponsePolicy(for: response, isForMainFrame: true), .cancel)
+            adapter.webView(webView, didFinish: nil)
+            let denied = await reply(from: adapter, incoming: .trusted(helloJSON))
+            let cancelAllCount = await executor.cancelAllCount
+
+            XCTAssertEqual(events, [.failed(.contentUnavailable)], "HTTP \(status) fails the shell load")
+            XCTAssertEqual(denied["code"] as? String, "ORIGIN_DENIED")
+            XCTAssertEqual(cancelAllCount, 1)
+        }
+
+        for status in [200, 204, 299] {
+            let adapter = makeAdapter(executor: AdapterExecutor())
+            let webView = WKWebView(frame: .zero, configuration: WKWebViewConfiguration())
+            var events: [WKBridgeLoadEvent] = []
+            adapter.install(on: webView) { events.append($0) }
+            _ = await activate(adapter)
+            let response = try XCTUnwrap(HTTPURLResponse(
+                url: trustedURL,
+                statusCode: status,
+                httpVersion: "HTTP/1.1",
+                headerFields: nil
+            ))
+
+            XCTAssertEqual(adapter.navigationResponsePolicy(for: response, isForMainFrame: true), .allow)
+            adapter.webView(webView, didFinish: nil)
+            XCTAssertEqual(events, [.finished], "HTTP \(status) remains a successful shell load")
+        }
+
+        let adapter = makeAdapter(executor: AdapterExecutor())
+        _ = await activate(adapter)
+        let subframeError = try XCTUnwrap(HTTPURLResponse(
+            url: trustedURL,
+            statusCode: 503,
+            httpVersion: "HTTP/1.1",
+            headerFields: nil
+        ))
+        XCTAssertEqual(adapter.navigationResponsePolicy(for: subframeError, isForMainFrame: false), .allow)
+        XCTAssertEqual(adapter.navigationResponsePolicy(for: URLResponse(
+            url: trustedURL,
+            mimeType: "text/html",
+            expectedContentLength: 0,
+            textEncodingName: "utf-8"
+        ), isForMainFrame: true), .allow)
+        let activeSession = await hello(adapter)
+        XCTAssertFalse(activeSession.isEmpty, "allowed response controls preserve the active document")
     }
 
     func testWebContentProcessTerminationRevokesDocument() async {

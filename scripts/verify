@@ -103,6 +103,11 @@ def require_stage4_events(events):
             assert event.get('authorization') is False, f'ambient authorization: {event.get("tag")}'
 
 
+def stage4_test_selection():
+    """Keep Explain's asset-dependent layout suite out of the Stage4 fixture contract."""
+    return ('-skip-testing:BridgeLabTests/ExplainLayoutTests',)
+
+
 def explain_control_names():
     """Closed static-port coordination contract for the Explain runtime UI test."""
     return (
@@ -697,7 +702,7 @@ class Run:
             self.command('webkit-tests', ['xcodebuild', '-project', 'ios/BridgeLab.xcodeproj', '-scheme', 'BridgeLab',
                          '-destination', 'platform=iOS Simulator,id=' + udid, '-derivedDataPath', self.out / 'derived',
                          '-resultBundlePath', self.out / 'webkit.xcresult', 'CODE_SIGNING_ALLOWED=NO',
-                         '-parallel-testing-enabled', 'NO', 'test'], timeout=900)
+                         '-parallel-testing-enabled', 'NO', *stage4_test_selection(), 'test'], timeout=900)
             summary = json.loads(self.capture(['xcrun', 'xcresulttool', 'get', 'test-results', 'summary', '--path', str(self.out / 'webkit.xcresult'), '--format', 'json']))
             save(self.out / 'webkit-summary.json', summary)
             assert summary['failedTests'] == 0, f'webkit failedTests={summary["failedTests"]}'

@@ -96,6 +96,12 @@ class EvidenceTests(unittest.TestCase):
             with self.assertRaises(AssertionError):
                 check(mutation)
 
+    def test_stage4_excludes_explain_layout_suite_and_keeps_53_test_contract(self):
+        selection = self.helper('stage4_test_selection')()
+        self.assertEqual(selection, ('-skip-testing:BridgeLabTests/ExplainLayoutTests',))
+        self.assertIn("*stage4_test_selection(),", SCRIPT.read_text())
+        self.assertIn("summary['passedTests'] == 53", SCRIPT.read_text())
+
     def test_same_app_rejects_container_change_and_non_executable_change(self):
         same = self.helper('require_same_app')
         first = {'udid': 'device', 'container': '/app/one', 'files': {'BridgeLab': 'exe', 'Info.plist': 'plist'}}
@@ -125,6 +131,20 @@ class EvidenceTests(unittest.TestCase):
         for mutation in [lines[1:], lines[:-1], lines + [catalog], lines + [quote]]:
             with self.assertRaises(AssertionError):
                 check('\n'.join(mutation))
+
+    def test_tracked_dist_is_current_variant_b_explain_default(self):
+        dist = ROOT / 'web' / 'dist'
+        index = (dist / 'index.html').read_text()
+        entries = list((dist / 'assets').glob('index-*.js'))
+
+        self.assertIn('<title>Как это работает — Bridge Lab</title>', index)
+        self.assertNotIn('<title>Web–Native Bridge Lab</title>', index)
+        self.assertEqual(len(entries), 1, f'tracked JavaScript entries: {entries}')
+        self.assertIn(f'/assets/{entries[0].name}', index)
+        javascript = entries[0].read_text()
+        for marker in ('Как это работает', 'Рассчитать заказ',
+                       'Этот экран умеет рассчитать заказ из двух блокнотов'):
+            self.assertIn(marker, javascript)
 
     def test_web_entry_requires_one_built_hashed_javascript_asset(self):
         entry = self.helper('web_entry')
