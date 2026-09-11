@@ -127,6 +127,7 @@ export function App({ createClient, variant, identity, storage, reload }: AppPro
   const generation = useRef(0);
   const mounted = useRef(false);
   const busy = useRef(false);
+  const continuityConsumed = useRef(false);
 
   function continuityStorage(): StoragePort | null {
     if (storage) return storage;
@@ -161,9 +162,12 @@ export function App({ createClient, variant, identity, storage, reload }: AppPro
       );
     }
     if (!mounted.current || generation.current !== currentGeneration) return;
-    const targetStorage = continuityStorage();
-    const history = targetStorage ? consumeDemoHistory(targetStorage) : null;
-    setLoaded(classifyLoadedDemo(identity, history, variant));
+    if (!continuityConsumed.current) {
+      continuityConsumed.current = true;
+      const targetStorage = continuityStorage();
+      const history = targetStorage ? consumeDemoHistory(targetStorage) : null;
+      setLoaded(classifyLoadedDemo(identity, history, variant));
+    }
   }
 
   useEffect(() => {

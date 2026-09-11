@@ -168,6 +168,30 @@ describe("Explain demo with an explicitly mocked native boundary", () => {
     expect(recovered.native.decodedMessages()).toEqual([{ v: 1, type: "hello" }]);
   });
 
+  it("preserves observed A history through a rejected handshake and successful B retry", async () => {
+    const rejected = new BridgeClient(new MockNativeBoundary(() => Promise.reject(new Error("rejected"))));
+    const recovered = clientFor((message) => ({
+      v: 1, type: "response", id: message.id, status: 200, headers: {},
+      body: '{"quote":{"sku":"notebook","quantity":2,"totalMinor":1200,"currency":"USD"}}',
+    }));
+    const createClient = vi.fn()
+      .mockReturnValueOnce(rejected)
+      .mockReturnValueOnce(recovered.client);
+    const history = JSON.stringify({ v: 1, previous: aIdentity, catalogSeen: true, updateRequested: true });
+    const storage = storageWith(history);
+    render(<App createClient={createClient} variant="B" identity={bIdentity} storage={storage} />);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Не удалось подключить веб-экран к приложению");
+    expect(screen.getByText("Раньше вы получили каталог. Теперь веб-экран умеет рассчитать заказ")).toBeVisible();
+    expect(storage.current()).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Повторить подключение" }));
+    await userEvent.click(await readyButton("Рассчитать заказ"));
+
+    expect(await screen.findByTestId("demo.quote-total")).toHaveTextContent(/12,00/);
+    expect(screen.getByText("Веб-экран изменился: теперь вместо каталога он умеет рассчитать заказ. Оба действия проходят через уже доступную связь приложения с сервером.")).toBeVisible();
+    expect(createClient).toHaveBeenCalledTimes(2);
+  });
+
   it("persists current A identity before a real document reload", async () => {
     const { client } = clientFor((message) => ({
       v: 1, type: "response", id: message.id, status: 200, headers: {},
