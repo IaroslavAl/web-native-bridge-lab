@@ -27,6 +27,6 @@
 
 ## 5. Independent acceptance and later closure
 
-- [ ] 5.1 Fresh Astra/xhigh verifier independently checks exact candidate with requirements/evidence matrix; no author self-acceptance.
-- [ ] 5.2 Coordinator reconciles reviewed source/tests/specs and active baseline lifecycle without mutating old mission graph; only then prepares final integration and owner RC handoff.
+- [x] 5.1 Fresh Astra/xhigh verifier independently checked exact implementation candidate `6ef85571005bb42c7f3bd6e3be6158d338f4b0c1` against the requirements/evidence matrix; A110 passed after the independently reviewed currency correction.
+- [x] 5.2 Coordinator reconciled reviewed source/tests/specs and active baseline lifecycle without mutating the old mission graph, preserved the final handoff, and prepared the accepted candidate for integration. Historical phase reports remain snapshots of their own heads.
 - [ ] 5.3 Record owner product acceptance separately; do not equate a validated plan, technical gate or mockup QA with accepted Explain UI.

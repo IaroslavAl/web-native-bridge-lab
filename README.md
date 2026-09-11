@@ -139,7 +139,9 @@ A load failure revokes that document, keeps stale content non-interactive, and s
 a native error with `Повторить` plus a return-to-demo path when Diagnostics was
 selected. The reviewed N candidate passed the unchanged Stage4 and Stage5 commands. The R
 candidate adds focused Explain runtime/layout evidence and proportional Stage2/3
-regressions; independent R review and final acceptance remain pending. See
+regressions. Independent R review and the fresh Astra/xhigh technical acceptance
+passed on the final implementation candidate `6ef85571005bb42c7f3bd6e3be6158d338f4b0c1`;
+owner product/aesthetic acceptance remains separate. See
 [Explain v2 native evidence](docs/design/explain-v2/native-evidence.md) for the exact
 N scope and [Explain v2 runtime evidence](docs/design/explain-v2/runtime-evidence.md)
 for the R scope, executed gates and deliberate limits.
