@@ -407,6 +407,9 @@ private final class LiveNavigation: NSObject, WKNavigationDelegate, WKUIDelegate
             decisionHandler(policy)
         }
     }
+    func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+        adapter?.webView(webView, didStartProvisionalNavigation:navigation)
+    }
     func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
         if forwardCommit { adapter?.webView(webView, didCommit:navigation) }
         else { heldCommit = { [weak self, weak webView] in if let webView { self?.adapter?.webView(webView, didCommit:navigation) } } }

@@ -51,6 +51,7 @@ final class WKBridgeAdapterTests: XCTestCase {
 
         adapter.provisionalNavigationFailed()
         let denied = await reply(from: adapter, incoming: .trusted(helloJSON))
+        await executor.waitForCancelAllCount(1)
         let cancelAllCount = await executor.cancelAllCount
 
         XCTAssertEqual(denied["code"] as? String, "ORIGIN_DENIED")
@@ -58,6 +59,7 @@ final class WKBridgeAdapterTests: XCTestCase {
 
         assertClosedSurfaceDestinationsAndNativeIdentity()
         assertTypedLoadEventsDoNotFinishRevokedDocument()
+        try await assertSupersededFailureDoesNotRevokeReplacementDocument()
         assertShellSelectionFailureRetryReturnAndInteraction()
         try await assertMainFrameHTTPResponseRequires2xxWhileSubframesRemainAllowed()
     }
@@ -95,6 +97,36 @@ final class WKBridgeAdapterTests: XCTestCase {
         adapter.webView(webView, didFinish: nil)
         XCTAssertEqual(events, [.started, .finished, .started, .failed(.contentUnavailable)],
                        "a revoked failed document cannot later publish finish")
+    }
+
+    private func assertSupersededFailureDoesNotRevokeReplacementDocument() async throws {
+        let executor = AdapterExecutor()
+        let adapter = makeAdapter(executor: executor)
+        let webView = WKWebView(frame: .zero, configuration: WKWebViewConfiguration())
+        var events: [WKBridgeLoadEvent] = []
+        adapter.install(on: webView) { events.append($0) }
+        let superseded = try XCTUnwrap(webView.load(URLRequest(url: trustedURL)))
+        let replacement = try XCTUnwrap(webView.load(URLRequest(url: trustedURL)))
+        webView.stopLoading()
+        let delegate = adapter as WKNavigationDelegate
+
+        XCTAssertFalse(superseded === replacement)
+        XCTAssertEqual(adapter.navigationPolicy(for: trustedURL, targetIsMainFrame: true), .allow)
+        delegate.webView?(webView, didStartProvisionalNavigation: superseded)
+        XCTAssertEqual(adapter.navigationPolicy(for: trustedURL, targetIsMainFrame: true), .allow)
+        delegate.webView?(webView, didStartProvisionalNavigation: replacement)
+        adapter.navigationDidCommit(url: trustedURL)
+
+        let cancellation = NSError(domain: NSURLErrorDomain, code: NSURLErrorCancelled)
+        adapter.webView(webView, didFailProvisionalNavigation: superseded, withError: cancellation)
+        adapter.webView(webView, didFinish: replacement)
+        let freshSession = await hello(adapter)
+
+        XCTAssertEqual(events, [.started, .started, .finished],
+                       "a superseded failure cannot fail or suppress the replacement document")
+        XCTAssertFalse(freshSession.isEmpty, "the replacement document remains bridge-active")
+        let cancelAllCount = await executor.cancelAllCount
+        XCTAssertEqual(cancelAllCount, 0, "the superseded callback cannot revoke the replacement")
     }
 
     private func assertShellSelectionFailureRetryReturnAndInteraction() {

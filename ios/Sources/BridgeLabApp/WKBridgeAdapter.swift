@@ -24,6 +24,7 @@ final class WKBridgeAdapter: NSObject {
     private let policy: TrustedPagePolicy
     private weak var webView: WKWebView?
     private var proxy: WeakReplyMessageHandler?
+    private var activeNavigation: WKNavigation?
     private var committedURL: URL?
     private var documentIsActive = false
 
@@ -65,6 +66,7 @@ final class WKBridgeAdapter: NSObject {
     func close() {
         guard !didClose else { return }
         didClose = true
+        activeNavigation = nil
         documentIsActive = false
         committedURL = nil
         if let webView {
@@ -84,6 +86,7 @@ final class WKBridgeAdapter: NSObject {
 
     private func prepareForAllowedNavigation() {
         guard !didClose else { return }
+        activeNavigation = nil
         documentIsActive = false
         committedURL = nil
         lifecycle.revoke()
@@ -103,10 +106,16 @@ final class WKBridgeAdapter: NSObject {
 
     private func failDocumentLoad(_ failure: WKBridgeLoadFailure) {
         guard !didClose else { return }
+        activeNavigation = nil
         documentIsActive = false
         committedURL = nil
         lifecycle.revoke()
         onLoadEvent?(.failed(failure))
+    }
+
+    private func isCurrentNavigation(_ navigation: WKNavigation?) -> Bool {
+        guard let navigation else { return true }
+        return navigation === activeNavigation
     }
 
     fileprivate func receive(
@@ -202,12 +211,19 @@ extension WKBridgeAdapter: WKNavigationDelegate {
         ))
     }
 
+    func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+        guard !didClose, let navigation else { return }
+        activeNavigation = navigation
+    }
+
     func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
+        guard isCurrentNavigation(navigation) else { return }
         navigationDidCommit(url: webView.url)
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        guard documentIsActive else { return }
+        guard isCurrentNavigation(navigation), documentIsActive else { return }
+        activeNavigation = nil
         onLoadEvent?(.finished)
     }
 
@@ -216,10 +232,12 @@ extension WKBridgeAdapter: WKNavigationDelegate {
         didFailProvisionalNavigation navigation: WKNavigation!,
         withError error: Error
     ) {
+        guard isCurrentNavigation(navigation) else { return }
         provisionalNavigationFailed()
     }
 
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+        guard isCurrentNavigation(navigation) else { return }
         navigationFailed()
     }
 

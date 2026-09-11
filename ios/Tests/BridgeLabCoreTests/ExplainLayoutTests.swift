@@ -281,6 +281,10 @@ private final class ExplainLayoutHost: NSObject, WKNavigationDelegate {
         adapter?.webView(webView, decidePolicyFor: action, decisionHandler: decisionHandler)
     }
 
+    func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+        adapter?.webView(webView, didStartProvisionalNavigation: navigation)
+    }
+
     func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
         adapter?.webView(webView, didCommit: navigation)
     }
