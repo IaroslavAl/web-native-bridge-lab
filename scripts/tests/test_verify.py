@@ -6,6 +6,7 @@ import runpy
 import sys
 import tempfile
 import unittest
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -101,8 +102,172 @@ class EvidenceTests(unittest.TestCase):
     def test_stage4_excludes_explain_layout_suite_and_keeps_56_test_contract(self):
         selection = self.helper('stage4_test_selection')()
         self.assertEqual(selection, ('-skip-testing:BridgeLabTests/ExplainLayoutTests',))
-        self.assertIn("*stage4_test_selection(),", SCRIPT.read_text())
-        self.assertIn("summary['passedTests'] == 56", SCRIPT.read_text())
+
+        scheme = ET.parse(ROOT / 'ios/BridgeLab.xcodeproj/xcshareddata/xcschemes/BridgeLab.xcscheme')
+        testables = scheme.findall('.//TestAction//TestableReference')
+        self.assertEqual(len(testables), 1)
+        self.assertEqual(testables[0].attrib.get('skipped'), 'NO')
+        buildables = testables[0].findall('./BuildableReference')
+        self.assertEqual(len(buildables), 1)
+        self.assertEqual(buildables[0].attrib, {
+            'BuildableIdentifier': 'primary',
+            'BlueprintIdentifier': 'T10000000000000000000002',
+            'BuildableName': 'BridgeLabTests.xctest',
+            'BlueprintName': 'BridgeLabTests',
+            'ReferencedContainer': 'container:BridgeLab.xcodeproj',
+        })
+
+        project = (ROOT / 'ios/BridgeLab.xcodeproj/project.pbxproj').read_text()
+
+        def object_body(identifier):
+            single = re.search(
+                rf'(?m)^\s*{re.escape(identifier)}(?: /\*.*?\*/)? = \{{(.*?)\}};\s*$',
+                project,
+            )
+            if single:
+                return single.group(1)
+            multiline = re.search(
+                rf'(?ms)^\s*{re.escape(identifier)}(?: /\*.*?\*/)? = \{{(.*?)^\s*\}};',
+                project,
+            )
+            if multiline:
+                return multiline.group(1)
+            self.fail(f'pbx object missing: {identifier}')
+
+        target = object_body('T10000000000000000000002')
+        phases = re.search(r'buildPhases = \((.*?)\);', target, re.DOTALL)
+        self.assertIsNotNone(phases)
+        phase_ids = re.findall(r'\b[A-Z][A-Z0-9]{23}\b', phases.group(1))
+        source_phases = [identifier for identifier in phase_ids
+                         if 'isa = PBXSourcesBuildPhase' in object_body(identifier)]
+        self.assertEqual(len(source_phases), 1)
+        files = re.search(r'files = \((.*?)\);', object_body(source_phases[0]), re.DOTALL)
+        self.assertIsNotNone(files)
+        build_file_ids = re.findall(r'\b[A-Z][A-Z0-9]{23}\b', files.group(1))
+        file_ref_ids = []
+        for build_file_id in build_file_ids:
+            match = re.search(r'fileRef = ([A-Z][A-Z0-9]{23})', object_body(build_file_id))
+            self.assertIsNotNone(match, f'fileRef missing: {build_file_id}')
+            file_ref_ids.append(match.group(1))
+
+        groups_section = project.split('/* Begin PBXGroup section */', 1)[1].split('/* End PBXGroup section */', 1)[0]
+        group_ids = re.findall(r'(?m)^\s*(G[A-Z0-9]{23})\b.*? = \{', groups_section)
+        group_children = {}
+        group_paths = {}
+        parent = {}
+        for group_id in group_ids:
+            body = object_body(group_id)
+            children = re.search(r'children = \((.*?)\);', body, re.DOTALL)
+            group_children[group_id] = re.findall(r'\b[A-Z][A-Z0-9]{23}\b', children.group(1)) if children else []
+            path = re.search(r'path = (?:"([^"]+)"|([^;]+));', body)
+            group_paths[group_id] = (path.group(1) or path.group(2)).strip() if path else ''
+            for child in group_children[group_id]:
+                parent[child] = group_id
+
+        def group_path(group_id):
+            base = group_path(parent[group_id]) if group_id in parent and parent[group_id] in group_paths else ''
+            return '/'.join(part for part in (base, group_paths[group_id]) if part)
+
+        resolved = set()
+        for file_ref_id in file_ref_ids:
+            body = object_body(file_ref_id)
+            path = re.search(r'path = (?:"([^"]+)"|([^;]+));', body)
+            tree = re.search(r'sourceTree = (?:"([^"]+)"|([^;]+));', body)
+            self.assertIsNotNone(path, f'path missing: {file_ref_id}')
+            self.assertIsNotNone(tree, f'sourceTree missing: {file_ref_id}')
+            relative = (path.group(1) or path.group(2)).strip()
+            source_tree = (tree.group(1) or tree.group(2)).strip()
+            if source_tree == '<group>':
+                relative = '/'.join(part for part in (group_path(parent[file_ref_id]), relative) if part)
+            else:
+                self.assertEqual(source_tree, 'SOURCE_ROOT')
+            resolved.add('ios/' + relative)
+
+        expected_sources = {
+            'ios/Tests/BridgeLabCoreTests/BridgeLifecycleCoordinatorTests.swift',
+            'ios/Tests/BridgeLabCoreTests/BridgePolicyTests.swift',
+            'ios/Tests/BridgeLabCoreTests/BridgeEngineTests.swift',
+            'ios/Tests/BridgeLabCoreTests/WKBridgeAdapterTests.swift',
+            'ios/Tests/BridgeLabCoreTests/LiveWebKitTests.swift',
+            'ios/Tests/BridgeLabCoreTests/ExplainLayoutTests.swift',
+        }
+        self.assertEqual(resolved, expected_sources)
+
+        tree = ast.parse(SCRIPT.read_text())
+        run_class = next(node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == 'Run')
+        webkit = next(node for node in run_class.body if isinstance(node, ast.FunctionDef) and node.name == 'webkit')
+        calls = [node for node in ast.walk(webkit) if isinstance(node, ast.Call)
+                 and isinstance(node.func, ast.Attribute) and node.func.attr == 'command'
+                 and node.args and isinstance(node.args[0], ast.Constant) and node.args[0].value == 'webkit-tests']
+        self.assertEqual(len(calls), 1)
+        argv = calls[0].args[1]
+        self.assertIsInstance(argv, ast.List)
+        assert isinstance(argv, ast.List)
+        stars = [node for node in argv.elts if isinstance(node, ast.Starred)]
+        self.assertEqual(len(stars), 1)
+        self.assertIsInstance(stars[0].value, ast.Call)
+        self.assertIsInstance(stars[0].value.func, ast.Name)
+        self.assertEqual(stars[0].value.func.id, 'stage4_test_selection')
+        literals = [node.value for node in argv.elts if isinstance(node, ast.Constant) and isinstance(node.value, str)]
+        self.assertEqual(literals.count('ios/BridgeLab.xcodeproj'), 1)
+        self.assertEqual(literals.count('BridgeLab'), 1)
+        self.assertFalse(any(value.startswith(('-skip-testing:', '-only-testing:')) for value in literals))
+        dynamic = [ast.unparse(node) for node in argv.elts
+                   if not isinstance(node, (ast.Constant, ast.Starred))]
+        self.assertEqual(dynamic, [
+            "'platform=iOS Simulator,id=' + udid",
+            "self.out / 'derived'",
+            "self.out / 'webkit.xcresult'",
+        ])
+
+        declaration = re.compile(r'^\s+func (test[A-Za-z0-9_]+)\(', re.MULTILINE)
+        counts = {path: len(declaration.findall((ROOT / path).read_text())) for path in resolved}
+        self.assertEqual(counts['ios/Tests/BridgeLabCoreTests/LiveWebKitTests.swift'], 12)
+        self.assertEqual(counts['ios/Tests/BridgeLabCoreTests/BridgeLifecycleCoordinatorTests.swift'], 2)
+        self.assertEqual(counts['ios/Tests/BridgeLabCoreTests/BridgePolicyTests.swift'], 2)
+        self.assertEqual(counts['ios/Tests/BridgeLabCoreTests/BridgeEngineTests.swift'], 15)
+        self.assertEqual(counts['ios/Tests/BridgeLabCoreTests/WKBridgeAdapterTests.swift'], 25)
+        self.assertEqual(counts['ios/Tests/BridgeLabCoreTests/ExplainLayoutTests.swift'], 4)
+        regression = sum(counts[path] for path in resolved
+                         if path.endswith(('BridgeLifecycleCoordinatorTests.swift', 'BridgePolicyTests.swift',
+                                           'BridgeEngineTests.swift', 'WKBridgeAdapterTests.swift')))
+        self.assertEqual(regression, 44)
+        self.assertEqual(regression + counts['ios/Tests/BridgeLabCoreTests/LiveWebKitTests.swift'], 56)
+
+        with self.subTest(contract='runtime summary helper'):
+            check = self.helper('require_stage4_summary')
+            passing = {'passedTests': 56, 'totalTestCount': 56, 'failedTests': 0,
+                       'skippedTests': 0, 'expectedFailures': 0}
+            self.assertEqual(check(passing), passing)
+            for field, value in [('passedTests', 55), ('totalTestCount', 57), ('failedTests', 1),
+                                 ('skippedTests', 1), ('expectedFailures', 1)]:
+                with self.subTest(field=field), self.assertRaises(AssertionError):
+                    check({**passing, field: value})
+
+        phrase = '56 tests: 12 live WebKit/network component tests plus 44 inherited Simulator regression tests'
+        readme = ' '.join((ROOT / 'README.md').read_text().split())
+        with self.subTest(contract='README counts'):
+            self.assertEqual(readme.count(phrase), 2)
+            self.assertNotRegex(readme, r'eleven live|53 with inherited|eleven live WebKit/network component tests plus\s*42')
+
+        matrix = ' '.join((ROOT / 'docs/integration/FINAL_MATRIX.md').read_text().split())
+        with self.subTest(contract='matrix provenance and counts'):
+            self.assertIn('historical evidence for clean source `be46ee45f2fa2c0e3b2789fbbeebe5aadbc1da8a`', matrix)
+            self.assertIn('does not carry forward', matrix)
+            self.assertIn('fresh exact-head Unit, Operations, Stage4, Explain, Stage5, and build gates plus independent review remain pending', matrix)
+            self.assertIn('12 live + 44 inherited = 56 total', matrix)
+            self.assertIn('44 inherited Simulator tests', matrix)
+            self.assertNotRegex(matrix, r'Eleven live tests plus 42|run the 42 inherited')
+
+    def test_response_copy_uses_only_the_closed_interpretation_category(self):
+        source = (ROOT / 'web/src/App.tsx').read_text()
+        function = source.split('export function describeDemoError', 1)[1].split('\nfunction displayIdentity', 1)[0]
+        for forbidden in ('error.message', '.startsWith(', '.includes(', '.match('):
+            self.assertNotIn(forbidden, function)
+        self.assertNotRegex(function, r'/(?:\\/|[^/\n])+/[a-z]*\.test\(')
+        for category in ('HTTP', 'JSON parse', 'business', 'invalid success shape'):
+            self.assertIn(f'case "{category}":', function)
+        self.assertIn('assertNever(category)', function)
 
     def test_same_app_rejects_container_change_and_non_executable_change(self):
         same = self.helper('require_same_app')

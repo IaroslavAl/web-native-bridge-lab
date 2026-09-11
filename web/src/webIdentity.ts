@@ -19,6 +19,7 @@ export interface StoragePort {
 }
 
 export const WEB_HISTORY_KEY = "per85.explain.v1";
+export const MAX_SERIALIZED_HISTORY_LENGTH = 512;
 const ENTRY_PATH = /^\/assets\/[A-Za-z0-9._-]+\.js$/;
 const MAX_ENTRY_PATH_LENGTH = 256;
 
@@ -48,6 +49,7 @@ function isIdentity(value: unknown): value is WebIdentity {
 }
 
 function parseHistory(raw: string): DemoHistoryRecord | null {
+  if (raw.length > MAX_SERIALIZED_HISTORY_LENGTH) return null;
   let value: unknown;
   try {
     value = JSON.parse(raw) as unknown;

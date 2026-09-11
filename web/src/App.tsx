@@ -44,25 +44,40 @@ export interface DemoError {
   responseReceived: boolean;
 }
 
+function assertNever(value: never): never {
+  throw new Error(`Unhandled interpretation category: ${String(value)}`);
+}
+
 export function describeDemoError(error: unknown): DemoError {
   if (error instanceof ResponseInterpretationError) {
-    if (error.category === "HTTP") {
-      return {
-        title: `Сервер вернул ошибку HTTP${error.status ? ` ${error.status}` : ""}`,
-        detail: "Ответ получен, но успешного результата в нём нет.",
-        responseReceived: true,
-      };
-    }
-    if (error.category === "business") {
-      return error.message.startsWith("Unexpected")
-        ? { title: "Ответ получен, но экран не смог проверить данные", detail: "Формат результата отличается от ожидаемого. Повторите запрос.", responseReceived: true }
-        : { title: "Ответ получен, но действие отклонено", detail: "Сервер объяснил, что действие нельзя завершить. Можно повторить запрос.", responseReceived: true };
-    }
-    return {
-      title: "Ответ получен, но экран не смог прочитать данные",
-      detail: "Содержимое ответа не является корректным JSON. Повторите запрос.",
-      responseReceived: true,
+    const category = error.category;
+    switch (category) {
+      case "HTTP":
+        return {
+          title: `Сервер вернул ошибку HTTP${error.status ? ` ${error.status}` : ""}`,
+          detail: "Ответ получен, но успешного результата в нём нет.",
+          responseReceived: true,
+        };
+      case "business":
+        return {
+          title: "Ответ получен, но действие отклонено",
+          detail: "Сервер объяснил, что действие нельзя завершить. Можно повторить запрос.",
+          responseReceived: true,
+        };
+      case "invalid success shape":
+        return {
+          title: "Ответ получен, но экран не смог проверить данные",
+          detail: "Формат результата отличается от ожидаемого. Повторите запрос.",
+          responseReceived: true,
+        };
+      case "JSON parse":
+        return {
+          title: "Ответ получен, но экран не смог прочитать данные",
+          detail: "Содержимое ответа не является корректным JSON. Повторите запрос.",
+          responseReceived: true,
+        };
     };
+    return assertNever(category);
   }
   if (error instanceof TransportError) {
     if (error.code === "TIMEOUT") return { title: "Время ожидания ответа истекло", detail: "Приложение остановило запрос по тайм-ауту. Можно повторить.", responseReceived: false };
@@ -195,7 +210,9 @@ export function App({ createClient, variant, identity, storage, reload }: AppPro
       busy.current = true;
       setOperation({ kind: "pending", action: "reload" });
       const targetStorage = continuityStorage();
-      if (identity && targetStorage) saveUpdateHistory(targetStorage, identity, true);
+      const catalogSeen = loaded.observedCatalog
+        || (operation.kind === "result" && operation.action === "catalog");
+      if (identity && targetStorage) saveUpdateHistory(targetStorage, identity, catalogSeen);
       (reload ?? (() => window.location.reload()))();
       return;
     }

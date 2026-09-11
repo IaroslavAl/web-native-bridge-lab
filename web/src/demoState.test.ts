@@ -14,11 +14,15 @@ describe("loaded demo classification", () => {
   it("keeps A catalog-only after a same-identity reload", () => {
     expect(classifyLoadedDemo(identity("A", "/assets/a.js"), history(identity("A", "/assets/a.js"))))
       .toEqual({ capability: "catalog", update: "unchanged", observedCatalog: true });
+    expect(classifyLoadedDemo(identity("A", "/assets/a.js"), history(identity("A", "/assets/a.js"), false)))
+      .toEqual({ capability: "catalog", update: "unchanged", observedCatalog: false });
   });
 
   it("does not unlock quote when a changed entry is still A", () => {
     expect(classifyLoadedDemo(identity("A", "/assets/a-new.js"), history(identity("A", "/assets/a.js"))))
       .toEqual({ capability: "catalog", update: "changed-a", observedCatalog: true });
+    expect(classifyLoadedDemo(identity("A", "/assets/a-new.js"), history(identity("A", "/assets/a.js"), false)))
+      .toEqual({ capability: "catalog", update: "changed-a", observedCatalog: false });
   });
 
   it("attributes an A to B transition only to valid observed A history", () => {

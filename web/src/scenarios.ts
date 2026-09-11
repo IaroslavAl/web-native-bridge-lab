@@ -2,7 +2,7 @@ import type { BridgeRequestInput, BridgeResponse } from "./bridgeClient";
 import { currencyMinorUnitExponent } from "./money";
 
 export type ScenarioName = "catalog" | "quote";
-export type InterpretationCategory = "HTTP" | "business" | "JSON parse";
+export type InterpretationCategory = "HTTP" | "JSON parse" | "business" | "invalid success shape";
 
 export type ScenarioResult =
   | {
@@ -88,15 +88,30 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function businessError(value: unknown): ResponseInterpretationError | undefined {
-  if (!isRecord(value) || !isRecord(value.error)) return undefined;
-  const code = typeof value.error.code === "string" ? value.error.code : "UNKNOWN";
-  const message = typeof value.error.message === "string" ? value.error.message : "Business request failed";
-  return new ResponseInterpretationError("business", `${code}: ${message}`);
+function hasExactKeys(value: Record<string, unknown>, keys: string[]): boolean {
+  const actual = Object.keys(value).sort();
+  const expected = [...keys].sort();
+  return actual.length === expected.length && actual.every((key, index) => key === expected[index]);
 }
 
-function invalidBusinessShape(expected: string): never {
-  throw new ResponseInterpretationError("business", `Unexpected ${expected} response shape.`);
+function businessError(value: unknown): ResponseInterpretationError | undefined {
+  if (!isRecord(value) || !Object.prototype.hasOwnProperty.call(value, "error")) return undefined;
+  if (
+    hasExactKeys(value, ["error"])
+    && isRecord(value.error)
+    && hasExactKeys(value.error, ["code", "message"])
+    && typeof value.error.code === "string"
+    && value.error.code.trim().length > 0
+    && typeof value.error.message === "string"
+    && value.error.message.trim().length > 0
+  ) {
+    return new ResponseInterpretationError("business", `${value.error.code}: ${value.error.message}`);
+  }
+  return new ResponseInterpretationError("invalid success shape", "Unexpected error response shape.");
+}
+
+function invalidSuccessShape(expected: string): never {
+  throw new ResponseInterpretationError("invalid success shape", `Unexpected ${expected} response shape.`);
 }
 
 export function interpretCatalog(response: BridgeResponse): ScenarioResult {
@@ -104,11 +119,11 @@ export function interpretCatalog(response: BridgeResponse): ScenarioResult {
   const error = businessError(decoded);
   if (error) throw error;
   if (!isRecord(decoded) || !Array.isArray(decoded.items) || !Number.isInteger(decoded.total)) {
-    return invalidBusinessShape("catalog");
+    return invalidSuccessShape("catalog");
   }
   const items = decoded.items.map((item) => {
     if (!isRecord(item) || typeof item.sku !== "string" || typeof item.title !== "string") {
-      return invalidBusinessShape("catalog item");
+      return invalidSuccessShape("catalog item");
     }
     return { sku: item.sku, title: item.title };
   });
@@ -127,7 +142,7 @@ export function interpretQuote(response: BridgeResponse): ScenarioResult {
   const decoded = parseJson(response);
   const error = businessError(decoded);
   if (error) throw error;
-  if (!isRecord(decoded) || !isRecord(decoded.quote)) return invalidBusinessShape("quote");
+  if (!isRecord(decoded) || !isRecord(decoded.quote)) return invalidSuccessShape("quote");
   const quote = decoded.quote;
   const minorUnitExponent = typeof quote.currency === "string"
     ? currencyMinorUnitExponent(quote.currency)
@@ -141,7 +156,7 @@ export function interpretQuote(response: BridgeResponse): ScenarioResult {
     typeof quote.currency !== "string" ||
     minorUnitExponent === null
   ) {
-    return invalidBusinessShape("quote");
+    return invalidSuccessShape("quote");
   }
   return {
     kind: "quote",
@@ -161,7 +176,7 @@ export function interpretDelay(response: BridgeResponse): ScenarioResult {
   const error = businessError(decoded);
   if (error) throw error;
   if (!isRecord(decoded) || typeof decoded.label !== "string" || !Number.isInteger(decoded.delayedMs)) {
-    return invalidBusinessShape("delay diagnostic");
+    return invalidSuccessShape("delay diagnostic");
   }
   return { kind: "diagnostic", summary: `${decoded.label} — ${decoded.delayedMs as number} ms` };
 }
@@ -170,5 +185,5 @@ export function interpretBusinessFixture(response: BridgeResponse): ScenarioResu
   const decoded = parseJson(response);
   const error = businessError(decoded);
   if (error) throw error;
-  return invalidBusinessShape("business-error fixture");
+  return invalidSuccessShape("business-error fixture");
 }

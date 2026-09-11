@@ -139,6 +139,26 @@ describe("Explain demo with an explicitly mocked native boundary", () => {
     expect(screen.queryByTestId("demo.quote-total")).not.toBeInTheDocument();
   });
 
+  it.each([
+    [200, '{"error":{"code":"UnexpectedInventory","message":"Inventory changed"}}', "Ответ получен, но действие отклонено"],
+    [200, '{"error":{"code":"OUT_OF_STOCK"}}', "Ответ получен, но экран не смог проверить данные"],
+    [200, '{"quote":{"sku":"notebook","quantity":2,"totalMinor":"1200","currency":"USD"}}', "Ответ получен, но экран не смог проверить данные"],
+    [503, '{"error":"unavailable"}', "Сервер вернул ошибку HTTP 503"],
+    [200, "{", "Ответ получен, но экран не смог прочитать данные"],
+  ])("renders trusted response category independently from response text: %s %s", async (status, body, title) => {
+    const { client } = clientFor((message) => ({
+      v: 1, type: "response", id: message.id, status, headers: {}, body,
+    }));
+    render(<App createClient={() => client} variant="B" identity={bIdentity} storage={storageWith()} />);
+
+    await userEvent.click(await readyButton("Рассчитать заказ"));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(title);
+    expect(screen.queryByTestId("demo.quote-total")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Повторить расчёт" })).toBeEnabled();
+    expect(screen.getByLabelText("Путь запроса и ответа")).toHaveAttribute("data-direction", "back");
+  });
+
   it.each([-1, 1.5])("shows an interpretation error instead of a receipt for malformed totalMinor %s", async (totalMinor) => {
     const { client } = clientFor((message) => ({
       v: 1, type: "response", id: message.id, status: 200, headers: {},
@@ -151,6 +171,21 @@ describe("Explain demo with an explicitly mocked native boundary", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Ответ получен, но экран не смог проверить данные");
     expect(screen.queryByTestId("demo.quote-total")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Повторить расчёт" })).toBeVisible();
+    expect(screen.getByLabelText("Путь запроса и ответа")).toHaveAttribute("data-direction", "back");
+  });
+
+  it("renders invalid catalog success shape as validation failure", async () => {
+    const { client } = clientFor((message) => ({
+      v: 1, type: "response", id: message.id, status: 200, headers: {},
+      body: '{"items":[{"sku":"notebook"}],"total":1}',
+    }));
+    render(<App createClient={() => client} variant="A" identity={aIdentity} storage={storageWith()} />);
+
+    await userEvent.click(await readyButton("Получить каталог"));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Ответ получен, но экран не смог проверить данные");
+    expect(screen.queryByTestId("demo.catalog-result")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Повторить запрос каталога" })).toBeEnabled();
     expect(screen.getByLabelText("Путь запроса и ответа")).toHaveAttribute("data-direction", "back");
   });
 
@@ -256,6 +291,29 @@ describe("Explain demo with an explicitly mocked native boundary", () => {
     expect(screen.queryByRole("button", { name: "Рассчитать заказ" })).not.toBeInTheDocument();
   });
 
+  it.each([
+    ["unchanged", aIdentity, false, "Загружен прежний веб-экран"],
+    ["unchanged", aIdentity, true, "Загружен прежний веб-экран"],
+    ["changed", { ...aIdentity, entryPath: "/assets/index-a2.js" }, false, "Веб-экран обновлён; расчёт пока недоступен"],
+    ["changed", { ...aIdentity, entryPath: "/assets/index-a2.js" }, true, "Веб-экран обновлён; расчёт пока недоступен"],
+  ])("preserves %s A catalog observation %s when rechecking", async (_state, currentIdentity, catalogSeen, title) => {
+    const raw = JSON.stringify({ v: 1, previous: aIdentity, catalogSeen, updateRequested: true });
+    const storage = storageWith(raw);
+    const reload = vi.fn();
+    const { client } = clientFor(() => { throw new Error("No request expected"); });
+    render(<App createClient={() => client} variant="A" identity={currentIdentity} storage={storage} reload={reload} />);
+
+    expect(await screen.findByText(title)).toBeVisible();
+    await userEvent.click(screen.getByRole("button", { name: "Проверить обновление ещё раз" }));
+
+    expect(JSON.parse(storage.current() ?? "null")).toMatchObject({
+      previous: currentIdentity,
+      catalogSeen,
+      updateRequested: true,
+    });
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
   it("keeps changed A catalog-only and does not invent A history on cold B", async () => {
     const raw = JSON.stringify({ v: 1, previous: aIdentity, catalogSeen: true, updateRequested: true });
     const changedA = clientFor(() => { throw new Error("No request expected"); });
@@ -275,8 +333,11 @@ describe("Explain demo with an explicitly mocked native boundary", () => {
     expect(describeDemoError(new ResponseInterpretationError("HTTP", "HTTP 503: body", 503))).toMatchObject({
       title: "Сервер вернул ошибку HTTP 503", responseReceived: true,
     });
-    expect(describeDemoError(new ResponseInterpretationError("business", "OUT_OF_STOCK"))).toMatchObject({
+    expect(describeDemoError(new ResponseInterpretationError("business", "UnexpectedInventory: changed"))).toMatchObject({
       title: "Ответ получен, но действие отклонено", responseReceived: true,
+    });
+    expect(describeDemoError(new ResponseInterpretationError("invalid success shape", "OUT_OF_STOCK: plausible server text"))).toMatchObject({
+      title: "Ответ получен, но экран не смог проверить данные", responseReceived: true,
     });
     expect(describeDemoError(new ResponseInterpretationError("JSON parse", "bad"))).toMatchObject({
       title: "Ответ получен, но экран не смог прочитать данные", responseReceived: true,

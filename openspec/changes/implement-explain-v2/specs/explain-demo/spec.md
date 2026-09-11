@@ -30,7 +30,7 @@ The demo SHALL drive request state from actual client/response/interpreter event
 
 ### Requirement: EX-03 Actual web-owned data and errors
 
-Web SHALL retain request construction and domain interpretation, show returned catalog/quote values rather than mock receipts, and distinguish bridge/protocol, HTTP, business, JSON/shape, timeout, cancellation and transport failures in understandable Russian. Native SHALL remain domain-agnostic. All untrusted text SHALL be inert.
+Web SHALL retain request construction and domain interpretation, show returned catalog/quote values rather than mock receipts, and distinguish bridge/protocol, HTTP, server business rejection, JSON parse, invalid successful-response shape, timeout, cancellation and transport failures in understandable Russian. Native SHALL remain domain-agnostic. A server business rejection SHALL be recognized only when parsed 2xx JSON is an exact top-level object with the sole own key `error`, whose value is an exact object with the sole own keys `code` and `message`, both nonblank strings. Any parsed object with an own `error` key that is partial, malformed, blank, wrong-typed, or has top-level or nested extra keys SHALL be an invalid successful-response shape before endpoint success validation. Participant copy SHALL dispatch exhaustively over the four web interpretation categories HTTP, JSON parse, server business rejection, and invalid successful-response shape. Server code/message text SHALL remain inert and SHALL NOT select a category or participant copy.
 
 #### Scenario: Quote data changes
 - **WHEN** a B quote response contains a valid quantity, amount or currency different from the reference mockup
@@ -40,13 +40,17 @@ Web SHALL retain request construction and domain interpretation, show returned c
 - **WHEN** a catalog or quote request fails, including an HTTP response with an error body or invalid JSON
 - **THEN** the error appears beside the retry action with the correct category, no misleading successful result or blanket claim that the server never replied, and retry issues a fresh real operation
 
+#### Scenario: Closed business envelope
+- **WHEN** a 2xx response contains an exact nonblank `{error:{code,message}}` envelope, misleading server text such as a code beginning with `Unexpected`, a malformed own-`error` envelope, or an invalid endpoint success shape
+- **THEN** exact envelopes are server business rejections, malformed envelopes and invalid endpoint results are invalid successful-response shapes, and participant copy follows only the trusted exhaustive category rather than server text
+
 #### Scenario: Unavailable or rejected bridge
 - **WHEN** nativeHTTP is absent or handshake fails
 - **THEN** business actions are unavailable, the user sees a truthful Russian explanation and recovery path, no browser API fetch occurs, and recovery does not reuse a permanently rejected handshake
 
 ### Requirement: EX-04 Served capability update
 
-A SHALL expose catalog but not the quote action in the main demo. B SHALL expose the quote capability for notebook quantity 2. The participant update action SHALL load actual served content via document navigation, independently of presenter publication, and SHALL NOT unlock B from storage, a timer or a local flag.
+A SHALL expose catalog but not the quote action in the main demo. B SHALL expose the quote capability for notebook quantity 2. The participant update action SHALL load actual served content via document navigation, independently of presenter publication, and SHALL NOT unlock B from storage, a timer or a local flag. A reload record SHALL preserve `catalogSeen` only from a prior valid-but-untrusted observation record or a successful current catalog result; requesting reload alone SHALL NOT set it.
 
 #### Scenario: Same-installed-app A to B
 - **WHEN** catalog A succeeds, the presenter replaces only completed served web assets with B, and the participant loads the new screen
@@ -60,13 +64,17 @@ A SHALL expose catalog but not the quote action in the main demo. B SHALL expose
 - **WHEN** a changed entry identity still belongs to A
 - **THEN** the UI can report changed content but does not claim the quote capability has appeared
 
+#### Scenario: Rechecking without a catalog observation
+- **WHEN** unchanged or changed A is loaded from a valid history record whose `catalogSeen` value is false and the participant requests another reload without a successful current catalog result
+- **THEN** the next record preserves false, while a prior true value or a successful current catalog result preserves or records true
+
 #### Scenario: Cold B and repetition
 - **WHEN** B opens without valid A history or the user repeats a completed quote
 - **THEN** the app reports current B capability honestly, does not invent a prior catalog observation, and repetition cannot simulate reverting the loaded web build to A
 
 ### Requirement: EX-05 Real identity and bounded claims
 
-Displayed web identity SHALL come from the actual built/loaded content and native version/build SHALL come from the installed Bundle. Before/after explanation SHALL distinguish changed web capability from existing native capabilities without presenting labels or stored history as binary-integrity proof. Missing identity/history SHALL degrade honestly.
+Displayed web identity SHALL come from the actual built/loaded content and native version/build SHALL come from the installed Bundle. Before/after explanation SHALL distinguish changed web capability from existing native capabilities without presenting labels or stored history as binary-integrity proof. Missing identity/history SHALL degrade honestly. Serialized history SHALL be bounded to exactly 512 JavaScript UTF-16 code units and rejected before JSON parsing when larger. After a successful storage get, consumption SHALL attempt removal exactly once before parsing; if removal throws, consumption SHALL return no history without parsing and without claiming durable deletion. A get failure SHALL remain nonfatal but SHALL NOT be described as one-shot consumption.
 
 #### Scenario: Runtime version labels
 - **WHEN** A is loaded and then B is loaded on the same installed shell
@@ -75,6 +83,10 @@ Displayed web identity SHALL come from the actual built/loaded content and nativ
 #### Scenario: Corrupt or unavailable history
 - **WHEN** session storage is missing, invalid, oversized or inaccessible
 - **THEN** current loaded capability remains usable but prior-transition claims are omitted; stored data never authorizes a capability or substitutes an HTTP response
+
+#### Scenario: Serialized history parse bound and removal ordering
+- **WHEN** an accessible serialized history value is at most 512 UTF-16 code units, exceeds 512, storage get fails, or the one removal attempt fails
+- **THEN** only an at-most-512 value whose removal returned normally may be parsed, oversized values are removed but never parsed, and get/removal failures return no history without overclaiming deletion
 
 #### Scenario: Meaning of the final comparison
 - **WHEN** the demonstrated B quote succeeds after observed A

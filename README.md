@@ -28,7 +28,7 @@ The [final requirement/scenario matrix](docs/integration/FINAL_MATRIX.md) is the
       -destination 'generic/platform=iOS Simulator' \
       -derivedDataPath "$PWD/.artifacts/final-build" CODE_SIGNING_ALLOWED=NO build analyze
 
-Each installed-shell mode includes the entire A/B proof, so Stage1 alone need not be repeated. WebKit mode now includes eleven live tests (53 with inherited tests), including remaining redirect/Location, decoded gzip/header/escaped-reply boundaries and streaming deadline vectors. Individual commands may take minutes; use a bounded background process on hosts with short foreground caps, retain its handle and verify its real exit/cleanup. Do not abandon an owned Simulator after a tool timeout. Current exact-source results are retained in `docs/integration/final-candidate-evidence.json` when produced and the same-card review handoff; absence of that record means final-source verification is pending. No runner grants independent review, product acceptance or an owner RC decision.
+Each installed-shell mode includes the entire A/B proof, so Stage1 alone need not be repeated. WebKit mode now includes 56 tests: 12 live WebKit/network component tests plus 44 inherited Simulator regression tests, including remaining redirect/Location, decoded gzip/header/escaped-reply boundaries and streaming deadline vectors. Individual commands may take minutes; use a bounded background process on hosts with short foreground caps, retain its handle and verify its real exit/cleanup. Do not abandon an owned Simulator after a tool timeout. Current exact-source results are retained in `docs/integration/final-candidate-evidence.json` when produced and the same-card review handoff; absence of that record means final-source verification is pending. No runner grants independent review, product acceptance or an owner RC decision.
 
 ## Explain v2 runtime acceptance
 
@@ -100,7 +100,7 @@ covered by the complementary modes; no single mode is final security acceptance.
 
     scripts/verify simulator-stage4-webkit-privacy
 
-Runs eleven live WebKit/network component tests plus42 existing Simulator tests on
+Runs 56 tests: 12 live WebKit/network component tests plus 44 inherited Simulator regression tests on
 a newly created dedicated Simulator. The opt-in fixture has no CSP so actual
 same/foreign iframe messages reach the unchanged production adapter. This is NOT
 the installed React E2E layer. It checks real navigation, reload, provisional

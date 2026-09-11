@@ -108,6 +108,23 @@ def stage4_test_selection():
     return ('-skip-testing:BridgeLabTests/ExplainLayoutTests',)
 
 
+def require_stage4_summary(summary):
+    """Fail closed unless Stage4 ran the exact 44 regression + 12 live contract."""
+    expected = {
+        'passedTests': 56,
+        'totalTestCount': 56,
+        'failedTests': 0,
+        'skippedTests': 0,
+        'expectedFailures': 0,
+    }
+    for field, value in expected.items():
+        assert field in summary, f'webkit summary missing {field}'
+        assert summary[field] == value, (
+            f'webkit {field}={summary[field]}, expected {value} for 44 regression + 12 live tests'
+        )
+    return summary
+
+
 def explain_control_names():
     """Closed static-port coordination contract for the Explain runtime UI test."""
     return (
@@ -734,9 +751,7 @@ class Run:
                          '-parallel-testing-enabled', 'NO', *stage4_test_selection(), 'test'], timeout=900)
             summary = json.loads(self.capture(['xcrun', 'xcresulttool', 'get', 'test-results', 'summary', '--path', str(self.out / 'webkit.xcresult'), '--format', 'json']))
             save(self.out / 'webkit-summary.json', summary)
-            assert summary['failedTests'] == 0, f'webkit failedTests={summary["failedTests"]}'
-            assert summary['skippedTests'] == 0, f'webkit skippedTests={summary["skippedTests"]}'
-            assert summary['passedTests'] == 56, f'webkit passedTests={summary["passedTests"]}, expected 44 regression + 12 live tests'
+            require_stage4_summary(summary)
             require_stage4_events(json.loads((self.out / 'events.json').read_text()))
         finally:
             if fixture:

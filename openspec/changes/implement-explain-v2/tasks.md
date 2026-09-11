@@ -36,4 +36,5 @@
 - [x] 6.1 Make tokenless main-frame HTTP response policy side-effect free, require exact non-nil navigation identity for delegate mutations, and retain real current-503 failure/recovery coverage.
 - [x] 6.2 Preserve typed response provenance in web presentation state so correlated HTTP, business and parse failures retain reverse direction without localized-title inference.
 - [x] 6.3 Make fixed-port release an explicit post-cleanup invariant after owned lab/static stop attempts, including exceptional paths and evidence fields.
-- [ ] 6.4 Run all required exact-head static, unit, build, Operations, Stage4, Explain and Stage5 gates and obtain fresh independent same-card review before publication.
+- [x] 6.4 Complete the bounded Round-7 correction: text-as-control cycle 2/final with a closed four-category response interpreter and exhaustive participant dispatch; observation-preserving reload continuity; the literal 512-code-unit pre-parse history bound and exact removal ordering; and the Stage4 scheme-to-runtime-to-current-doc drift guard with narrowly hardened summary assertions.
+- [ ] 6.5 Run all required exact-head static, unit, build, Operations, Stage4, Explain and Stage5 gates and obtain fresh independent same-card review before publication. Do not mark independent review or owner acceptance complete from implementation evidence.

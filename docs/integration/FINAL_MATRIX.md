@@ -1,6 +1,6 @@
 # Integrated candidate: requirement / scenario / proof layer
 
-This is the final implementation coverage map, not approval or owner acceptance. The original obligations remain in [verification plan](../verification-plan.md), active OpenSpec specs and [protocol v1](../../protocol/v1/README.md). Historical Stage1–5 reports describe observations at their own heads; their then-pending lists are reconciled below, not silently waived. Final candidate commands and observed exact source SHA are retained in `final-candidate-evidence.json`: all selected gates passed at clean source be46ee45f2fa2c0e3b2789fbbeebe5aadbc1da8a. The handoff adds only evidence/checklist text over that tested source; independent review and acceptance remain pending.
+This is the final implementation coverage map, not approval or owner acceptance. The original obligations remain in [verification plan](../verification-plan.md), active OpenSpec specs and [protocol v1](../../protocol/v1/README.md). Historical Stage1–5 reports describe observations at their own heads; their then-pending lists are reconciled below, not silently waived. `final-candidate-evidence.json` is historical evidence for clean source `be46ee45f2fa2c0e3b2789fbbeebe5aadbc1da8a`; it applies only to that revision and does not carry forward through later production, test, runner, or specification changes. For any future implementation candidate, fresh exact-head Unit, Operations, Stage4, Explain, Stage5, and build gates plus independent review remain pending.
 
 ## Executable command key and layer
 
@@ -10,11 +10,11 @@ Run commands separately, serializing fixed ports / dedicated Simulators. `script
 - O: `python3 scripts/tests/operations.py`. Actual owned runner / service signals, command failure, foreign listeners and dedicated Simulator lifecycle. Expected failing child commands are assertions, not skipped tests.
 - I2: `scripts/verify simulator-stage2-outcomes`. Production A/B then test-only React outcome page using production client/interpreters in installed production shell, real WebKit/native URLSession/backend; includes actual backend-off probe.
 - I3: `scripts/verify simulator-stage3-trust-limits`. Production A/B then test-only raw bridge trust/limits probes in installed shell. Deliberately bypasses TS validation, never native policy. Frame attempts here are CSP prevention, not adapter provenance.
-- W: `scripts/verify simulator-stage4-webkit-privacy`. Real WKWebView component host + unchanged production adapter/executor with opt-in fixture; no installed React claim. Eleven live tests plus 42 inherited core/adapter tests. Controlled outer frame-navigation bypass and held framework callbacks are explicit test seams.
+- W: `scripts/verify simulator-stage4-webkit-privacy`. Real WKWebView component host + unchanged production adapter/executor with opt-in fixture; no installed React claim. 12 live + 44 inherited = 56 total. Controlled outer frame-navigation bypass and held framework callbacks are explicit test seams.
 - I5: `scripts/verify simulator-stage5-production-ux`. Production A/B and actual production Diagnostics UI, no acceptance page or JS injection.
 - B: `xcodebuild -project ios/BridgeLab.xcodeproj -scheme BridgeLab -destination 'generic/platform=iOS Simulator' -derivedDataPath "$PWD/.artifacts/final-build" CODE_SIGNING_ALLOWED=NO build analyze`. Universal Simulator build/static analyzer; no signing or real device.
 
-I2, I3 and I5 each run `SameBinaryTests.testWebOnlyUpdateOnSameInstalledApplication`, include the entire Stage1 A/B assertion/manifest/backend procedure and run the 42 inherited Simulator tests. A separate Stage1 rerun is therefore redundant, not missing. None of these commands is itself final product acceptance. All runner outputs are isolated under ignored `.artifacts/verify-*`; commit compact evidence before worktree retirement.
+I2, I3 and I5 each run `SameBinaryTests.testWebOnlyUpdateOnSameInstalledApplication`, include the entire Stage1 A/B assertion/manifest/backend procedure and run the 44 inherited Simulator tests. A separate Stage1 rerun is therefore redundant, not missing. None of these commands is itself final product acceptance. All runner outputs are isolated under ignored `.artifacts/verify-*`; commit compact evidence before worktree retirement.
 
 ## Requirement → scenario → executable assertion → status / limits
 

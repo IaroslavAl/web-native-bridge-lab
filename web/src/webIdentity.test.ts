@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  MAX_SERIALIZED_HISTORY_LENGTH,
   WEB_HISTORY_KEY,
   clearDemoHistory,
   consumeDemoHistory,
@@ -36,6 +37,93 @@ describe("loaded web identity", () => {
 });
 
 describe("bounded untrusted demo continuity", () => {
+  it("fixes the serialized history limit at 512 UTF-16 code units", () => {
+    expect(MAX_SERIALIZED_HISTORY_LENGTH).toBe(512);
+  });
+
+  it("bounds literal 512, 513 and 65,536 padded records before parsing", () => {
+    const compact = JSON.stringify({ v: 1, previous: aIdentity, catalogSeen: true, updateRequested: true });
+    expect(compact.length).toBeLessThan(512);
+    const raw512 = compact + " ".repeat(512 - compact.length);
+    const raw513 = compact + " ".repeat(513 - compact.length);
+    const raw65536 = compact + " ".repeat(65_536 - compact.length);
+    expect(raw512.length).toBe(512);
+    expect(raw513.length).toBe(513);
+    expect(raw65536.length).toBe(65_536);
+
+    for (const [raw, accepted, parseCalls] of [
+      [raw512, true, 1],
+      [raw513, false, 0],
+      [raw65536, false, 0],
+    ] as const) {
+      const order: string[] = [];
+      let value: string | null = raw;
+      const storage = {
+        getItem: vi.fn(() => value),
+        setItem: vi.fn((_key: string, next: string) => { value = next; }),
+        removeItem: vi.fn(() => { order.push("remove"); value = null; }),
+      };
+      const originalParse = JSON.parse;
+      const parse = vi.spyOn(JSON, "parse").mockImplementation((text: string) => {
+        order.push("parse");
+        return originalParse(text);
+      });
+
+      expect(consumeDemoHistory(storage) !== null).toBe(accepted);
+      expect(storage.removeItem).toHaveBeenCalledTimes(1);
+      expect(parse).toHaveBeenCalledTimes(parseCalls);
+      expect(order).toEqual(parseCalls === 1 ? ["remove", "parse"] : ["remove"]);
+      expect(consumeDemoHistory(storage)).toBeNull();
+      parse.mockRestore();
+    }
+  });
+
+  it("removes under-bound malformed JSON before one caught parse attempt", () => {
+    const order: string[] = [];
+    const originalParse = JSON.parse;
+    const parse = vi.spyOn(JSON, "parse").mockImplementation((text: string) => {
+      order.push("parse");
+      return originalParse(text);
+    });
+    const storage = memoryStorage("{");
+    storage.removeItem.mockImplementation(() => { order.push("remove"); });
+    expect(consumeDemoHistory(storage)).toBeNull();
+    expect(storage.removeItem).toHaveBeenCalledTimes(1);
+    expect(parse).toHaveBeenCalledTimes(1);
+    expect(order).toEqual(["remove", "parse"]);
+    parse.mockRestore();
+  });
+
+  it("does not parse or claim deletion when removal throws after a successful get", () => {
+    const compact = JSON.stringify({ v: 1, previous: aIdentity, catalogSeen: true, updateRequested: true });
+    const raw512 = compact + " ".repeat(512 - compact.length);
+    expect(raw512.length).toBe(512);
+    const parse = vi.spyOn(JSON, "parse");
+    const storage = {
+      getItem: vi.fn(() => raw512),
+      setItem: vi.fn(),
+      removeItem: vi.fn(() => { throw new Error("denied"); }),
+    };
+    expect(consumeDemoHistory(storage)).toBeNull();
+    expect(storage.getItem).toHaveBeenCalledTimes(1);
+    expect(storage.removeItem).toHaveBeenCalledTimes(1);
+    expect(parse).not.toHaveBeenCalled();
+    parse.mockRestore();
+  });
+
+  it("does not attempt removal or parsing when storage get throws", () => {
+    const parse = vi.spyOn(JSON, "parse");
+    const storage = {
+      getItem: vi.fn(() => { throw new Error("denied"); }),
+      setItem: vi.fn(),
+      removeItem: vi.fn(),
+    };
+    expect(consumeDemoHistory(storage)).toBeNull();
+    expect(storage.removeItem).not.toHaveBeenCalled();
+    expect(parse).not.toHaveBeenCalled();
+    parse.mockRestore();
+  });
+
   it("round-trips the closed update record and consumes it once", () => {
     const storage = memoryStorage();
     expect(saveUpdateHistory(storage, aIdentity, true)).toBe(true);
