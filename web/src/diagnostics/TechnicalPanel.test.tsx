@@ -1,8 +1,8 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { BridgeClient } from "./bridgeClient";
-import { MockNativeBoundary } from "./test/MockNativeBoundary";
+import { BridgeClient } from "../bridge/BridgeClient";
+import { MockNativeBoundary } from "../test/MockNativeBoundary";
 import { TechnicalPanel } from "./TechnicalPanel";
 
 const session = "0123456789abcdef0123456789abcdef";

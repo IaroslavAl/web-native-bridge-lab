@@ -1,203 +1,163 @@
-# Web–Native Bridge Lab — PER-85
+# Web–Native Bridge Lab
 
-A small Simulator-only foundation: remotely served React constructs requests and parses business JSON; a generic Swift transport executes HTTP through the production WKWebView adapter. This is not production-ready. Only synthetic loopback data is supported; no authentication, cloud service, device signing or publication.
+A small iOS Simulator demonstration of one mechanism:
 
-## Prerequisites
+Web content defines an HTTP request, JavaScript sends it through a native bridge, the installed iOS app performs the request, and the response returns to the web content.
 
-macOS with Xcode and an installed iOS Simulator runtime; Node >=20.19 (tested Node 26.5), npm, Python 3.9+, Swift/Xcode command line tools, and `/usr/sbin/lsof`. Dependencies are pinned under `web/` and `openspec/tooling/`; no global install, approvals-policy change or service registration is needed.
+The visible Explain demo is in Russian. Variant A requests a catalog. After the served web assets are replaced and the same installed app reloads, variant B requests a quote. React owns the demo actions and response meaning; native code stays generic.
 
-## Core verification
+This lab is intentionally small and is not production-ready.
 
-From this checkout:
+## The path
 
-    scripts/verify unit
+    Screen (React)
+      requestDefinitions.ts
+             |
+             v
+      BridgeClient -> WebKitNativeBoundary
+             |
+             v
+    App (WKBridgeAdapter -> BridgeEngine -> HTTPExecutor)
+             |
+             v
+    Server (synthetic loopback API)
+             |
+             v
+    opaque status + allowed headers + body
+             |
+             v
+      responseInterpreters.ts -> Screen result/error
 
-Installs pinned local tooling, audits the complete web dependency tree, runs schema/OpenSpec validation, backend HTTP/process tests, native and iOS package tests, React/TypeScript tests and both web builds. Output goes to a fresh ignored `.artifacts/verify-unit-*/` directory. Commands and exit codes are recorded in `commands.json`; failures return nonzero. Builds use isolated output and do not replace tracked `web/dist`. Unit native/bridge doubles are not proof of actual WebKit networking.
+The app and the web demo present the same idea as `Экран -> Приложение -> Сервер`. While an action runs, the screen shows the current direction and state. When a reply returns, React either renders the returned catalog/quote or explains the error category.
 
-## Final candidate gates and evidence
+## Where requests are defined
 
-The [final requirement/scenario matrix](docs/integration/FINAL_MATRIX.md) is the current cross-layer coverage map. Stage1–5 reports below are historical checkpoints, not five outstanding product phases. Run separately and serially after the unit command:
+The web-owned HTTP definitions are in one focused file:
 
-    python3 scripts/tests/operations.py
-    scripts/verify simulator-explain-v2
-    scripts/verify simulator-stage2-outcomes
-    scripts/verify simulator-stage3-trust-limits
-    scripts/verify simulator-stage4-webkit-privacy
-    scripts/verify simulator-stage5-production-ux
-    xcodebuild -project ios/BridgeLab.xcodeproj -scheme BridgeLab \
-      -destination 'generic/platform=iOS Simulator' \
-      -derivedDataPath "$PWD/.artifacts/final-build" CODE_SIGNING_ALLOWED=NO build analyze
+- `web/src/demo/requestDefinitions.ts`
+  - `buildCatalogRequest`: GET `/api/catalog?category=books`
+  - `buildQuoteRequest`: POST `/api/quote` with a JSON body
+  - `buildFixtureRequest`: GET definitions used by the opt-in diagnostics surface
 
-Each installed-shell mode includes the entire A/B proof, so Stage1 alone need not be repeated. WebKit mode now includes 56 tests: 12 live WebKit/network component tests plus 44 inherited Simulator regression tests, including remaining redirect/Location, decoded gzip/header/escaped-reply boundaries and streaming deadline vectors. Individual commands may take minutes; use a bounded background process on hosts with short foreground caps, retain its handle and verify its real exit/cleanup. Do not abandon an owned Simulator after a tool timeout. Current exact-source results are retained in `docs/integration/final-candidate-evidence.json` when produced and the same-card review handoff; absence of that record means final-source verification is pending. No runner grants independent review, product acceptance or an owner RC decision.
+Request construction is separate from response meaning. `web/src/demo/responseInterpreters.ts` parses the opaque native reply, validates the endpoint-specific JSON shape, and classifies HTTP, JSON, business, and invalid-shape failures.
 
-## Explain v2 runtime acceptance
+Native production code contains no catalog or quote endpoint registry and no business response models.
 
-    scripts/verify simulator-explain-v2
+## How the bridge works
 
-This bounded mode creates one owned iPhone Simulator and reuses the production
-loopback lab, installed-app hash proof and cleanup contract. It runs the real built
-A and B assets in focused WKWebView layout tests at 320×740, 390×844 and 1100×900,
-plus reduced-motion and enlarged-text coverage. It then installs one production
-shell and proves unchanged A, served B, real catalog/quote values, cold B/repeat,
-API unavailability/retry, missing-entry fallback/recovery, native safe areas and an
-accessibility-extra-large installed-shell pass. Static-port control files coordinate
-the XCTest runner but never supply API results or inject JavaScript into the installed
-app. Result bundles retain screenshots, geometry and accessibility trees.
+1. React selects a request from `requestDefinitions.ts`.
+2. `BridgeClient` performs the v1 `hello` handshake, allocates a correlated request id, and serializes the request envelope defined by `web/src/bridge/protocol.ts`.
+3. `WebKitNativeBoundary` calls `window.webkit.messageHandlers.nativeHTTP.postMessage`. There is no browser `fetch` fallback.
+4. `WeakReplyMessageHandler` receives the WebKit message and frame metadata. `WKBridgeAdapter` checks the trusted page/frame and coordinates document lifetime.
+5. Unchanged `BridgeEngine` validates the wire message and delegates generic HTTP execution to unchanged `native/TransportPackage/`.
+6. The app replies once through the original WebKit callback with status, allowed headers, and an opaque text body, or with a transport error.
+7. `BridgeClient` validates correlation and the closed reply envelope. `responseInterpreters.ts` then parses business JSON and the React screen renders the result or error.
 
-The mode rebuilds served assets but does not rebuild or reinstall the native app
-between A and B. It records exact installed-file equality, built asset hashes,
-attributable backend events, fault facts and teardown under a fresh ignored
-`.artifacts/verify-simulator-explain-v2-*/` directory. The run remains Simulator-only
-and synthetic; it is not independent acceptance or release authorization. See the
-[Explain v2 runtime evidence](docs/design/explain-v2/runtime-evidence.md) and its
-[machine-readable ledger](docs/design/explain-v2/runtime-evidence.json).
+The normative wire contract and limits are in `protocol/v1/README.md`.
 
-## Actual Simulator A/B proof (Stage 1 only)
+## Source tree
 
-After the core command:
+    web/src/
+      bridge/
+        BridgeClient.ts             handshake, ids, request/cancel lifecycle
+        WebKitNativeBoundary.ts     JavaScript-to-WebKit boundary
+        protocol.ts                 v1 web types and reply validation
+      demo/
+        App.tsx                     Russian Explain screen and action state
+        demoTypes.ts                action and screen-state types
+        errorPresentation.ts        Russian error presentation
+        requestDefinitions.ts       all web-owned HTTP request construction
+        responseInterpreters.ts     separate response parsing/validation
+        screenText.ts               labels and route-state presentation
+        demoState.ts                A/B presentation state
+        webIdentity.ts              served-build identity and reload record
+        money.ts                    bounded quote formatting
+      diagnostics/
+        TechnicalPanel.tsx          opt-in engineering surface
+      main.tsx                      selects Explain or diagnostics
 
-    scripts/verify simulator-stage1
+    ios/Sources/
+      BridgeLabApp/
+        UI/                         SwiftUI screen and WKWebView container
+        WebView/                    WebView model, destinations, load state
+        WebKitBridge/               adapter, message handler, reply-once helper
+      BridgeLabCore/
+        BridgeEngine.swift          wire admission and generic bridge replies
+        BridgeLifecycleCoordinator.swift
+        BridgePolicies.swift
 
-This creates one dedicated `PER85-Stage1-*` Simulator using an available iOS runtime, runs the existing iOS Simulator suite, builds the app and a separate XCTest UI runner, and installs the real shell. It serves variant A on port 8787 with the API on 8788, submits catalog GET through the actual React UI, then rebuilds only served web assets to B and taps native Reload. The same running application submits quote POST and displays the nested response total. There is no native build/install/relaunch between the observations.
+    native/TransportPackage/        generic Foundation HTTP transport
+    backend/                        read-only synthetic web/API service
+    protocol/v1/                    normative bridge contract
+    scripts/lab                     opt-in local service lifecycle
+    scripts/verify                  broader integration evidence runners
 
-The UI runner's separate URLSession accesses only `/stage1/*.txt` on the static web port for host coordination; it never requests an API fixture, supplies result data, evaluates JavaScript or substitutes a bridge. These control files live in ignored build output, not the production web bundle. Backend method/path/tag logs attribute the catalog and quote requests; production CSP blocks browser connections and the shipped web client has no fetch fallback.
+The source path above is sufficient to follow the implementation. Deeper design and historical evidence remain linked in `docs/architecture.md` and `docs/integration/FINAL_MATRIX.md`; they are not prerequisites for understanding the demo.
 
-Before A, after A and after B, the host records the actual installed container and a sorted SHA-256 map of every regular `.app` file (including hidden files; unexpected symlinks fail closed). Container, UDID and every file hash must remain identical. A/B asset hashes, actual XCTest assertions/screenshots, result bundles, logs and cleanup records are under `.artifacts/verify-simulator-stage1-*/`. Hashes vary with build path; only equality within a run is expected.
+## Five-minute A/B demo
 
-The runner refuses occupied ports without killing foreign listeners. It stops its own lab, verifies both ports can bind again, shuts down/deletes only its newly created Simulator and verifies its absence on success or handled failure. SIGINT/SIGTERM trigger cleanup; a force-kill or host crash cannot be guaranteed recoverable automatically. Do not run simultaneous fixed-port sessions. If cleanup fails, read `cleanup.json` and use the recorded state directory/UDID; never broadly kill Node or Simulator processes.
+Prerequisites: macOS, Xcode with an iOS Simulator runtime, Node/npm, Swift tools, Python 3, and one Simulator that you own. Commands below keep generated web and Xcode output under ignored `.artifacts/` paths and do not write `web/dist`.
 
-Stage 1 was a coordinator checkpoint, not final acceptance. The final matrix above reconciles subsequent error/security/lifecycle proof; independent integration review and separate exact-RC acceptance remain separate gates. There is no generic `simulator` command. See [Stage 1 evidence](docs/integration/STAGE1.md), [verification obligations](docs/verification-plan.md), and active [OpenSpec tasks](openspec/changes/add-bridge-lab/tasks.md).
-
-## Actual Simulator outcome slice (Stage 2, incomplete matrix)
-
-    scripts/verify simulator-stage2-outcomes
-
-Includes the complete Stage1 regression, then replaces only served assets with an opt-in test-only React page (`web/acceptance/`). It imports the production bridge client and business interpreters and runs inside the same clean installed shell through real WebKit and native URLSession. Neither normal A/B build includes this entry; no native test bypass or browser fetch is used. This proves the integrated transport/interpreter path, not the production Diagnostics layout or accessibility.
-
-The UI test asserts preserved HTTP 503/422 bodies, business and JSON-parse classification, native timeout, explicit cancellation and acknowledgements, out-of-order concurrent correlation, and NETWORK_ERROR after actually stopping the backend. The host requires matching backend events, connection-close for timeout/cancel with no late success, unchanged installed app files, released ports and removed owned Simulator. All failure categories are assertions, not skipped tests. Test-runner synchronization remains restricted to static web-port control files.
-
-This is an outcome-only mode, not an approved RC. Other modes supply iframe provenance, redirects, synthetic privacy, bounds and revocation as mapped in the final matrix. See [Stage2 outcome evidence and gaps](docs/integration/STAGE2_OUTCOMES.md). `final_acceptance` remains false.
-
-## Actual Simulator trust/limits slice (Stage 3, incomplete matrix)
-
-    scripts/verify simulator-stage3-trust-limits
-
-Repeats production A/B, then exercises raw closed/version/session/id validation,
-exact raw/Unicode request and chunked response size boundaries, URL/header policy,
-same/cross/loop redirects with zero destination hits, media/encoding rejection,
-inert hostile response text, and eight native admissions/ninth BUSY through the
-unchanged installed shell. Host logs corroborate actual request outcomes and reject
-forbidden effects. Same/foreign frame attempts are blocked by the unchanged
-production CSP BEFORE bridge execution; this is not handler-provenance proof.
-The test-only raw probes intentionally bypass TS validation, never native policy.
-
-See [Stage3 evidence and remaining obligations](docs/integration/STAGE3_TRUST_LIMITS.md).
-This mode does not repeat Stage2 outcome probes; both commands remain available.
-Provenance/privacy/revocation, production Diagnostics and adversarial cleanup are
-covered by the complementary modes; no single mode is final security acceptance.
-
-## Real WebKit component trust/lifetime/privacy (Stage4)
-
-    scripts/verify simulator-stage4-webkit-privacy
-
-Runs 56 tests: 12 live WebKit/network component tests plus 44 inherited Simulator regression tests on
-a newly created dedicated Simulator. The opt-in fixture has no CSP so actual
-same/foreign iframe messages reach the unchanged production adapter. This is NOT
-the installed React E2E layer. It checks real navigation, reload, provisional
-failure, close/destruction socket cancellation and fresh-id isolation, plus strictly
-synthetic native/WK cookies, cache and authentication challenges. The actual
-production model's nonpersistent WK store is also exercised. No real credentials
-or host keychain are read. Owned fixture ports8787/8788 and the device are cleaned
-on success or handled failure. Run fixed-port modes serially.
-
-See [Stage4 evidence and explicit framework seams](docs/integration/STAGE4_WEBKIT_PRIVACY.md).
-Production Diagnostics and adverse runner lifecycle are separate modes below;
-none of these commands constitutes final acceptance.
-
-## Production Diagnostics and adverse operations (Stage5)
-
-    python3 scripts/tests/operations.py
-    scripts/verify simulator-stage5-production-ux
-
-Run these serially after `scripts/verify unit`. The UI mode repeats A/B and then
-uses the actual production Diagnostics controls: HTTP status/body, business/JSON
-errors, native timeout, visible loading and independent slow cancellation with the
-fast result preserved. The slow diagnostic now waits10s (15s native deadline),
-giving the user time to cancel. It does not load the opt-in acceptance React page.
-
-Explain v2 moves these controls out of the participant journey into the opt-in
-`?mode=diagnostics` surface. The browser URL is explanatory only: a normal browser
-has no native bridge. In the installed app, long-press the native footer labelled
-`Версия приложения <short version> · сборка <build>` and choose `Диагностика`
-(`lab.openDiagnostics`), or use the equivalent named VoiceOver action. Version and
-build come from the installed Bundle; a missing value is labelled unavailable rather
-than invented. Native reload and failed-load retry preserve the selected fixed
-destination. `Вернуться к демо` (`lab.openDemo`) loads the fixed demo root.
-
-The shell disables web interaction until the selected top-level document finishes.
-A load failure revokes that document, keeps stale content non-interactive, and shows
-a native error with `Повторить` plus a return-to-demo path when Diagnostics was
-selected. The linked evidence documents preserve revision-scoped historical runs and their
-explicit limits. Any later candidate must be evaluated from its own recorded source
-revision; this README neither designates a final candidate nor carries prior acceptance
-onto changed production, test, runner, specification, or operational-contract content.
-Independent technical review and owner product/aesthetic acceptance remain separate. See
-[Explain v2 native evidence](docs/design/explain-v2/native-evidence.md) for the exact
-N scope and [Explain v2 runtime evidence](docs/design/explain-v2/runtime-evidence.md)
-for the R scope, executed gates and deliberate limits.
-
-The operations gate deliberately interrupts fresh owned runner processes before
-and after service ownership, injects a failing command, checks actual service
-signals with active work and repeat start/stop, and proves a synthetic foreign
-listener survives occupied-port refusal. Expected child failures must still yield
-an overall gate PASS and verified cleanup. Only newly created process groups,
-canonical owned lab state and recorded dedicated Simulators may be stopped.
-The runner marks its unique lab state cleanup-eligible before the interruptible start
-command; a deterministic regression covers that ordering, while the operations gate
-covers cleanup after startup and service ownership. SIGKILL and host crashes remain
-outside automatic recovery guarantees; see
-[Stage5 evidence, recovery and limits](docs/integration/STAGE5_UX_OPERATIONS.md).
-The final matrix and observed candidate evidence distinguish full exact-source
-regression from the still-independent review/acceptance gates.
-
-## Manual demonstration
+From the repository root:
 
     npm ci --prefix web
-    npm --prefix web run build:a
-    scripts/lab start
-    scripts/lab status
+    npm --prefix web run build:a -- --outDir "$PWD/.artifacts/manual-web"
+    scripts/lab start --web-root "$PWD/.artifacts/manual-web"
+    scripts/lab status --web-root "$PWD/.artifacts/manual-web"
 
-Build with the checked-in project, using a dedicated Simulator you own (replace the placeholder with its actual UDID):
+Set the UDID of an owned, booted Simulator:
 
+    UDID=<owned-simulator-udid>
     xcodebuild -project ios/BridgeLab.xcodeproj -scheme BridgeLab \
-      -destination 'platform=iOS Simulator,id=<owned-UDID>' \
-      -derivedDataPath "$PWD/.artifacts/manual-derived" CODE_SIGNING_ALLOWED=NO build
-    xcrun simctl install <owned-UDID> .artifacts/manual-derived/Build/Products/Debug-iphonesimulator/BridgeLab.app
-    xcrun simctl launch <owned-UDID> lab.webnative.BridgeLab
+      -destination "platform=iOS Simulator,id=$UDID" \
+      -derivedDataPath "$PWD/.artifacts/manual-xcode" \
+      CODE_SIGNING_ALLOWED=NO build
+    xcrun simctl install "$UDID" \
+      "$PWD/.artifacts/manual-xcode/Build/Products/Debug-iphonesimulator/BridgeLab.app"
+    xcrun simctl launch "$UDID" lab.webnative.BridgeLab
 
-In A, tap `Получить каталог`. The result displays the actual returned title/SKU.
-The presenter then runs `npm --prefix web run build:b` separately; only completed
-served web assets are replaced. The participant taps `Загрузить обновлённый экран`,
-which performs a same-origin document reload. In B, tap `Рассчитать заказ`; the
-receipt uses the returned quantity, minor units and currency. Keep the app installed
-throughout. A never exposes quote in the main demo; a cold B starts directly with
-quote and does not invent A history. Open Diagnostics through the native footer
-mechanism described above, not through a visible web-demo button.
-Finish with:
+In the installed app:
 
-    scripts/lab stop
-    scripts/lab status
-    xcrun simctl shutdown <owned-UDID>
+1. In variant A, tap `Получить каталог`. Confirm that the returned title/SKU is shown.
+2. Replace only the served web assets:
 
-Stopped status intentionally exits 1 and prints `state: stopped`. Manual builds replace tracked `web/dist` (variant B is the reviewed committed default); do not confuse generated differences with source changes. For isolated lifecycle overrides and ownership semantics see [backend README](backend/README.md). Always use identical options for start/status/stop and stop before deleting a worktree.
+       npm --prefix web run build:b -- --outDir "$PWD/.artifacts/manual-web"
 
-## Boundaries and source of truth
+3. Do not rebuild, reinstall, or relaunch the app. Tap `Загрузить обновлённый экран` (or the native `Обновить` button).
+4. Confirm the screen identifies variant B, then tap `Рассчитать заказ`. Confirm the returned quantity, currency, and total are shown.
 
-- [Approved mission](docs/agent/OWNER_MISSION.md), [architecture](docs/architecture.md), [normative v1 protocol](protocol/v1/README.md).
-- `native/TransportPackage/`: generic Foundation HTTP, no business endpoints/models.
-- `ios/`: shell, frame/origin/lifecycle adapter and tests; page 127.0.0.1:8787 and API 127.0.0.1:8788 are separate fixed policies.
-- `web/`: React client, scenarios, interpretation and UI.
-- `backend/` and `scripts/lab`: synthetic fixtures and opt-in lifecycle.
-- `scripts/verify`: reproducible integration evidence, not an approval mechanism.
+Stop only the owned lab service when finished:
 
-All services bind loopback, use no real credentials and are explicitly opt-in. Production trust, real device networking, OS/framework internal buffering and server-side rollback of cancelled work are not solved by this lab.
+    scripts/lab stop --web-root "$PWD/.artifacts/manual-web"
+    scripts/lab status --web-root "$PWD/.artifacts/manual-web"
+
+A stopped status intentionally exits 1 and prints `state: stopped`. Do not run fixed-port lab sessions concurrently, and never kill unrelated listeners.
+
+The opt-in Diagnostics screen is available from the installed app by long-pressing the native version footer and choosing `Диагностика`. It uses the same bridge and has no browser-network fallback.
+
+## Focused verification
+
+These checks cover the refactored source without running the broad Simulator matrices:
+
+    npm --prefix web test -- --run
+    npm --prefix web run typecheck
+    npm --prefix web run build:a -- --outDir ../.artifacts/demo-implementer-a
+    npm --prefix web run build:b -- --outDir ../.artifacts/demo-implementer-b
+    swift test --package-path ios -Xswiftc -warnings-as-errors
+    xcodebuild -project ios/BridgeLab.xcodeproj -scheme BridgeLab \
+      -destination 'generic/platform=iOS Simulator' \
+      -derivedDataPath "$PWD/.artifacts/demo-implementer-xcode" \
+      CODE_SIGNING_ALLOWED=NO build
+
+The web tests use an explicit mocked native boundary. The generic Xcode build proves source/project integration, not the live A/B interaction. Existing full Simulator evidence and runners are linked from `docs/integration/FINAL_MATRIX.md`.
+
+## Explicit limitations
+
+- Simulator and fixed loopback origins only: web `127.0.0.1:8787`, API `127.0.0.1:8788`.
+- Synthetic read-only backend; no real credentials, authentication, cloud deployment, device signing, or publication.
+- Trusted web code receives a bounded HTTP capability for the allowed API origin. This is not a production trust-bootstrap design.
+- No browser `fetch` fallback, retry/cache platform, binary/file API, or new recovery behavior.
+- Cancellation stops local network work but cannot roll back a server-side effect.
+- The demo preserves the behavior of revision `d1aef8a`: its A-to-B explanation can use the current WKWebView's session storage, but continuity across a recreated WKWebView is not solved. Rare redirect/lifecycle work beyond that baseline is deliberately out of scope.
+
+For the approved mission and deeper constraints, see `docs/agent/OWNER_MISSION.md`, `docs/architecture.md`, and `protocol/v1/README.md`.

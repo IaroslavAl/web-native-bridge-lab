@@ -2,12 +2,14 @@ import { describe, expect, it } from "vitest";
 import {
   buildCatalogRequest,
   buildQuoteRequest,
+} from "./requestDefinitions";
+import {
   interpretCatalog,
   interpretQuote,
   ResponseInterpretationError,
   type InterpretationCategory,
-} from "./scenarios";
-import type { BridgeResponse } from "./bridgeClient";
+} from "./responseInterpreters";
+import type { BridgeResponse } from "../bridge/protocol";
 
 const ok = (body: string) => ({ v: 1 as const, type: "response" as const, id: 1, status: 200, headers: {}, body });
 

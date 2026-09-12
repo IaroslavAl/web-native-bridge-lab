@@ -1,14 +1,15 @@
 import ReactDOM from "react-dom/client";
-import { App } from "./App";
-import { BridgeClient, createWebKitNativeBoundary } from "./bridgeClient";
-import { TechnicalPanel } from "./TechnicalPanel";
+import { BridgeClient } from "./bridge/BridgeClient";
+import { createWebKitNativeBoundary } from "./bridge/WebKitNativeBoundary";
+import { App } from "./demo/App";
+import { TechnicalPanel } from "./diagnostics/TechnicalPanel";
 import {
   clearDemoHistory,
   createLoadedIdentity,
   selectWebSurface,
   type LabVariant,
   type StoragePort,
-} from "./webIdentity";
+} from "./demo/webIdentity";
 import "./styles.css";
 
 const variant: LabVariant = __LAB_VARIANT__;

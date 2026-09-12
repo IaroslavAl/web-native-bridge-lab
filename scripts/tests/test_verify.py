@@ -244,11 +244,13 @@ class EvidenceTests(unittest.TestCase):
                 with self.subTest(field=field), self.assertRaises(AssertionError):
                     check({**passing, field: value})
 
-        phrase = '56 tests: 12 live WebKit/network component tests plus 44 inherited Simulator regression tests'
         readme = ' '.join((ROOT / 'README.md').read_text().split())
-        with self.subTest(contract='README counts'):
-            self.assertEqual(readme.count(phrase), 2)
-            self.assertNotRegex(readme, r'eleven live|53 with inherited|eleven live WebKit/network component tests plus\s*42')
+        with self.subTest(contract='README keeps verification details out of the main explanation'):
+            self.assertIn('docs/integration/FINAL_MATRIX.md', readme)
+            self.assertNotIn(
+                '56 tests: 12 live WebKit/network component tests plus 44 inherited Simulator regression tests',
+                readme,
+            )
 
         matrix = ' '.join((ROOT / 'docs/integration/FINAL_MATRIX.md').read_text().split())
         with self.subTest(contract='matrix provenance and counts'):
@@ -260,8 +262,7 @@ class EvidenceTests(unittest.TestCase):
             self.assertNotRegex(matrix, r'Eleven live tests plus 42|run the 42 inherited')
 
     def test_response_copy_uses_only_the_closed_interpretation_category(self):
-        source = (ROOT / 'web/src/App.tsx').read_text()
-        function = source.split('export function describeDemoError', 1)[1].split('\nfunction displayIdentity', 1)[0]
+        function = (ROOT / 'web/src/demo/errorPresentation.ts').read_text()
         for forbidden in ('error.message', '.startsWith(', '.includes(', '.match('):
             self.assertNotIn(forbidden, function)
         self.assertNotRegex(function, r'/(?:\\/|[^/\n])+/[a-z]*\.test\(')
@@ -314,7 +315,7 @@ class EvidenceTests(unittest.TestCase):
             self.assertIn(marker, javascript)
 
     def test_missing_javascript_fallback_names_native_reload_control(self):
-        native_source = (ROOT / 'ios' / 'Sources' / 'BridgeLabApp' / 'BridgeScreen.swift').read_text()
+        native_source = (ROOT / 'ios' / 'Sources' / 'BridgeLabApp' / 'UI' / 'BridgeScreen.swift').read_text()
         reload_control = re.search(
             r'Button\("([^"]+)"\)\s*\{\s*model\.reload\(\)\s*\}.*?'
             r'\.accessibilityIdentifier\("lab\.reload"\)',
@@ -330,22 +331,17 @@ class EvidenceTests(unittest.TestCase):
         self.assertIn(f'Используйте «{native_label}» в установленном приложении.', fallback)
 
     def test_response_direction_does_not_depend_on_localized_title_prefix(self):
-        source = (ROOT / 'web' / 'src' / 'App.tsx').read_text()
+        source = (ROOT / 'web' / 'src' / 'demo' / 'screenText.ts').read_text()
         self.assertNotIn('title.startsWith("Ответ получен")', source)
 
-    def test_readme_acceptance_paragraph_is_commit_neutral(self):
+    def test_readme_is_scope_focused_and_does_not_claim_acceptance(self):
         readme = (ROOT / 'README.md').read_text()
-        stable = (
-            'The linked evidence documents preserve revision-scoped historical runs and their explicit limits. '
-            'Any later candidate must be evaluated from its own recorded source revision; this README neither '
-            'designates a final candidate nor carries prior acceptance onto changed production, test, runner, '
-            'specification, or operational-contract content. Independent technical review and owner '
-            'product/aesthetic acceptance remain separate.'
-        )
-        self.assertIn(stable, ' '.join(readme.splitlines()))
-        paragraph = next(block for block in readme.split('\n\n') if 'The linked evidence documents' in block)
-        self.assertNotRegex(paragraph, r'\b[0-9a-f]{40}\b')
-        self.assertNotRegex(paragraph.lower(), r'current exact head|final sha')
+        normalized = ' '.join(readme.splitlines())
+        self.assertIn('This lab is intentionally small and is not production-ready.', normalized)
+        self.assertIn('Existing full Simulator evidence and runners are linked', normalized)
+        self.assertIn('## Explicit limitations', readme)
+        self.assertNotRegex(readme, r'\b[0-9a-f]{40}\b')
+        self.assertNotRegex(readme.lower(), r'current exact head|final sha|final candidate')
 
     def test_web_entry_requires_one_built_hashed_javascript_asset(self):
         entry = self.helper('web_entry')

@@ -1,19 +1,6 @@
 import Foundation
 import WebKit
 
-enum WKBridgeLoadFailure: Equatable {
-    case originDenied
-    case contentUnavailable
-    case navigationFailed
-    case processTerminated
-}
-
-enum WKBridgeLoadEvent: Equatable {
-    case started
-    case finished
-    case failed(WKBridgeLoadFailure)
-}
-
 @MainActor
 final class WKBridgeAdapter: NSObject {
     static let handlerName = "nativeHTTP"
@@ -118,7 +105,7 @@ final class WKBridgeAdapter: NSObject {
         return navigation === activeNavigation
     }
 
-    fileprivate func receive(
+    func receive(
         body: Any,
         frame: BridgeFrameOrigin,
         replyHandler: @escaping (Any?, String?) -> Void
@@ -242,57 +229,5 @@ extension WKBridgeAdapter: WKNavigationDelegate {
 
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
         webContentProcessTerminated()
-    }
-}
-
-@MainActor
-final class WeakReplyMessageHandler: NSObject, WKScriptMessageHandlerWithReply {
-    weak var delegate: WKBridgeAdapter?
-
-    init(delegate: WKBridgeAdapter) {
-        self.delegate = delegate
-    }
-
-    func userContentController(
-        _ userContentController: WKUserContentController,
-        didReceive message: WKScriptMessage,
-        replyHandler: @escaping (Any?, String?) -> Void
-    ) {
-        let origin = message.frameInfo.securityOrigin
-        forward(body: message.body, frame: BridgeFrameOrigin(
-            scheme: origin.protocol, host: origin.host, port: origin.port,
-            isMainFrame: message.frameInfo.isMainFrame
-        ), replyHandler: replyHandler)
-    }
-
-    // Shared synchronous ingress; tests supply provenance tuples, WebKit supplies
-    // actual securityOrigin/frameInfo above. Neither path inserts a Task hop.
-    func forward(body: Any, frame: BridgeFrameOrigin, replyHandler: @escaping (Any?, String?) -> Void) {
-        guard let delegate else {
-            replyHandler([
-                "v": 1,
-                "type": "error",
-                "id": NSNull(),
-                "code": "ORIGIN_DENIED",
-                "message": "Bridge origin denied"
-            ], nil)
-            return
-        }
-        delegate.receive(body: body, frame: frame, replyHandler: replyHandler)
-    }
-}
-
-@MainActor
-final class ReplyOnce {
-    private var handler: ((Any?, String?) -> Void)?
-
-    init(_ handler: @escaping (Any?, String?) -> Void) {
-        self.handler = handler
-    }
-
-    func call(_ value: Any?, _ error: String?) {
-        guard let handler else { return }
-        self.handler = nil
-        handler(value, error)
     }
 }

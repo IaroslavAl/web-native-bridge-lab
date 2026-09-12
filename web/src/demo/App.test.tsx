@@ -1,10 +1,12 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { App, describeDemoError } from "./App";
-import { BridgeClient, BridgeClientError, TransportError } from "./bridgeClient";
-import { ResponseInterpretationError } from "./scenarios";
-import { MockNativeBoundary } from "./test/MockNativeBoundary";
+import { App } from "./App";
+import { BridgeClient } from "../bridge/BridgeClient";
+import { BridgeClientError, TransportError } from "../bridge/protocol";
+import { describeDemoError } from "./errorPresentation";
+import { ResponseInterpretationError } from "./responseInterpreters";
+import { MockNativeBoundary } from "../test/MockNativeBoundary";
 import type { StoragePort, WebIdentity } from "./webIdentity";
 
 const session = "0123456789abcdef0123456789abcdef";

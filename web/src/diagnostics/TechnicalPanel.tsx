@@ -1,25 +1,25 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   BridgeClient,
+} from "../bridge/BridgeClient";
+import {
   BridgeClientError,
   TransportError,
   type BridgeRequestInput,
   type BridgeResponse,
   type PendingBridgeRequest,
-} from "./bridgeClient";
+} from "../bridge/protocol";
+import { buildCatalogRequest, buildFixtureRequest, buildQuoteRequest } from "../demo/requestDefinitions";
 import {
   ResponseInterpretationError,
-  buildCatalogRequest,
-  buildFixtureRequest,
-  buildQuoteRequest,
   interpretBusinessFixture,
   interpretCatalog,
   interpretDelay,
   interpretQuote,
   type ScenarioName,
   type ScenarioResult,
-} from "./scenarios";
-import type { LabVariant } from "./webIdentity";
+} from "../demo/responseInterpreters";
+import type { LabVariant } from "../demo/webIdentity";
 
 interface TechnicalPanelProps {
   client: BridgeClient | null;

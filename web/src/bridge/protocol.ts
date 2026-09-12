@@ -20,10 +20,6 @@ export interface BridgeResponse {
   body: string;
 }
 
-export interface NativeBoundary {
-  postMessage(serializedMessage: string): Promise<unknown>;
-}
-
 export interface PendingBridgeRequest {
   id: number;
   promise: Promise<BridgeResponse>;
@@ -75,7 +71,6 @@ export class BridgeClientError extends Error {
   }
 }
 
-const MAX_ID = 2_147_483_647;
 const MAX_RESPONSE_BODY_BYTES = 1_048_576;
 const SESSION_PATTERN = /^[0-9a-f]{32}$/;
 const RESPONSE_STATUSES_EXCLUDED = new Set([301, 302, 303, 307, 308]);
@@ -95,7 +90,7 @@ function protocolError(detail: string): BridgeClientError {
   return new BridgeClientError("PROTOCOL_ERROR", `Invalid native bridge reply: ${detail}`);
 }
 
-function parseHelloAck(value: unknown): string {
+export function parseHelloAck(value: unknown): string {
   if (
     !isRecord(value) ||
     !hasExactKeys(value, ["v", "type", "session"]) ||
@@ -136,7 +131,7 @@ function parseResponseHeaders(value: unknown): BridgeResponse["headers"] {
   return value as BridgeResponse["headers"];
 }
 
-function parseRequestReply(value: unknown, expectedId: number): BridgeResponse {
+export function parseRequestReply(value: unknown, expectedId: number): BridgeResponse {
   if (!isRecord(value) || value.v !== 1 || typeof value.type !== "string") {
     throw protocolError("expected a v1 object");
   }
@@ -182,7 +177,7 @@ function parseRequestReply(value: unknown, expectedId: number): BridgeResponse {
   };
 }
 
-function parseCancelAck(value: unknown, expectedId: number): boolean {
+export function parseCancelAck(value: unknown, expectedId: number): boolean {
   if (
     !isRecord(value) ||
     !hasExactKeys(value, ["v", "type", "id", "cancelled"]) ||
@@ -196,95 +191,6 @@ function parseCancelAck(value: unknown, expectedId: number): boolean {
   return value.cancelled;
 }
 
-export class BridgeClient {
-  private nextId = 1;
-  private sessionPromise: Promise<string> | undefined;
-  private readonly activeIds = new Set<number>();
-
-  constructor(private readonly native: NativeBoundary) {}
-
-  async connect(): Promise<void> {
-    await this.getSession();
-  }
-
-  request(input: BridgeRequestInput): PendingBridgeRequest {
-    if (this.nextId > MAX_ID) {
-      throw new BridgeClientError("ID_EXHAUSTED", "Request id space exhausted; reload the page.");
-    }
-
-    const id = this.nextId++;
-    this.activeIds.add(id);
-    const promise = this.execute(id, input);
-    return {
-      id,
-      promise,
-      cancel: () => this.cancel(id),
-    };
-  }
-
-  async cancel(id: number): Promise<boolean> {
-    if (!this.activeIds.has(id)) return false;
-    const session = await this.getSession();
-    const reply = await this.native.postMessage(JSON.stringify({ v: 1, type: "cancel", session, id }));
-    return parseCancelAck(reply, id);
-  }
-
-  attachPageLifecycle(target: Pick<Window, "addEventListener" | "removeEventListener">): () => void {
-    const onPageHide = () => {
-      for (const id of this.activeIds) void this.cancel(id).catch(() => undefined);
-      this.sessionPromise = undefined;
-    };
-    target.addEventListener("pagehide", onPageHide);
-    return () => target.removeEventListener("pagehide", onPageHide);
-  }
-
-  private getSession(): Promise<string> {
-    if (!this.sessionPromise) {
-      this.sessionPromise = this.native
-        .postMessage(JSON.stringify({ v: 1, type: "hello" }))
-        .then(parseHelloAck);
-    }
-    return this.sessionPromise;
-  }
-
-  private async execute(id: number, input: BridgeRequestInput): Promise<BridgeResponse> {
-    try {
-      const session = await this.getSession();
-      const reply = await this.native.postMessage(
-        JSON.stringify({
-          v: 1,
-          type: "request",
-          session,
-          id,
-          method: input.method,
-          url: input.url,
-          headers: input.headers,
-          body: input.body,
-          timeoutMs: input.timeoutMs ?? 5000,
-        }),
-      );
-      return parseRequestReply(reply, id);
-    } catch (error) {
-      if (error instanceof TransportError || error instanceof BridgeClientError) throw error;
-      throw protocolError("native invocation rejected");
-    } finally {
-      this.activeIds.delete(id);
-    }
-  }
-}
-
-export function createWebKitNativeBoundary(root: unknown = globalThis): NativeBoundary {
-  const candidate = root as {
-    webkit?: { messageHandlers?: { nativeHTTP?: { postMessage?: (message: string) => unknown } } };
-  };
-  const postMessage = candidate.webkit?.messageHandlers?.nativeHTTP?.postMessage;
-  if (typeof postMessage !== "function") {
-    throw new BridgeClientError(
-      "BRIDGE_UNAVAILABLE",
-      "Bridge unavailable: open this page in BridgeLab.",
-    );
-  }
-  return {
-    postMessage: (message) => Promise.resolve(postMessage.call(candidate.webkit?.messageHandlers?.nativeHTTP, message)),
-  };
+export function rejectedNativeInvocation(): BridgeClientError {
+  return protocolError("native invocation rejected");
 }

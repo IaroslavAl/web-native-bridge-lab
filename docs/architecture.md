@@ -1,4 +1,6 @@
-# Web–Native Bridge Lab architecture and implementation handoff
+# Web–Native Bridge Lab detailed architecture
+
+Start with the root [README](../README.md) for the concise mechanism, current source map, five-minute demo, and focused checks. This document retains the deeper implementation contract and historical handoff detail.
 
 Status: implemented integration candidate; independent final gates are not yet acceptance. Approved product intent: [OWNER_MISSION](agent/OWNER_MISSION.md). Observable requirements: `openspec/changes/add-bridge-lab/specs/`. Normative wire/security/lifecycle limits: [protocol v1](../protocol/v1/README.md). Actual requirement/test mapping: [final matrix](integration/FINAL_MATRIX.md); original obligations: [verification plan](verification-plan.md). Do not copy business types into native production code.
 
@@ -75,7 +77,7 @@ Unknown route is 404 JSON; wrong method on known route is 405 JSON. Malformed PO
 
 ## Web variants and acceptance hooks
 
-Web owns `npm --prefix web run build:a` and `build:b` producing the same `web/dist` path using build-time `VITE_LAB_VARIANT=A|B`. Variant A defaults to catalog GET with category query and list rendering; variant B defaults to quote POST with quantity input and nested quote rendering. Each exposes the other scenario via a scenario selector so both remain usable. Build-time variant changes the visible label/default scenario and default request, not only a color/title. A dedicated Diagnostics section offers error/delay/cancel/concurrency exercises through the same bridge client. No automatic call to fetch if WebKit is absent; display bridge unavailable. Mocks exist only in tests, never in shipped assets.
+Web owns `npm --prefix web run build:a` and `build:b` producing the same `web/dist` path using build-time `VITE_LAB_VARIANT=A|B`. The visible Explain surface keeps A focused on catalog GET and B focused on quote POST. The opt-in Diagnostics surface retains the scenario selector plus error/delay/cancel/concurrency exercises through the same bridge client. Build-time variant changes the visible Explain action and request, not only a color/title. No automatic call to fetch if WebKit is absent; display bridge unavailable. Mocks exist only in tests, never in shipped assets.
 
 Stable DOM/accessibility hooks: `lab.variant` (A/B), `lab.scenario` selector, `lab.submit`, `lab.cancel`, `lab.loading`, `lab.result`, `lab.error`. Use data-testid for DOM and matching accessible labels where practical. Error display includes category (HTTP, business, JSON parse, transport with code, bridge unavailable), while safe server text is rendered as text, not HTML. Pending requests track their own state; cancel does not blank an unrelated result. Bounded request UI supports a slow and fast request concurrently to prove correlation. iOS UI tests should assert visible web result text rather than treating a test-only native success flag as evidence.
 

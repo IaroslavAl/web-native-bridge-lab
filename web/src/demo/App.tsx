@@ -1,19 +1,16 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  BridgeClient,
-  BridgeClientError,
-  TransportError,
-} from "./bridgeClient";
-import { classifyLoadedDemo, type LoadedDemo } from "./demoState";
+import { BridgeClient } from "../bridge/BridgeClient";
+import { BridgeClientError } from "../bridge/protocol";
+import { classifyLoadedDemo } from "./demoState";
+import type { Connection, DemoAction, DemoError, Operation } from "./demoTypes";
+import { describeDemoError } from "./errorPresentation";
 import { formatMinorUnits } from "./money";
+import { buildCatalogRequest, buildQuoteRequest } from "./requestDefinitions";
 import {
-  ResponseInterpretationError,
-  buildCatalogRequest,
-  buildQuoteRequest,
   interpretCatalog,
   interpretQuote,
-  type ScenarioResult,
-} from "./scenarios";
+} from "./responseInterpreters";
+import { actionLabel, displayIdentity, initialCopy, routeState } from "./screenText";
 import {
   consumeDemoHistory,
   saveUpdateHistory,
@@ -28,111 +25,6 @@ interface AppProps {
   identity: WebIdentity | null;
   storage?: StoragePort;
   reload?: () => void;
-}
-
-type DemoAction = "catalog" | "quote" | "reload";
-type Connection = "connecting" | "ready" | "error";
-type Operation =
-  | { kind: "idle" }
-  | { kind: "pending"; action: DemoAction }
-  | { kind: "result"; action: "catalog" | "quote"; result: ScenarioResult }
-  | { kind: "error"; action: "catalog" | "quote"; error: DemoError };
-
-export interface DemoError {
-  title: string;
-  detail: string;
-  responseReceived: boolean;
-}
-
-function assertNever(value: never): never {
-  throw new Error(`Unhandled interpretation category: ${String(value)}`);
-}
-
-export function describeDemoError(error: unknown): DemoError {
-  if (error instanceof ResponseInterpretationError) {
-    const category = error.category;
-    switch (category) {
-      case "HTTP":
-        return {
-          title: `Сервер вернул ошибку HTTP${error.status ? ` ${error.status}` : ""}`,
-          detail: "Ответ получен, но успешного результата в нём нет.",
-          responseReceived: true,
-        };
-      case "business":
-        return {
-          title: "Ответ получен, но действие отклонено",
-          detail: "Сервер объяснил, что действие нельзя завершить. Можно повторить запрос.",
-          responseReceived: true,
-        };
-      case "invalid success shape":
-        return {
-          title: "Ответ получен, но экран не смог проверить данные",
-          detail: "Формат результата отличается от ожидаемого. Повторите запрос.",
-          responseReceived: true,
-        };
-      case "JSON parse":
-        return {
-          title: "Ответ получен, но экран не смог прочитать данные",
-          detail: "Содержимое ответа не является корректным JSON. Повторите запрос.",
-          responseReceived: true,
-        };
-    };
-    return assertNever(category);
-  }
-  if (error instanceof TransportError) {
-    if (error.code === "TIMEOUT") return { title: "Время ожидания ответа истекло", detail: "Приложение остановило запрос по тайм-ауту. Можно повторить.", responseReceived: false };
-    if (error.code === "CANCELLED") return { title: "Запрос отменён", detail: "Успешного результата нет. Можно повторить запрос.", responseReceived: false };
-    if (error.code === "NETWORK_ERROR") return { title: "Не удалось связаться с сервером", detail: "Приложение не получило сетевой ответ. Проверьте сервис и повторите.", responseReceived: false };
-    return { title: "Приложение отклонило запрос", detail: `Категория транспорта: ${error.code}. Можно повторить.`, responseReceived: false };
-  }
-  if (error instanceof BridgeClientError) {
-    return error.category === "bridge"
-      ? { title: "Связь с приложением недоступна", detail: "Откройте экран внутри Bridge Lab и повторите подключение.", responseReceived: false }
-      : { title: "Приложение вернуло непонятный ответ", detail: "Защищённый формат ответа не прошёл проверку. Повторите подключение.", responseReceived: false };
-  }
-  return { title: "Не удалось выполнить действие", detail: "Произошла непредвиденная ошибка. Повторите попытку.", responseReceived: false };
-}
-
-function displayIdentity(identity: WebIdentity | null, variant: LabVariant): string {
-  if (!identity) return `Веб ${variant} · версия веб-сборки недоступна`;
-  const basename = identity.entryPath.split("/").pop();
-  return `Веб ${identity.variant} · ${basename}`;
-}
-
-function initialCopy(loaded: LoadedDemo): string {
-  if (loaded.update === "unchanged") return "Загружен прежний веб-экран";
-  if (loaded.update === "changed-a") return "Веб-экран обновлён; расчёт пока недоступен";
-  if (loaded.update === "changed-to-b") return "Раньше вы получили каталог. Теперь веб-экран умеет рассчитать заказ";
-  if (loaded.capability === "quote") return "Этот экран умеет рассчитать заказ из двух блокнотов";
-  return "Сначала запросим настоящий каталог через установленное приложение";
-}
-
-function actionLabel(action: DemoAction, operation: Operation, loaded: LoadedDemo): string {
-  if (operation.kind === "pending") {
-    return action === "reload" ? "Загружаем веб-экран…" : "Ждём ответ…";
-  }
-  if (operation.kind === "error") return action === "catalog" ? "Повторить запрос каталога" : "Повторить расчёт";
-  if (action === "catalog") return "Получить каталог";
-  if (action === "quote") return operation.kind === "result" ? "Рассчитать снова" : "Рассчитать заказ";
-  return loaded.update === "unchanged" || loaded.update === "changed-a"
-    ? "Проверить обновление ещё раз"
-    : "Загрузить обновлённый экран";
-}
-
-function routeState(operation: Operation) {
-  if (operation.kind === "pending" && operation.action !== "reload") {
-    return { direction: "forward", text: "Ждём ответ через приложение" } as const;
-  }
-  if (operation.kind === "result") {
-    return { direction: "back", text: "Ответ получен. Экран показывает результат" } as const;
-  }
-  if (operation.kind === "error" && operation.error.responseReceived) {
-    return { direction: "back", text: "Ответ получен, но успешного результата нет" } as const;
-  }
-  if (operation.kind === "pending" && operation.action === "reload") {
-    return { direction: "neutral", text: "Загружаем веб-экран. Запрос к серверу не отправляется" } as const;
-  }
-  return { direction: "neutral", text: "Экран задаёт действие; приложение передаёт запрос" } as const;
 }
 
 export function App({ createClient, variant, identity, storage, reload }: AppProps) {
