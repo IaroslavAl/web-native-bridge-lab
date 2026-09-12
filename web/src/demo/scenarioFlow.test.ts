@@ -29,6 +29,15 @@ describe("web-owned scenarios", () => {
     });
   });
 
+  it.each([-1, Number.MAX_SAFE_INTEGER + 1])(
+    "rejects catalog total outside the nonnegative safe-integer range: %s",
+    (total) => {
+      expect(() => interpretCatalog(ok(JSON.stringify({ items: [], total })))).toThrowError(
+        expect.objectContaining({ category: "invalid success shape" }),
+      );
+    },
+  );
+
   it("constructs quote POST body and parses its distinct nested shape", () => {
     expect(buildQuoteRequest("notebook", 2)).toEqual({
       method: "POST",

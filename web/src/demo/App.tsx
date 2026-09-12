@@ -139,7 +139,7 @@ export function App({ createClient, variant, identity, storage, reload }: AppPro
       });
   }
 
-  const route = routeState(operation);
+  const route = routeState(connection, operation);
   const isPending = operation.kind === "pending";
   const currentResult = operation.kind === "result" ? operation.result : null;
   const currentError = operation.kind === "error" ? operation.error : connectionError;

@@ -230,8 +230,12 @@ describe("Explain demo with an explicitly mocked native boundary", () => {
       .mockReturnValueOnce(recovered.client);
     render(<App createClient={createClient} variant="A" identity={aIdentity} storage={storageWith()} />);
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("Не удалось подключить веб-экран к приложению");
+    const status = screen.getByRole("status");
+    await vi.waitFor(() => {
+      expect(status).toHaveTextContent(/^Связь с приложением недоступна\. Запрос к серверу не отправлен$/);
+    });
     expect(screen.getByLabelText("Путь запроса и ответа")).toHaveAttribute("data-direction", "neutral");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Не удалось подключить веб-экран к приложению");
     await userEvent.click(screen.getByRole("button", { name: "Повторить подключение" }));
 
     expect(await readyButton("Получить каталог")).toBeEnabled();

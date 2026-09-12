@@ -1,5 +1,5 @@
 import type { LoadedDemo } from "./demoState";
-import type { DemoAction, Operation } from "./demoTypes";
+import type { Connection, DemoAction, Operation } from "./demoTypes";
 import type { LabVariant, WebIdentity } from "./webIdentity";
 
 export function displayIdentity(identity: WebIdentity | null, variant: LabVariant): string {
@@ -28,7 +28,10 @@ export function actionLabel(action: DemoAction, operation: Operation, loaded: Lo
     : "Загрузить обновлённый экран";
 }
 
-export function routeState(operation: Operation) {
+export function routeState(connection: Connection, operation: Operation) {
+  if (connection === "error") {
+    return { direction: "neutral", text: "Связь с приложением недоступна. Запрос к серверу не отправлен" } as const;
+  }
   if (operation.kind === "pending" && operation.action !== "reload") {
     return { direction: "forward", text: "Ждём ответ через приложение" } as const;
   }

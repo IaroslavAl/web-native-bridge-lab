@@ -78,7 +78,12 @@ export function interpretCatalog(response: BridgeResponse): ScenarioResult {
   const decoded = parseJson(response);
   const error = businessError(decoded);
   if (error) throw error;
-  if (!isRecord(decoded) || !Array.isArray(decoded.items) || !Number.isInteger(decoded.total)) {
+  if (
+    !isRecord(decoded)
+    || !Array.isArray(decoded.items)
+    || !Number.isSafeInteger(decoded.total)
+    || (decoded.total as number) < 0
+  ) {
     return invalidSuccessShape("catalog");
   }
   const items = decoded.items.map((item) => {
