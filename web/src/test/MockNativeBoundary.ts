@@ -1,4 +1,4 @@
-import type { NativeBoundary } from "../bridgeClient";
+import type { NativeBoundary } from "../bridge/WebKitNativeBoundary";
 
 // Test-only explicit mock. This file is never imported by production entry points.
 export class MockNativeBoundary implements NativeBoundary {

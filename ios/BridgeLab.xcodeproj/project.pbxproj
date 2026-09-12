@@ -6,6 +6,8 @@
 	objects = {
 		B40000000000000000000001 = {isa = PBXBuildFile; fileRef = F40000000000000000000001; };
 		F40000000000000000000001 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tests/BridgeLabCoreTests/LiveWebKitTests.swift; sourceTree = SOURCE_ROOT; };
+		B50000000000000000000001 = {isa = PBXBuildFile; fileRef = F50000000000000000000001; };
+		F50000000000000000000001 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExplainLayoutTests.swift; sourceTree = "<group>"; };
 		B20000000000000000000001 = {isa = PBXBuildFile; fileRef = F20000000000000000000001; };
 		F20000000000000000000001 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tests/BridgeLabUITests/SameBinaryTests.swift; sourceTree = SOURCE_ROOT; };
 		F20000000000000000000002 = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = BridgeLabUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -28,6 +30,13 @@
 		B10000000000000000000008 /* TransportPackage in Frameworks */ = {isa = PBXBuildFile; productRef = P10000000000000000000001 /* TransportPackage */; };
 		B10000000000000000000009 /* TransportPackage in Frameworks */ = {isa = PBXBuildFile; productRef = P10000000000000000000002 /* TransportPackage */; };
 		B1000000000000000000000A /* WKBridgeAdapterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000B /* WKBridgeAdapterTests.swift */; };
+		B1000000000000000000000D /* WebViewContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000E /* WebViewContainer.swift */; };
+		B1000000000000000000000E /* NativeVersionIdentity.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000F /* NativeVersionIdentity.swift */; };
+		B1000000000000000000000F /* WebSurface.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000010 /* WebSurface.swift */; };
+		B10000000000000000000010 /* BridgeWebViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000011 /* BridgeWebViewModel.swift */; };
+		B10000000000000000000011 /* WKBridgeLoadEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000012 /* WKBridgeLoadEvent.swift */; };
+		B10000000000000000000012 /* WeakReplyMessageHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000013 /* WeakReplyMessageHandler.swift */; };
+		B10000000000000000000013 /* ReplyOnce.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000014 /* ReplyOnce.swift */; };
 /* End PBXBuildFile section */
 		B1000000000000000000000B /* BridgeLifecycleCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000C; };
 		B1000000000000000000000C /* BridgeLifecycleCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000D; };
@@ -54,6 +63,13 @@
 		F10000000000000000000009 /* BridgeLab.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BridgeLab.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F1000000000000000000000A /* BridgeLabTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BridgeLabTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F1000000000000000000000B /* WKBridgeAdapterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WKBridgeAdapterTests.swift; sourceTree = "<group>"; };
+		F1000000000000000000000E /* WebViewContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebViewContainer.swift; sourceTree = "<group>"; };
+		F1000000000000000000000F /* NativeVersionIdentity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeVersionIdentity.swift; sourceTree = "<group>"; };
+		F10000000000000000000010 /* WebSurface.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebSurface.swift; sourceTree = "<group>"; };
+		F10000000000000000000011 /* BridgeWebViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgeWebViewModel.swift; sourceTree = "<group>"; };
+		F10000000000000000000012 /* WKBridgeLoadEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WKBridgeLoadEvent.swift; sourceTree = "<group>"; };
+		F10000000000000000000013 /* WeakReplyMessageHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeakReplyMessageHandler.swift; sourceTree = "<group>"; };
+		F10000000000000000000014 /* ReplyOnce.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReplyOnce.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 		F1000000000000000000000C = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgeLifecycleCoordinator.swift; sourceTree = "<group>"; };
 		F1000000000000000000000D = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgeLifecycleCoordinatorTests.swift; sourceTree = "<group>"; };
@@ -67,10 +83,13 @@
 		G10000000000000000000001 = {isa = PBXGroup; children = (F20000000000000000000001, F20000000000000000000002, G10000000000000000000002 /* Sources */, G10000000000000000000005 /* Tests */, G10000000000000000000006 /* Configuration */, G10000000000000000000007 /* Products */,); sourceTree = "<group>"; };
 		G10000000000000000000002 /* Sources */ = {isa = PBXGroup; children = (G10000000000000000000003 /* BridgeLabCore */, G10000000000000000000004 /* BridgeLabApp */,); path = Sources; sourceTree = "<group>"; };
 		G10000000000000000000003 /* BridgeLabCore */ = {isa = PBXGroup; children = (F10000000000000000000004 /* BridgeEngine.swift */, F10000000000000000000005 /* BridgePolicies.swift */, F1000000000000000000000C,); path = BridgeLabCore; sourceTree = "<group>"; };
-		G10000000000000000000004 /* BridgeLabApp */ = {isa = PBXGroup; children = (F10000000000000000000001 /* BridgeLabApp.swift */, F10000000000000000000002 /* BridgeScreen.swift */, F10000000000000000000003 /* WKBridgeAdapter.swift */,); path = BridgeLabApp; sourceTree = "<group>"; };
-		G10000000000000000000005 /* Tests */ = {isa = PBXGroup; children = (F10000000000000000000006 /* BridgeEngineTests.swift */, F10000000000000000000007 /* BridgePolicyTests.swift */, F1000000000000000000000B /* WKBridgeAdapterTests.swift */, F1000000000000000000000D,); path = Tests/BridgeLabCoreTests; sourceTree = "<group>"; };
+		G10000000000000000000004 /* BridgeLabApp */ = {isa = PBXGroup; children = (F10000000000000000000001 /* BridgeLabApp.swift */, G10000000000000000000008 /* UI */, G10000000000000000000009 /* WebView */, G1000000000000000000000A /* WebKitBridge */,); path = BridgeLabApp; sourceTree = "<group>"; };
+		G10000000000000000000005 /* Tests */ = {isa = PBXGroup; children = (F10000000000000000000006 /* BridgeEngineTests.swift */, F10000000000000000000007 /* BridgePolicyTests.swift */, F1000000000000000000000B /* WKBridgeAdapterTests.swift */, F1000000000000000000000D, F50000000000000000000001,); path = Tests/BridgeLabCoreTests; sourceTree = "<group>"; };
 		G10000000000000000000006 /* Configuration */ = {isa = PBXGroup; children = (F10000000000000000000008 /* Info.plist */,); path = BridgeLab; sourceTree = "<group>"; };
 		G10000000000000000000007 /* Products */ = {isa = PBXGroup; children = (F10000000000000000000009 /* BridgeLab.app */, F1000000000000000000000A /* BridgeLabTests.xctest */,); name = Products; sourceTree = "<group>"; };
+		G10000000000000000000008 /* UI */ = {isa = PBXGroup; children = (F10000000000000000000002 /* BridgeScreen.swift */, F1000000000000000000000F /* NativeVersionIdentity.swift */, F1000000000000000000000E /* WebViewContainer.swift */,); path = UI; sourceTree = "<group>"; };
+		G10000000000000000000009 /* WebView */ = {isa = PBXGroup; children = (F10000000000000000000011 /* BridgeWebViewModel.swift */, F10000000000000000000010 /* WebSurface.swift */,); path = WebView; sourceTree = "<group>"; };
+		G1000000000000000000000A /* WebKitBridge */ = {isa = PBXGroup; children = (F10000000000000000000003 /* WKBridgeAdapter.swift */, F10000000000000000000012 /* WKBridgeLoadEvent.swift */, F10000000000000000000013 /* WeakReplyMessageHandler.swift */, F10000000000000000000014 /* ReplyOnce.swift */,); path = WebKitBridge; sourceTree = "<group>"; };
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -124,8 +143,8 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		D10000000000000000000003 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (B10000000000000000000001, B10000000000000000000002, B10000000000000000000003, B10000000000000000000004, B10000000000000000000005, B1000000000000000000000B,); runOnlyForDeploymentPostprocessing = 0; };
-		D10000000000000000000004 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (B10000000000000000000006, B10000000000000000000007, B1000000000000000000000A, B1000000000000000000000C, B40000000000000000000001,); runOnlyForDeploymentPostprocessing = 0; };
+		D10000000000000000000003 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (B10000000000000000000001, B10000000000000000000002, B10000000000000000000003, B10000000000000000000004, B10000000000000000000005, B1000000000000000000000B, B1000000000000000000000D, B1000000000000000000000E, B1000000000000000000000F, B10000000000000000000010, B10000000000000000000011, B10000000000000000000012, B10000000000000000000013,); runOnlyForDeploymentPostprocessing = 0; };
+		D10000000000000000000004 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (B10000000000000000000006, B10000000000000000000007, B1000000000000000000000A, B1000000000000000000000C, B40000000000000000000001, B50000000000000000000001,); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */

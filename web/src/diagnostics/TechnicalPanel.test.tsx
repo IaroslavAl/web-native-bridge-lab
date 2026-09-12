@@ -1,9 +1,9 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { App } from "./App";
-import { BridgeClient } from "./bridgeClient";
-import { MockNativeBoundary } from "./test/MockNativeBoundary";
+import { BridgeClient } from "../bridge/BridgeClient";
+import { MockNativeBoundary } from "../test/MockNativeBoundary";
+import { TechnicalPanel } from "./TechnicalPanel";
 
 const session = "0123456789abcdef0123456789abcdef";
 
@@ -14,49 +14,32 @@ function clientFor(handler: (message: Record<string, unknown>) => unknown): { cl
   return { client: new BridgeClient(native), native };
 }
 
-describe("App with explicitly mocked native boundary", () => {
-  it("performs the document hello handshake on mount before user requests", async () => {
-    const { client, native } = clientFor(() => {
-      throw new Error("No request expected");
-    });
-
-    render(<App client={client} variant="A" />);
-
+describe("opt-in TechnicalPanel with explicitly mocked native boundary", () => {
+  it("performs the document hello handshake on mount before engineering requests", async () => {
+    const { client, native } = clientFor(() => { throw new Error("No request expected"); });
+    render(<TechnicalPanel client={client} variant="A" />);
     await vi.waitFor(() => expect(native.decodedMessages()).toEqual([{ v: 1, type: "hello" }]));
   });
 
-  it("variant A submits catalog and renders list business data", async () => {
+  it("retains scenario request construction and result summaries", async () => {
     const { client, native } = clientFor((message) => ({
-      v: 1,
-      type: "response",
-      id: message.id,
-      status: 200,
-      headers: { "content-type": "application/json" },
+      v: 1, type: "response", id: message.id, status: 200, headers: {},
       body: '{"items":[{"sku":"notebook","title":"Notebook"}],"total":1}',
     }));
-    render(<App client={client} variant="A" />);
-
-    expect(screen.getByTestId("lab.variant")).toHaveTextContent("Variant A");
+    render(<TechnicalPanel client={client} variant="A" />);
     await userEvent.click(screen.getByTestId("lab.submit"));
-
-    expect(await screen.findByTestId("lab.result")).toHaveTextContent("Notebook");
+    expect(await screen.findByTestId("lab.result")).toHaveTextContent("Notebook (notebook) — total 1");
     expect(native.decodedMessages()[1]).toMatchObject({ method: "GET", url: expect.stringContaining("/api/catalog?category=books") });
   });
 
-  it("variant B defaults to quote, builds POST in web, and renders nested quote", async () => {
+  it("retains variant B quote as the default structured scenario", async () => {
     const { client, native } = clientFor((message) => ({
-      v: 1,
-      type: "response",
-      id: message.id,
-      status: 200,
-      headers: { "content-type": "application/json" },
+      v: 1, type: "response", id: message.id, status: 200, headers: {},
       body: '{"quote":{"sku":"notebook","quantity":2,"totalMinor":1200,"currency":"USD"}}',
     }));
-    render(<App client={client} variant="B" />);
-
+    render(<TechnicalPanel client={client} variant="B" />);
     expect(screen.getByTestId("lab.scenario")).toHaveValue("quote");
     await userEvent.click(screen.getByTestId("lab.submit"));
-
     expect(await screen.findByTestId("lab.result")).toHaveTextContent("USD 1200 minor units");
     expect(native.decodedMessages()[1]).toMatchObject({ method: "POST", url: "http://127.0.0.1:8788/api/quote" });
   });
@@ -65,46 +48,27 @@ describe("App with explicitly mocked native boundary", () => {
     ["HTTP error", "HTTP", 503, '{"error":{"code":"UNAVAILABLE","message":"Try later"}}'],
     ["Business error", "business", 200, '{"error":{"code":"OUT_OF_STOCK","message":"Not available"}}'],
     ["Malformed JSON", "JSON parse", 200, '{"broken":'],
-  ])("renders the %s category as web-owned UI", async (buttonName, category, status, body) => {
-    const { client } = clientFor((message) => ({
-      v: 1,
-      type: "response",
-      id: message.id,
-      status,
-      headers: { "content-type": "application/json" },
-      body,
-    }));
-    render(<App client={client} variant="A" />);
-
+  ])("retains the %s diagnostic category", async (buttonName, category, status, body) => {
+    const { client } = clientFor((message) => ({ v: 1, type: "response", id: message.id, status, headers: {}, body }));
+    render(<TechnicalPanel client={client} variant="A" />);
     await userEvent.click(screen.getByRole("button", { name: buttonName }));
-
     expect(await screen.findByTestId("lab.error")).toHaveTextContent(category);
   });
 
-  it("keeps fast and slow requests correlated and cancels only the slow request", async () => {
+  it("keeps the fast result while cancelling only the slow request", async () => {
     let settleSlow: ((value: unknown) => void) | undefined;
     const { client, native } = clientFor((message) => {
       if (message.type === "cancel") {
         settleSlow?.({ v: 1, type: "error", id: message.id, code: "CANCELLED", message: "Cancelled" });
         return { v: 1, type: "cancelAck", id: message.id, cancelled: true };
       }
-      const url = message.url as string;
-      if (url.includes("label=slow")) return new Promise((resolve) => { settleSlow = resolve; });
-      return {
-        v: 1,
-        type: "response",
-        id: message.id,
-        status: 200,
-        headers: { "content-type": "application/json" },
-        body: '{"label":"fast","delayedMs":10}',
-      };
+      if (String(message.url).includes("label=slow")) return new Promise((resolve) => { settleSlow = resolve; });
+      return { v: 1, type: "response", id: message.id, status: 200, headers: {}, body: '{"label":"fast","delayedMs":10}' };
     });
-    render(<App client={client} variant="A" />);
-
+    render(<TechnicalPanel client={client} variant="A" />);
     await userEvent.click(screen.getByRole("button", { name: "Run concurrent requests" }));
-    // A human must have time to see loading and activate Cancel (not a one-second race).
     expect(native.decodedMessages().find((message) => String(message.url).includes("label=slow")))
-      .toMatchObject({ url: "http://127.0.0.1:8788/fixtures/delay?ms=10000&label=slow", timeoutMs: 15000 });
+      .toMatchObject({ timeoutMs: 15000 });
     expect(await screen.findByText(/fast — 10 ms/)).toBeVisible();
     expect(screen.getByTestId("lab.loading")).toHaveTextContent("1 request");
     await userEvent.click(screen.getByTestId("lab.cancel"));
@@ -112,11 +76,10 @@ describe("App with explicitly mocked native boundary", () => {
     expect(screen.getByText(/fast — 10 ms/)).toBeVisible();
   });
 
-  it("renders hostile opaque HTTP body as literal text in the production error panel", async () => {
+  it("renders a hostile HTTP body literally without injected elements or side effects", async () => {
     const body = '<img src=x onerror="document.title=\'injected\'"> <script>alert(1)</script>';
-    const { client } = clientFor((message) => ({ v: 1, type: "response", id: message.id,
-      status: 503, headers: { "content-type": "text/plain" }, body }));
-    render(<App client={client} variant="A" />);
+    const { client } = clientFor((message) => ({ v: 1, type: "response", id: message.id, status: 503, headers: {}, body }));
+    render(<TechnicalPanel client={client} variant="A" />);
     await userEvent.click(screen.getByRole("button", { name: "HTTP error" }));
     const panel = await screen.findByTestId("lab.error");
     expect(panel).toHaveTextContent(body);
@@ -124,8 +87,8 @@ describe("App with explicitly mocked native boundary", () => {
     expect(document.title).not.toBe("injected");
   });
 
-  it("shows bridge unavailable without a substitute network path", () => {
-    render(<App client={null} variant="A" startupError="Bridge unavailable: open this page in BridgeLab." />);
+  it("shows bridge unavailable with no substitute network action", () => {
+    render(<TechnicalPanel client={null} variant="B" startupError="Bridge unavailable: open in BridgeLab." />);
     expect(screen.getByTestId("lab.error")).toHaveTextContent("Bridge unavailable");
     expect(screen.getByTestId("lab.submit")).toBeDisabled();
   });

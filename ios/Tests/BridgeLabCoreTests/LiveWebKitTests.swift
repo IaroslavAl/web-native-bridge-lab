@@ -111,6 +111,34 @@ final class LiveWebKitTests: XCTestCase {
         XCTAssertEqual(response["body"] as? String, "fresh:provisional")
     }
 
+    func testActualMainFrameHTTP503CancelsFailsAndRecovers() async throws {
+        try await host.load(web + "/before-http-error")
+        let old = try await hello()
+        let failureCount = host.navigation.provisionalFailures
+        let loadEventCount = host.loadEvents.count
+
+        host.startLoad(web + "/main-http-503")
+        try await eventually("actual main-frame HTTP 503 response policy") {
+            self.host.navigation.responsePolicies.contains { $0.status == 503 && $0.policy == .cancel }
+        }
+        try await eventually("correlated HTTP 503 provisional failure") {
+            self.host.navigation.provisionalFailures > failureCount
+        }
+
+        let denied = await host.bridgeReply("{\"v\":1,\"type\":\"hello\"}")
+        XCTAssertEqual(denied["code"] as? String, "ORIGIN_DENIED", "cancelled document never activates")
+        try await host.load(web + "/after-http-error")
+        let fresh = try await hello()
+
+        XCTAssertNotEqual(fresh, old, "recovering navigation obtains a fresh session")
+        XCTAssertEqual(Array(host.loadEvents.dropFirst(loadEventCount)), [
+            .started,
+            .failed(.contentUnavailable),
+            .started,
+            .finished,
+        ], "real WebKit cancellation emits recoverable failure before replacement finish")
+    }
+
     func testLiveCloseAndAdapterDestructionCancelSocketsAndReleaseOwnership() async throws {
         for kind in ["close", "destruction"] {
             if kind == "destruction" { host.close(); host = LiveHost() }
@@ -343,6 +371,7 @@ private final class LiveHost {
     var adapter: WKBridgeAdapter?
     let navigation = LiveNavigation()
     let observer = FrameObserver()
+    var loadEvents: [WKBridgeLoadEvent] = []
     init() {
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = .nonPersistent()
@@ -352,12 +381,15 @@ private final class LiveHost {
         adapter = WKBridgeAdapter(engine: BridgeEngine(executor:executor), policy:.production)
         navigation.adapter = adapter
         view.navigationDelegate = navigation; view.uiDelegate = navigation
-        adapter!.install(on:view) { _ in }
+        adapter!.install(on:view) { [weak self] event in self?.loadEvents.append(event) }
         configuration.userContentController.add(observer, name:"observed")
     }
-    func load(_ url: String) async throws {
+    func startLoad(_ url: String) {
         navigation.finished = false
         view.load(URLRequest(url:URL(string:url)!, cachePolicy:.reloadIgnoringLocalCacheData))
+    }
+    func load(_ url: String) async throws {
+        startLoad(url)
         try await eventually("real didFinish \(url)") { self.navigation.finished }
     }
     func reload() async throws {
@@ -369,6 +401,13 @@ private final class LiveHost {
     }
     func waitJS(_ expression: String) async throws {
         try await eventually("JavaScript \(expression)") { try await self.js("return " + expression) as? Bool == true }
+    }
+    func bridgeReply(_ body: String) async -> [String: Any] {
+        await withCheckedContinuation { continuation in
+            adapter?.receive(.trusted(body)) { value, _ in
+                continuation.resume(returning: value as? [String: Any] ?? [:])
+            }
+        }
     }
     func close() {
         adapter?.close(); adapter=nil; navigation.adapter=nil
@@ -394,6 +433,7 @@ private final class LiveNavigation: NSObject, WKNavigationDelegate, WKUIDelegate
     var finished = false
     var denials: [String] = []
     var provisionalFailures = 0
+    var responsePolicies: [(status: Int?, policy: WKNavigationResponsePolicy)] = []
     private var heldCommit: (() -> Void)?
     func releaseCommit() { heldCommit?(); heldCommit=nil }
     func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
@@ -404,6 +444,15 @@ private final class LiveNavigation: NSObject, WKNavigationDelegate, WKUIDelegate
                 self.denials.append(kind)
                 print("STAGE4 navigation delegate denied: \(kind)")
             }
+            decisionHandler(policy)
+        }
+    }
+    func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+        adapter?.webView(webView, didStartProvisionalNavigation:navigation)
+    }
+    func webView(_ webView: WKWebView, decidePolicyFor response: WKNavigationResponse, decisionHandler: @escaping (WKNavigationResponsePolicy) -> Void) {
+        adapter?.webView(webView, decidePolicyFor:response) { policy in
+            self.responsePolicies.append(((response.response as? HTTPURLResponse)?.statusCode, policy))
             decisionHandler(policy)
         }
     }

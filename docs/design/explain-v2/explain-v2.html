@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Как это работает — уточнённая концепция</title>
+<style>
+:root{--ink:#132f35;--muted:#536d73;--accent:#006d80;--wash:#e4f4f2;--line:#d6e4e5;--paper:#fff;--bg:#edf2f2;--danger:#9f3827;--success:#236245}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}button,input,summary{font:inherit}button,summary{cursor:pointer}button{touch-action:manipulation}button:disabled{cursor:wait}button:focus-visible,summary:focus-visible,input:focus-visible{outline:3px solid #167a91;outline-offset:4px}button:hover:not(:disabled){filter:brightness(.95)}p,h1,h2,h3{margin:0}button svg{width:18px;height:18px}.layout{max-width:1040px;margin:auto;padding:30px 24px;display:grid;grid-template-columns:minmax(0,1fr) 390px;gap:70px;align-items:start}.intro{padding-top:48px}.kicker{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent)}h1{font-size:44px;line-height:1.1;letter-spacing:-.045em;margin:16px 0 22px}.intro>p{color:var(--muted);max-width:400px}.principle{margin-top:36px}.principle p{padding:15px 0;border-bottom:1px solid var(--line);font-size:15px;color:var(--muted)}.principle b{color:var(--ink)}.prototype-note{font-size:13px;color:var(--muted);margin-top:25px}.phone{background:var(--paper);border:1px solid #cbdadc;border-radius:28px;overflow:hidden;box-shadow:0 18px 60px #133c4114}.prototype-strip{background:#fff0c9;color:#64501d;text-align:center;font-size:11px;padding:7px 10px}.appbar{padding:16px 20px 12px;display:flex;justify-content:space-between;align-items:center;gap:8px}.appbar strong{font-size:17px;letter-spacing:-.02em}.appmark{width:25px;height:25px;display:inline-flex;color:var(--accent);vertical-align:middle;margin-right:5px}.appmark svg{width:100%;height:100%}.part{font-size:12px;color:var(--muted);white-space:nowrap}.screen{padding:0 20px 20px}.progress{display:flex;gap:5px;padding-bottom:18px}.progress i{height:4px;background:#e5edee;border-radius:8px;flex:1}.progress i.on{background:var(--accent)}.phase{font-size:11px;font-weight:750;letter-spacing:.08em;color:var(--accent);text-transform:uppercase;margin-bottom:7px}h2{font-size:28px;line-height:1.12;letter-spacing:-.035em;text-wrap:balance}.description{font-size:14px;color:var(--muted);margin-top:10px;min-height:41px}.journey{margin:18px 0 16px;padding:14px 10px 10px;border:1px solid var(--line);border-radius:16px;background:#f9fbfb}.route{display:flex;align-items:center;justify-content:space-between;gap:3px}.node{width:84px;padding:8px 1px 6px;flex:none;text-align:center;border-radius:10px;transition:background .2s,box-shadow .2s}.node svg{display:block;margin:0 auto 6px;width:26px;height:26px;stroke:currentColor}.node b{font-size:12px;display:block}.node small{font-size:10px;display:block;color:var(--muted);margin-top:2px}.node.active{color:var(--accent);background:var(--wash);box-shadow:inset 0 0 0 1px #a7d7d4}.node.failed{color:var(--danger);background:#fff0eb}.link{color:#95a8ad;font-size:19px;width:20px;flex:1;text-align:center}.route.back .link{transform:rotate(180deg)}.route.moving .link{color:var(--accent)}.route-title{border-top:1px solid var(--line);margin:10px 0 0;padding-top:10px;min-height:46px;text-align:center;font-size:12px;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:8px}.dot{width:6px;height:6px;background:var(--accent);border-radius:50%;display:inline-block;flex:none}.moving-dot{animation:pulse .9s ease-in-out infinite}@keyframes pulse{50%{opacity:.25;transform:scale(.65)}}
+.scene{background:var(--wash);border-radius:16px;padding:14px;margin-bottom:14px}.scene-head{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:13px;font-size:12px;font-weight:700}.scene-head small{font-weight:500;color:var(--muted);font-size:11px}.new{padding:3px 7px;background:#006d80;color:white;border-radius:6px;font-size:10px;font-weight:750;letter-spacing:.04em}.product-row{display:flex;align-items:center;gap:14px}.product-icon{background:white;width:60px;height:66px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex:none}.product-icon svg{width:38px;height:44px;color:var(--accent)}.product-copy strong{font-size:17px;display:block;line-height:1.2}.product-copy span{font-size:12px;color:var(--muted);display:block;margin-top:5px}.empty-scene{display:flex;align-items:center;gap:13px;min-height:67px;color:var(--muted);font-size:13px}.placeholder{width:52px;height:59px;border:1px dashed #77a8aa;border-radius:8px;flex:none;display:flex;align-items:center;justify-content:center;font-size:24px;color:#6a999b}.result{padding:12px 13px;border-radius:12px;margin-bottom:13px;background:#edf7f0;color:var(--success);font-size:13px}.result b{display:block;font-size:14px;margin-bottom:3px}.result.error{color:var(--danger);background:#fff0eb}.result.wait{color:#68511f;background:#fff6df}.cta{width:100%;border:none;border-radius:13px;min-height:52px;padding:14px;background:var(--accent);color:white;font-weight:700;display:flex;align-items:center;justify-content:center;gap:10px}.cta:disabled{background:#dfecea;color:#516b70}.next-hint{font-size:11px;text-align:center;color:var(--muted);margin-top:9px}.receipt{border-top:1px solid #b4d7d2;margin-top:13px;padding-top:11px;display:flex;justify-content:space-between;align-items:baseline;font-size:13px}.receipt strong{font-size:24px;letter-spacing:-.03em}.change{display:grid;grid-template-columns:1fr 20px 1fr;align-items:center;gap:8px;margin:14px 0}.change>div{font-size:11px;color:var(--muted)}.change b{display:block;font-size:13px;color:var(--ink);margin-top:3px}.change>span{color:var(--accent)}.stability{padding:12px 20px 14px;background:#f6f9f9;border-top:1px solid var(--line);display:flex;align-items:flex-start;gap:9px}.stability svg{width:18px;height:18px;color:var(--accent);flex:none;margin-top:1px}.stability strong{font-size:12px;display:block}.stability p{font-size:11px;color:var(--muted);margin-top:2px}.tools{margin-top:18px;color:var(--muted);font-size:12px}.tools summary{min-height:44px;display:flex;align-items:center;justify-content:center;list-style:none;text-decoration:underline;text-underline-offset:3px}.toolbody{padding:14px;background:#fff;border:1px solid var(--line);border-radius:12px}.toolbody p{font-size:12px;margin-bottom:10px}.toolbody label{min-height:44px;display:flex;align-items:center;gap:10px}.toolbody input{width:18px;height:18px}.toolbody button{background:#edf2f2;border:1px solid var(--line);padding:10px 13px;border-radius:8px;min-height:44px;color:var(--ink);width:100%;margin-top:8px}.review-label{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:#647c80;margin-top:14px;text-align:center}
+@media(max-width:760px){.layout{display:block;padding:10px;max-width:420px}.intro{display:none}.phone{border-radius:22px;box-shadow:none}.screen{padding:0 18px 16px}.appbar{padding:14px 18px 12px}.stability{padding:11px 18px}.tools{margin-top:8px}}
+@media(max-width:360px){h2{font-size:25px}.node{width:72px}.screen{padding-left:14px;padding-right:14px}.journey{padding-left:7px;padding-right:7px}.node b{font-size:11px}.appbar strong{font-size:16px}}
+@media(max-width:760px){
+ h2{font-size:26px}.description{font-size:13px;line-height:1.4;margin-top:8px;min-height:36px}
+ .progress{padding-bottom:14px}.journey{margin:14px 0 12px;padding:10px 8px 8px}
+ .route-title{min-height:36px;margin-top:8px;padding-top:8px}.scene{padding:12px;margin-bottom:12px}
+ .scene-head{margin-bottom:10px}.result{padding:10px 12px;margin-bottom:11px}
+ .next-hint{margin-top:7px}.stability{padding-top:9px;padding-bottom:10px}
+}
+@media(max-width:360px){
+ h2{font-size:23px}.appbar{padding-top:12px;padding-bottom:10px}.progress{padding-bottom:10px}
+ .node svg{width:22px;height:22px;margin-bottom:4px}.node{padding:5px 1px}
+ .journey{margin-top:11px;margin-bottom:10px}.product-icon{height:56px;width:52px}
+ .scene-head{margin-bottom:8px}.description{min-height:0}.result{font-size:12px}.result b{font-size:13px}
+ .change{margin:10px 0}.receipt{margin-top:10px;padding-top:8px}.cta{min-height:48px;padding:12px}
+}
+body[data-stage="done"] .description,body[data-stage="done"] .next-hint{display:none}
+@media(max-width:360px){
+ body[data-error="true"] .description,body[data-error="true"] .next-hint,body[data-waiting="true"] .description,body[data-waiting="true"] .next-hint{display:none}
+}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="layout">
+<aside class="intro">
+ <p class="kicker">Выбранное направление · версия 2</p>
+ <h1>Видно действие.<br>Понятен смысл.</h1>
+ <p>Приложение объясняет себя: куда отправился запрос, откуда пришёл ответ и как появилась новая возможность.</p>
+ <div class="principle">
+  <p><b>Один маршрут.</b><br>Каталог → новый экран → расчёт заказа.</p>
+  <p><b>Туда и обратно.</b><br>Экран → приложение → сервер → приложение → экран.</p>
+  <p><b>Понятное отличие.</b><br>Веб-экран меняется. Установленное приложение — нет.</p>
+ </div>
+ <p class="prototype-note">Это самостоятельный дизайн-макет. Сеть, данные и версии имитируются. Анимация помогает обсудить объяснение, но не является доказательством работы настоящего приложения.</p>
+</aside>
+<div>
+ <section class="phone" aria-label="Демонстрация приложения">
+  <div class="prototype-strip">ДИЗАЙН-МАКЕТ · действия и данные имитируются</div>
+  <header class="appbar"><strong><span class="appmark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 8h14m-4-4 4 4-4 4M21 16H7m4-4-4 4 4 4"/></svg></span>Как это работает</strong><span class="part" id="part">1 из 3</span></header>
+  <main class="screen" id="screen"></main>
+  <footer class="stability" id="stability"></footer>
+ </section>
+ <details class="tools" id="tools">
+  <summary>Для обсуждения макета: другие состояния</summary>
+  <div class="toolbody">
+   <p>Эти настройки не входят в экран приложения. Они нужны только для проверки дизайна.</p>
+   <label><input type="checkbox" id="errorNext">Следующий запрос завершится ошибкой</label>
+   <label><input type="checkbox" id="published" checked>Новый веб-экран уже опубликован</label>
+   <button id="reset">Начать макет сначала</button>
+  </div>
+ </details>
+</div>
+</div>
+<script>
+'use strict';
+const icons={
+ screen:'<rect x="3" y="4" width="22" height="20" rx="3"/><path d="M3 10h22M7 7h.5m3 0h.5M8 15h12m-12 4h7"/>',
+ app:'<rect x="7" y="2" width="14" height="24" rx="3"/><path d="M12 5h4m-3 17h2"/>',
+ server:'<rect x="3" y="4" width="22" height="8" rx="2"/><rect x="3" y="16" width="22" height="8" rx="2"/><path d="M7 8h.5M7 20h.5M12 8h9m-9 12h9"/>',
+ book:'<rect x="5" y="2" width="19" height="25" rx="3"/><path d="M10 2v25m4-18h6m-6 4h6"/>',
+ check:'<path d="m5 14 6 6L24 7"/>'
+};
+function icon(name){return '<svg viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+icons[name]+'</svg>';}
+let stage='intro',busy=false,version=1,active=-1,reverse=false,routeText='Экран задаёт действие. Приложение связывается с сервером.',error=false,waiting=false;
+const screen=document.querySelector('#screen');
+function route(){return '<section class="journey" aria-label="Путь запроса и ответа"><div class="route '+(reverse?'back ':'')+(busy?'moving':'')+'">'+['screen','app','server'].map((n,i)=>'<div class="node '+(active===i?'active ':'')+(error&&i===2?'failed':'')+'" data-node="'+i+'">'+icon(n)+'<b>'+['Экран','Приложение','Сервер'][i]+'</b><small>'+['показывает','передаёт','отвечает'][i]+'</small></div>'+(i<2?'<span class="link" aria-hidden="true">→</span>':'')).join('')+'</div><p class="route-title" role="status"><span class="dot '+(busy?'moving-dot':'')+'"></span><span>'+routeText+'</span></p></section>';}
+function draw(){
+ const titles={intro:'Новый сценарий — без переустановки',catalog:'Товар получен. Добавим новое?',quote:'Теперь здесь можно рассчитать заказ',done:'Возможность новая. Приложение прежнее.'};
+ const descriptions={intro:'Сначала получим каталог. Затем добавим расчёт заказа, не заменяя приложение.',catalog:'В каталоге пока доступен только просмотр. Загрузим веб-экран с расчётом заказа.',quote:'На обновлённом экране — заказ из двух блокнотов. Узнаем итоговую стоимость.',done:'Раньше — только просмотр товара. Теперь — ещё и расчёт заказа на сервере.'};
+ const primary={intro:'Получить каталог',catalog:waiting?'Проверить ещё раз':'Загрузить новый экран',quote:'Рассчитать заказ',done:'Показать ещё раз'};
+ const phase=stage==='intro'?0:stage==='catalog'?1:2;
+ document.querySelector('#part').textContent=(phase+1)+' из 3';
+ screen.innerHTML='<div class="progress" aria-hidden="true">'+[0,1,2].map(i=>'<i class="'+(i<=phase?'on':'')+'"></i>').join('')+'</div><div class="phase">'+['Проверяем связь','Меняем веб-экран','Пробуем новую возможность'][phase]+'</div><h2>'+titles[stage]+'</h2><p class="description">'+descriptions[stage]+'</p>'+route()+
+ '<section class="scene" aria-label="Текущий веб-сценарий"><div class="scene-head"><span>'+(version===1?'Каталог':'Расчёт заказа')+'</span>'+(version===2?'<span class="new">НОВАЯ ВОЗМОЖНОСТЬ</span>':'<small>Веб-экран 1</small>')+'</div>'+
+ (stage==='intro'?'<div class="empty-scene"><span class="placeholder" aria-hidden="true">…</span><span>Здесь появится товар,<br>который пришлёт сервер.</span></div>':'<div class="product-row"><div class="product-icon">'+icon('book')+'</div><div class="product-copy"><strong>Блокнот для идей</strong><span>'+(version===1?'Можно посмотреть товар':'В заказе · 2 штуки')+'</span></div></div>')+
+ (stage==='done'?'<div class="receipt"><span>Итого за заказ</span><strong>12,00 $</strong></div>':'')+'</section>'+
+ (error?'<div class="result error" role="alert"><b>Сервер не ответил</b>Данные не получены. Проверьте, что сервер запущен, и повторите запрос.</div>':'')+
+ (waiting?'<div class="result wait" role="status"><b>Новый экран ещё не опубликован</b>Пока ничего не изменилось. Дождитесь обновления от ведущего.</div>':'')+
+
+ (stage==='done'?'<div class="change"><div>ИЗМЕНИЛОСЬ<b>Веб-экран и действие</b></div><span>≠</span><div>НЕ МЕНЯЛОСЬ<b>Установленное приложение</b></div></div>':'')+
+ '<button class="cta" id="primary" '+(busy?'disabled':'')+'>'+(busy?'Показываем действие…':error?'Повторить запрос':primary[stage])+'</button>'+
+ '<p class="next-hint">'+(stage==='catalog'?'Ведущий публикует экран. Эта кнопка только загружает его.':stage==='done'?'Меняется веб-сценарий, а не нативные возможности.':'Результат появится здесь, без перехода на другой экран.')+'</p>';
+ document.querySelector('#primary').onclick=action;
+ document.querySelector('#stability').innerHTML=icon('app')+'<div><strong>Приложение · версия 1</strong><p>'+(version===1?'Веб-экран 1 · каталог':'Веб-экран 2 · расчёт заказа. Приложение не заменяли.')+'</p></div>';
+ document.querySelector('#reset').disabled=busy;
+ document.querySelector('#errorNext').disabled=busy;
+ document.querySelector('#published').disabled=busy;
+ document.body.dataset.stage=stage;document.body.dataset.busy=String(busy);document.body.dataset.version=String(version);document.body.dataset.error=String(error);document.body.dataset.waiting=String(waiting);
+}
+function sleep(ms){return new Promise(resolve=>setTimeout(resolve,ms));}
+async function request(){
+ const fail=document.querySelector('#errorNext').checked;
+ document.querySelector('#errorNext').checked=false;
+ busy=true;error=false;waiting=false;
+ const caption=stage==='intro'?'список товаров':'стоимость заказа';
+ const phases=[
+  [0,false,'Экран просит '+caption+'.'],
+  [1,false,'Приложение отправляет запрос серверу.'],
+  [2,false,stage==='intro'?'Сервер готовит список товаров.':'Сервер рассчитывает заказ.'],
+  [1,true,'Приложение получает ответ сервера.'],
+  [0,true,'Экран показывает полученный результат.']
+ ];
+ for(let i=0;i<phases.length;i++){
+  [active,reverse,routeText]=phases[i];draw();await sleep(650);
+  if(i===2&&fail){busy=false;error=true;active=2;reverse=false;routeText='Ответ не получен. Успешного результата нет.';draw();return;}
+ }
+ stage=stage==='intro'?'catalog':'done';busy=false;active=0;reverse=true;routeText='Ответ вернулся на экран. Действие завершено.';draw();
+}
+async function update(){
+ busy=true;error=false;waiting=false;active=0;reverse=false;
+ routeText='Загружаем веб-экран. Это не запрос расчёта заказа.';draw();await sleep(900);
+ busy=false;
+ if(!document.querySelector('#published').checked){waiting=true;active=-1;routeText='Доступен прежний веб-экран. Приложение не изменилось.';draw();return;}
+ version=2;stage='quote';active=0;routeText='Новый веб-экран загружен. Теперь отправим заказ.';draw();
+}
+function reset(){if(busy)return;stage='intro';version=1;active=-1;reverse=false;error=false;waiting=false;routeText='Экран задаёт действие. Приложение связывается с сервером.';draw();}
+function action(){if(busy)return;if(stage==='done')reset();else if(stage==='catalog')void update();else void request();}
+document.querySelector('#reset').onclick=reset;
+draw();
+</script>
+</body>
+</html>

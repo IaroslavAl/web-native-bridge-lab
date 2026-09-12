@@ -14,6 +14,13 @@ import uuid
 
 ROOT = Path(__file__).resolve().parent.parent
 APP_ID = 'lab.webnative.BridgeLab'
+SIMULATOR_MODES = {
+    'simulator-stage1': {},
+    'simulator-stage2-outcomes': {'stage2': True},
+    'simulator-stage3-trust-limits': {'stage3': True},
+    'simulator-stage5-production-ux': {'stage5': True},
+    'simulator-explain-v2': {'explain': True},
+}
 
 
 def manifest(root):
@@ -96,6 +103,71 @@ def require_stage4_events(events):
             assert event.get('authorization') is False, f'ambient authorization: {event.get("tag")}'
 
 
+def stage4_test_selection():
+    """Keep Explain's asset-dependent layout suite out of the Stage4 fixture contract."""
+    return ('-skip-testing:BridgeLabTests/ExplainLayoutTests',)
+
+
+def require_stage4_summary(summary):
+    """Fail closed unless Stage4 ran the exact 44 regression + 12 live contract."""
+    expected = {
+        'passedTests': 56,
+        'totalTestCount': 56,
+        'failedTests': 0,
+        'skippedTests': 0,
+        'expectedFailures': 0,
+    }
+    for field, value in expected.items():
+        assert field in summary, f'webkit summary missing {field}'
+        assert summary[field] == value, (
+            f'webkit {field}={summary[field]}, expected {value} for 44 regression + 12 live tests'
+        )
+    return summary
+
+
+def explain_control_names():
+    """Closed static-port coordination contract for the Explain runtime UI test."""
+    return (
+        'explain-enabled', 'api-failure-ready', 'api-failure-observed', 'api-recovery-observed',
+        'asset-failure-ready', 'asset-failure-observed',
+        'large-text-ready', 'matrix-observed',
+    )
+
+
+def require_explain_events(text):
+    """Require the real demo operations while rejecting hidden extra successes."""
+    lines = text.splitlines()
+    catalog = 'GET /api/catalog 200 tag=scenario-a'
+    quote = 'POST /api/quote 200 tag=scenario-b'
+    actual = {'catalog': lines.count(catalog), 'quote': lines.count(quote)}
+    assert actual == {'catalog': 1, 'quote': 4}, f'Explain demo events: {actual}'
+    return actual
+
+
+def web_entry(files):
+    """Return the one content-hashed Vite entry from a built manifest."""
+    entries = [path for path in files if path.startswith('assets/index-') and path.endswith('.js')]
+    assert len(entries) == 1, f'expected one built JavaScript entry, found {entries}'
+    return entries[0]
+
+
+def move_entry_for_fault(entry, hidden, ownership):
+    """Register restoration ownership before the destructive move can be interrupted."""
+    assert ownership['paths'] is None, 'missing-entry restoration already registered'
+    ownership['paths'] = (entry, hidden)
+    entry.replace(hidden)
+
+
+def restore_entry_after_fault(ownership):
+    paths = ownership['paths']
+    if paths is None:
+        return
+    entry, hidden = paths
+    if hidden.exists():
+        hidden.replace(entry)
+    ownership['paths'] = None
+
+
 def require_free_ports():
     sockets = []
     try:
@@ -111,6 +183,18 @@ def require_free_ports():
     finally:
         for sock in sockets:
             sock.close()
+
+
+def verify_released_ports(start_attempted, cleanup_errors, checker=require_free_ports):
+    """Record the final fixed-port invariant after all owned service stop attempts."""
+    if not start_attempted:
+        return None
+    try:
+        checker()
+    except Exception as error:
+        cleanup_errors.append(f'fixed-port release check failed: {error}')
+        return False
+    return True
 
 
 class Run:
@@ -136,6 +220,13 @@ class Run:
         child = subprocess.Popen(args, cwd=ROOT, env=env or self.env, stdout=log,
                                  stderr=subprocess.STDOUT, start_new_session=True)
         self.children.append(child)
+        return child
+
+    def spawn_owned_service(self, args, log, ownership, env=None):
+        """Make fixed-port cleanup proof applicable before a spawn can be interrupted."""
+        ownership['start_attempted'] = True
+        child = self.spawn(args, log, env)
+        ownership['created'] = True
         return child
 
     def stop_child(self, child):
@@ -188,6 +279,24 @@ class Run:
             raise RuntimeError(f'{name} exit {code}; see {self.out / record["log"]}')
         return code
 
+    def command_retry(self, name, args, attempts=3, pause=0.2):
+        """Retry a documented transient exit 1 while preserving every real attempt."""
+        for index in range(attempts):
+            attempt_name = name if index == 0 else f'{name}-retry-{index}'
+            if self.command(attempt_name, args, allowed=(0, 1)) == 0:
+                return
+            if index + 1 < attempts:
+                time.sleep(pause)
+        raise RuntimeError(f'{name} remained unavailable after {attempts} recorded attempts')
+
+    def command_lab_start(self, name, args, ownership):
+        """Make a unique lab state eligible for cleanup before start can be interrupted."""
+        ownership['start_attempted'] = True
+        ownership['running'] = True
+        code = self.command(name, args)
+        ownership['created'] = True
+        return code
+
     def web(self, variant):
         self.command('web-build-' + variant, ['npm', '--prefix', 'web', 'run', 'build:' + variant.lower(),
                      '--', '--outDir', self.out / 'web', '--emptyOutDir'])
@@ -223,28 +332,134 @@ class Run:
         self.command('diff-check', ['git', 'diff', '--check'])
         save(self.out / 'result.json', {'unit': 'PASS', 'final_acceptance': False})
 
-    def simulator(self, stage2=False, stage3=False, stage5=False):
+    def simulator(self, stage2=False, stage3=False, stage5=False, explain=False):
         require_free_ports() # before creating resources; never steal existing lab services
         udid = None
-        started = False
+        lab_ownership = {'running': False, 'start_attempted': False, 'created': False}
         tester = None
         test_log = None
+        static_web = None
+        static_log = None
+        missing_entry = {'paths': None}
         lab = ['node', str(ROOT / 'scripts/lab')]
         options = ['--state-dir', str(self.out / 'lab'), '--web-root', str(self.out / 'web')]
         try:
             runtimes = json.loads(self.capture(['xcrun', 'simctl', 'list', 'runtimes', '-j']))['runtimes']
             runtime = next(r for r in runtimes if r['isAvailable'] and r['name'].startswith('iOS'))
             device = next(d for d in runtime['supportedDeviceTypes'] if d['productFamily'] == 'iPhone')
-            udid = self.capture(['xcrun', 'simctl', 'create', 'PER85-Stage1-' + uuid.uuid4().hex[:8], device['identifier'], runtime['identifier']])
+            prefix = 'PER85-Explain-' if explain else 'PER85-Stage1-'
+            udid = self.capture(['xcrun', 'simctl', 'create', prefix + uuid.uuid4().hex[:8], device['identifier'], runtime['identifier']])
             save(self.out / 'simulator.json', {'udid': udid, 'runtime': runtime['identifier'], 'device': device['identifier']})
             self.command('boot', ['xcrun', 'simctl', 'boot', udid])
             self.command('boot-ready', ['xcrun', 'simctl', 'bootstatus', udid, '-b'])
             base = ['xcodebuild', '-project', 'ios/BridgeLab.xcodeproj', '-destination', 'platform=iOS Simulator,id=' + udid,
                     '-derivedDataPath', str(self.out / 'derived'), 'CODE_SIGNING_ALLOWED=NO', '-parallel-testing-enabled', 'NO']
+            if explain:
+                import urllib.request
+
+                a_web = self.web('A')
+                layout_control = self.out / 'web/stage1'
+                layout_control.mkdir()
+                (layout_control / 'layout-b-ready.txt').write_text('actual A result ready for replacement')
+                self.command_lab_start('lab-start', lab + ['start'] + options, lab_ownership)
+                self.command_retry('lab-status', lab + ['status'] + options)
+                layout = base + ['-scheme', 'BridgeLab']
+                layout_a_args = layout + [
+                    '-only-testing:BridgeLabTests/ExplainLayoutTests/testVariantARequiredViewportsAndRealStates',
+                    '-resultBundlePath', self.out / 'layout-a-default.xcresult', 'test']
+                layout_record = {'name': 'layout-a-default', 'argv': [str(arg) for arg in layout_a_args],
+                                 'log': 'layout-a-default.log'}
+                self.commands.append(layout_record); save(self.out / 'commands.json', self.commands)
+                test_log = (self.out / 'layout-a-default.log').open('w')
+                tester = self.spawn(layout_a_args, test_log)
+                try:
+                    server_log = self.out / 'lab/server.log'
+                    deadline = time.monotonic() + 180
+                    while 'GET /stage1/layout-b-ready.txt 200' not in server_log.read_text():
+                        if tester.poll() is not None:
+                            raise RuntimeError(f'layout A exited {tester.returncode} before B replacement')
+                        if time.monotonic() >= deadline:
+                            raise RuntimeError('layout A did not request real B replacement')
+                        time.sleep(0.2)
+                    b_transition_web = self.web('B')
+                    layout_control.mkdir()
+                    (layout_control / 'layout-b-release.txt').write_text('actual B assets served')
+                    code = tester.wait(timeout=900)
+                    layout_record['exit_code'] = code
+                    save(self.out / 'commands.json', self.commands)
+                    assert code == 0, f'layout-a-default exit_code={code}; see layout-a-default.log'
+                finally:
+                    self.stop_child(tester)
+                    tester = None
+                    test_log.close(); test_log = None
+                assert web_entry(a_web) != web_entry(b_transition_web), 'coordinated A/B entry paths match'
+
+                a_web = self.web('A')
+                self.command('reduce-motion-on', ['xcrun', 'simctl', 'spawn', udid, 'defaults', 'write',
+                             'com.apple.Accessibility', 'ReduceMotionEnabled', '-bool', 'YES'])
+                self.command('reduce-motion-notify', ['xcrun', 'simctl', 'spawn', udid, 'notifyutil', '-p',
+                             'com.apple.accessibility.api'])
+                self.command('layout-a-assistive', layout + [
+                    '-only-testing:BridgeLabTests/ExplainLayoutTests/testReducedMotionAndEnlargedTextRemainUsable',
+                    '-resultBundlePath', self.out / 'layout-a-assistive.xcresult', 'test'], timeout=900)
+                b_layout_web = self.web('B')
+                self.command('layout-b', layout + [
+                    '-only-testing:BridgeLabTests/ExplainLayoutTests/testVariantBRequiredViewportsColdResultAndRepeat',
+                    '-resultBundlePath', self.out / 'layout-b.xcresult', 'test'], timeout=900)
+                assert web_entry(a_web) != web_entry(b_layout_web), 'actual A/B entry paths match'
+
+                self.command('layout-api-fault-stop-lab', lab + ['stop'] + options)
+                lab_ownership['running'] = False
+                require_free_ports()
+                static_args = [sys.executable, '-m', 'http.server', '8787', '--bind', '127.0.0.1',
+                               '--directory', str(self.out / 'web')]
+                static_record = {'name': 'layout-static-web-only', 'argv': static_args,
+                                 'log': 'layout-static-web-only.log'}
+                self.commands.append(static_record); save(self.out / 'commands.json', self.commands)
+                static_log = (self.out / 'layout-static-web-only.log').open('w')
+                static_web = self.spawn_owned_service(
+                    static_args, static_log, lab_ownership, {**self.env, 'PYTHONUNBUFFERED': '1'}
+                )
+                static_record['pid'] = static_web.pid
+                save(self.out / 'commands.json', self.commands)
+                deadline = time.monotonic() + 10
+                while True:
+                    assert static_web.poll() is None, 'layout static-only server exited before readiness'
+                    try:
+                        with urllib.request.urlopen('http://127.0.0.1:8787/', timeout=1) as response:
+                            assert response.status == 200
+                        break
+                    except OSError:
+                        if time.monotonic() >= deadline:
+                            raise RuntimeError('layout static-only readiness deadline')
+                        time.sleep(0.05)
+                with socket.socket() as probe:
+                    assert probe.connect_ex(('127.0.0.1', 8788)) != 0, 'API available during retry layout proof'
+                self.command('layout-b-retry', layout + [
+                    '-only-testing:BridgeLabTests/ExplainLayoutTests/testVariantBRetryRequiredViewports',
+                    '-resultBundlePath', self.out / 'layout-b-retry.xcresult', 'test'], timeout=900)
+                self.stop_child(static_web)
+                static_record['exit_code'] = static_web.returncode
+                static_web = None
+                static_log.close(); static_log = None
+                save(self.out / 'commands.json', self.commands)
+                require_free_ports()
+                self.command_lab_start('layout-api-recovery-start-lab', lab + ['start'] + options, lab_ownership)
+                self.command_retry('layout-api-recovery-status', lab + ['status'] + options)
+
+                for name in ('layout-a-default', 'layout-a-assistive', 'layout-b', 'layout-b-retry'):
+                    self.command(name + '-attachments', ['xcrun', 'xcresulttool', 'export', 'attachments',
+                                 '--path', self.out / (name + '.xcresult'), '--output-path', self.out / (name + '-attachments')])
+                self.command('reduce-motion-off', ['xcrun', 'simctl', 'spawn', udid, 'defaults', 'write',
+                             'com.apple.Accessibility', 'ReduceMotionEnabled', '-bool', 'NO'])
+                a_web = self.web('A')
             # Unit tests inject bundles into their host app. Keep that build tree separate
             # so the A/B application is the uninstrumented production shell.
             unit_base = [str(self.out / 'unit-derived') if arg == str(self.out / 'derived') else arg for arg in base]
-            self.command('ios-simulator-tests', unit_base + ['-scheme', 'BridgeLab', '-skip-testing:BridgeLabTests/LiveWebKitTests', '-resultBundlePath', self.out / 'unit.xcresult', 'test'], timeout=900)
+            self.command('ios-simulator-tests', unit_base + ['-scheme', 'BridgeLab',
+                         '-skip-testing:BridgeLabTests/LiveWebKitTests',
+                         '-skip-testing:BridgeLabTests/ExplainLayoutTests',
+                         '-resultBundlePath', self.out / 'unit.xcresult', 'test'], timeout=900)
             self.command('acceptance-build', base + ['-scheme', 'BridgeLabAcceptance', 'build-for-testing'], timeout=600)
             app = self.out / 'derived/Build/Products/Debug-iphonesimulator/BridgeLab.app'
             # Simulator replacement installs can retain the earlier unit-host PlugIns.
@@ -252,31 +467,38 @@ class Run:
             self.command('remove-unit-host', ['xcrun', 'simctl', 'uninstall', udid, APP_ID])
             self.command('install', ['xcrun', 'simctl', 'install', udid, app])
             self.installed(udid, 'installed-before-ui-runner')
-            a_web = self.web('A')
+            if not explain:
+                a_web = self.web('A')
             control = self.out / 'web/stage1'
             control.mkdir()
-            for name in ('ready', 'a-observed', 'b-observed'):
+            for name in ('ready', 'a-observed', 'b-observed') + (explain_control_names() if explain else ()):
                 (control / (name + '.txt')).write_text(name)
-            started = True
-            self.command('lab-start', lab + ['start'] + options)
-            self.command('lab-status', lab + ['status'] + options)
+            if not lab_ownership['running']:
+                self.command_lab_start('lab-start', lab + ['start'] + options, lab_ownership)
+                self.command_retry('lab-status', lab + ['status'] + options)
             args = base + ['-scheme', 'BridgeLabAcceptance', '-resultBundlePath', str(self.out / 'ab.xcresult'), 'test-without-building']
             record = {'name': 'ab-ui', 'argv': args, 'log': 'ab-ui.log'}
             self.commands.append(record); save(self.out / 'commands.json', self.commands)
             test_log = (self.out / 'ab-ui.log').open('w')
-            tester = self.spawn(args, test_log)
             server_log = self.out / 'lab/server.log'
+            explain_offset = len(server_log.read_text()) if explain else 0
+            tester = self.spawn(args, test_log)
 
-            def wait_event(name):
+            def wait_log_event(name, log_path):
                 deadline = time.monotonic() + 180
                 needle = 'GET /stage1/' + name + '.txt 200'
+                static_needle = 'GET /stage1/' + name + '.txt HTTP/'
                 while time.monotonic() < deadline:
-                    if needle in server_log.read_text():
+                    text = log_path.read_text()
+                    if needle in text or (static_needle in text and '" 200 ' in text):
                         return
                     if tester.poll() is not None:
                         raise RuntimeError(f'UI runner exited {tester.returncode} before {name}; see ab-ui.log')
                     time.sleep(0.2)
                 raise RuntimeError(f'UI milestone missing: {name}; see ab-ui.log')
+
+            def wait_event(name):
+                wait_log_event(name, server_log)
 
             wait_event('ready')
             before = self.installed(udid, 'installed-before-A')
@@ -291,6 +513,9 @@ class Run:
             control.mkdir()
             (control / 'b-observed.txt').write_text('marker')
             (control / 'b-release.txt').write_text('release')
+            if explain:
+                for name in explain_control_names():
+                    (control / (name + '.txt')).write_text(name)
             wait_event('b-observed')
             after_b = self.installed(udid, 'installed-after-B')
             require_same_app(before, after_b)
@@ -310,6 +535,74 @@ class Run:
                 for name in ('production-ux-enabled', 'matrix-observed'):
                     (control / (name + '.txt')).write_text(name)
             (control / 'finish.txt').write_text('release')
+            if explain:
+                fault_evidence = {'static_control_port': 8787, 'business_api_port': 8788}
+                wait_event('api-failure-ready')
+                self.command('api-fault-stop-lab', lab + ['stop'] + options)
+                lab_ownership['running'] = False
+                require_free_ports()
+                static_args = [sys.executable, '-m', 'http.server', '8787', '--bind', '127.0.0.1',
+                               '--directory', str(self.out / 'web')]
+                static_record = {'name': 'static-web-only', 'argv': static_args,
+                                 'log': 'static-web-only.log'}
+                self.commands.append(static_record); save(self.out / 'commands.json', self.commands)
+                static_log = (self.out / 'static-web-only.log').open('w')
+                static_web = self.spawn_owned_service(
+                    static_args, static_log, lab_ownership, {**self.env, 'PYTHONUNBUFFERED': '1'}
+                )
+                static_record['pid'] = static_web.pid
+                save(self.out / 'commands.json', self.commands)
+                deadline = time.monotonic() + 10
+                while True:
+                    assert static_web.poll() is None, 'owned static-only server exited before readiness'
+                    try:
+                        with urllib.request.urlopen('http://127.0.0.1:8787/stage1/api-failure-ready.txt', timeout=1) as response:
+                            assert response.status == 200
+                        break
+                    except OSError:
+                        if time.monotonic() >= deadline:
+                            raise RuntimeError('static-only readiness deadline')
+                        time.sleep(0.05)
+                with socket.socket() as probe:
+                    assert probe.connect_ex(('127.0.0.1', 8788)) != 0, 'business API remained available during fault'
+                fault_evidence['static_only_pid'] = static_web.pid
+                (control / 'api-failure-release.txt').write_text('API unavailable; static production assets only')
+                wait_log_event('api-failure-observed', self.out / 'static-web-only.log')
+                self.stop_child(static_web)
+                static_record['exit_code'] = static_web.returncode
+                static_web = None
+                static_log.close(); static_log = None
+                save(self.out / 'commands.json', self.commands)
+                require_free_ports()
+                self.command_lab_start('api-recovery-start-lab', lab + ['start'] + options, lab_ownership)
+                self.command_retry('api-recovery-status', lab + ['status'] + options)
+                (control / 'api-recovery-release.txt').write_text('owned API restored')
+                wait_event('api-recovery-observed')
+
+                wait_event('asset-failure-ready')
+                entry = self.out / 'web' / web_entry(b_web)
+                hidden = entry.with_name(entry.name + '.missing')
+                assert entry.is_file() and not hidden.exists(), 'built B entry unavailable for fault'
+                move_entry_for_fault(entry, hidden, missing_entry)
+                fault_evidence['missing_entry'] = entry.relative_to(self.out / 'web').as_posix()
+                (control / 'asset-failure-release.txt').write_text('entry removed after complete B build')
+                wait_event('asset-failure-observed')
+                restore_entry_after_fault(missing_entry)
+                assert manifest(self.out / 'web')[web_entry(b_web)] == b_web[web_entry(b_web)], 'restored B entry differs'
+                (control / 'asset-recovery-release.txt').write_text('exact B entry restored')
+
+                wait_event('large-text-ready')
+                self.command('installed-content-size', ['xcrun', 'simctl', 'ui', udid, 'content_size',
+                             'accessibility-extra-large'])
+                (control / 'large-text-release.txt').write_text('owned Simulator enlarged text enabled')
+                wait_event('matrix-observed')
+                require_same_app(before, self.installed(udid, 'installed-after-explain'))
+                explain_log = server_log.read_text()[explain_offset:]
+                (self.out / 'explain-backend.log').write_text(explain_log)
+                fault_evidence['events'] = require_explain_events(explain_log)
+                fault_evidence['installed_content_size'] = self.capture(
+                    ['xcrun', 'simctl', 'ui', udid, 'content_size'])
+                save(self.out / 'explain-faults.json', fault_evidence)
             if stage5:
                 wait_event('matrix-observed')
                 require_same_app(before, self.installed(udid, 'installed-after-production-ux'))
@@ -348,12 +641,24 @@ class Run:
                 assert summary['failedTests'] == 0, f'{name} failedTests={summary["failedTests"]}'
                 assert summary['passedTests'] > 0, f'{name} passedTests=0'
                 assert summary['skippedTests'] == 0, f'{name} skippedTests={summary["skippedTests"]}'
+            if explain:
+                for name in ('layout-a-default', 'layout-a-assistive', 'layout-b', 'layout-b-retry'):
+                    summary = json.loads(self.capture(['xcrun', 'xcresulttool', 'get', 'test-results', 'summary',
+                                                       '--path', str(self.out / (name + '.xcresult')), '--format', 'json']))
+                    save(self.out / (name + '-summary.json'), summary)
+                    assert summary['failedTests'] == 0, f'{name} failedTests={summary["failedTests"]}'
+                    assert summary['passedTests'] == 1, f'{name} passedTests={summary["passedTests"]}'
+                    assert summary['skippedTests'] == 0, f'{name} skippedTests={summary["skippedTests"]}'
             result = {'stage1': 'PASS', 'final_acceptance': False, 'udid': udid,
                  'executable_sha256': before['files']['BridgeLab'], 'manifest_sha256': hashlib.sha256(json.dumps(before['files'], sort_keys=True).encode()).hexdigest(),
                  'installed_files': len(before['files']), 'same_container': True, 'same_manifest': True,
                  'web_A': a_web, 'web_B': b_web}
             if stage5:
                 result['stage5_production_ux'] = 'PASS'
+            if explain:
+                result['explain_v2_runtime'] = 'PASS'
+                result['layout_component_tests'] = 4
+                result['faults'] = fault_evidence
             if stage2:
                 result['stage2_outcomes'] = 'PASS'
                 result['stage2_events'] = events
@@ -364,17 +669,33 @@ class Run:
                 result['full_security_lifecycle_matrix'] = 'PENDING'
         finally:
             cleanup_errors = []
+            service_cleanup_succeeded = True
             if tester is not None:
                 self.stop_child(tester)
             if test_log is not None:
                 test_log.close()
-            if started:
+            if missing_entry['paths'] is not None:
                 try:
-                    self.command('lab-stop', lab + ['stop'] + options)
-                    require_free_ports()
-                    self.command('lab-stopped-status', lab + ['status'] + options, allowed=(1,))
+                    restore_entry_after_fault(missing_entry)
                 except Exception as error:
                     cleanup_errors.append(str(error))
+            if static_web is not None:
+                try:
+                    self.stop_child(static_web)
+                except Exception as error:
+                    service_cleanup_succeeded = False
+                    cleanup_errors.append(str(error))
+            if static_log is not None:
+                static_log.close()
+            if lab_ownership['running']:
+                try:
+                    self.command('lab-stop', lab + ['stop'] + options)
+                    lab_ownership['running'] = False
+                    self.command('lab-stopped-status', lab + ['status'] + options, allowed=(1,))
+                except Exception as error:
+                    service_cleanup_succeeded = False
+                    cleanup_errors.append(str(error))
+            ports_released = verify_released_ports(lab_ownership['start_attempted'], cleanup_errors)
             if udid:
                 try:
                     states = json.loads(self.capture(['xcrun', 'simctl', 'list', 'devices', '-j']))['devices']
@@ -387,7 +708,8 @@ class Run:
                 except Exception as error:
                     cleanup_errors.append(str(error))
             save(self.out / 'cleanup.json', {'errors': cleanup_errors, 'owned_simulator_removed': bool(udid) and not cleanup_errors,
-                                            'owned_services_stopped': started and not cleanup_errors})
+                                            'owned_services_stopped': lab_ownership['created'] and service_cleanup_succeeded and ports_released is True,
+                                            'ports_released': ports_released})
             if cleanup_errors:
                 raise RuntimeError('cleanup failed: ' + '; '.join(cleanup_errors))
         # Never emit a successful result if cleanup failed.
@@ -426,12 +748,10 @@ class Run:
             self.command('webkit-tests', ['xcodebuild', '-project', 'ios/BridgeLab.xcodeproj', '-scheme', 'BridgeLab',
                          '-destination', 'platform=iOS Simulator,id=' + udid, '-derivedDataPath', self.out / 'derived',
                          '-resultBundlePath', self.out / 'webkit.xcresult', 'CODE_SIGNING_ALLOWED=NO',
-                         '-parallel-testing-enabled', 'NO', 'test'], timeout=900)
+                         '-parallel-testing-enabled', 'NO', *stage4_test_selection(), 'test'], timeout=900)
             summary = json.loads(self.capture(['xcrun', 'xcresulttool', 'get', 'test-results', 'summary', '--path', str(self.out / 'webkit.xcresult'), '--format', 'json']))
             save(self.out / 'webkit-summary.json', summary)
-            assert summary['failedTests'] == 0, f'webkit failedTests={summary["failedTests"]}'
-            assert summary['skippedTests'] == 0, f'webkit skippedTests={summary["skippedTests"]}'
-            assert summary['passedTests'] == 53, f'webkit passedTests={summary["passedTests"]}, expected 42 regression + 11 live tests'
+            require_stage4_summary(summary)
             require_stage4_events(json.loads((self.out / 'events.json').read_text()))
         finally:
             if fixture:
@@ -460,7 +780,7 @@ class Run:
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('mode', choices=['unit', 'simulator-stage1', 'simulator-stage2-outcomes', 'simulator-stage3-trust-limits', 'simulator-stage4-webkit-privacy', 'simulator-stage5-production-ux'])
+    parser.add_argument('mode', choices=['unit', *SIMULATOR_MODES, 'simulator-stage4-webkit-privacy'])
     args = parser.parse_args()
     def interrupted(signum, frame):
         raise KeyboardInterrupt(f'signal {signum}')
@@ -473,7 +793,7 @@ def main():
         elif args.mode == 'simulator-stage4-webkit-privacy':
             run.webkit()
         else:
-            run.simulator(stage2=args.mode == 'simulator-stage2-outcomes', stage3=args.mode == 'simulator-stage3-trust-limits', stage5=args.mode == 'simulator-stage5-production-ux')
+            run.simulator(**SIMULATOR_MODES[args.mode])
         print(f'PASS {args.mode}; not final product acceptance. Evidence: {run.out}', flush=True)
     except BaseException as error:
         save(run.out / 'failure.json', {'error': str(error), 'type': type(error).__name__})

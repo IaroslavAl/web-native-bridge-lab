@@ -1,6 +1,6 @@
 // Opt-in adversarial wire tests in the real installed shell, never a native seam.
 // Intentionally bypass TS client validation to exercise WebKit/native validation.
-import { createWebKitNativeBoundary } from "../src/bridgeClient";
+import { createWebKitNativeBoundary } from "../src/bridge/WebKitNativeBoundary";
 
 const bytes = (value: string) => new TextEncoder().encode(value).length;
 const pause = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));

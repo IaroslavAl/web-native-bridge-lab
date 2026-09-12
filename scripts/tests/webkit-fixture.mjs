@@ -59,6 +59,10 @@ function handle(req, res) {
   if (url.pathname === '/vectors/escaped') {
     res.writeHead(200, {'content-type':'text/plain'}); res.end('"\\\n'.repeat(50000)); return;
   }
+  if (url.pathname === '/main-http-503') {
+    res.writeHead(503, {'content-type':'text/html', 'cache-control':'no-store'});
+    res.end('<!doctype html><title>Unavailable</title>'); return;
+  }
   if (url.pathname === '/vectors/trickle') {
     res.writeHead(200, {'content-type':'text/plain'}); res.flushHeaders();
     let chunks = 0;

@@ -1,12 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   BridgeClient,
-  BridgeClientError,
-  TransportError,
-  createWebKitNativeBoundary,
-  type BridgeResponse,
-} from "./bridgeClient";
-import { MockNativeBoundary } from "./test/MockNativeBoundary";
+} from "./BridgeClient";
+import { BridgeClientError, TransportError, type BridgeResponse } from "./protocol";
+import { createWebKitNativeBoundary } from "./WebKitNativeBoundary";
+import { MockNativeBoundary } from "../test/MockNativeBoundary";
 
 const session = "0123456789abcdef0123456789abcdef";
 const MAX_RESPONSE_BODY_BYTES = 1_048_576;

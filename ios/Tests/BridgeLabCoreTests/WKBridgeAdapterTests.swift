@@ -44,17 +44,202 @@ final class WKBridgeAdapterTests: XCTestCase {
         XCTAssertEqual(cancelAllCount, 0)
     }
 
-    func testProvisionalFailureRevokesDocument() async {
+    func testProvisionalFailureRevokesDocumentAndShellRecoversSelectedClosedSurface() async throws {
         let executor = AdapterExecutor()
         let adapter = makeAdapter(executor: executor)
         _ = await activate(adapter)
 
         adapter.provisionalNavigationFailed()
         let denied = await reply(from: adapter, incoming: .trusted(helloJSON))
+        await executor.waitForCancelAllCount(1)
         let cancelAllCount = await executor.cancelAllCount
 
         XCTAssertEqual(denied["code"] as? String, "ORIGIN_DENIED")
         XCTAssertEqual(cancelAllCount, 1)
+
+        assertClosedSurfaceDestinationsAndNativeIdentity()
+        assertTypedLoadEventsDoNotFinishRevokedDocument()
+        try await assertSupersededFailureDoesNotRevokeReplacementDocument()
+        assertShellSelectionFailureRetryReturnAndInteraction()
+        try await assertMainFrameHTTPResponseRequires2xxWhileSubframesRemainAllowed()
+    }
+
+    private func assertClosedSurfaceDestinationsAndNativeIdentity() {
+        XCTAssertEqual(WebSurface.demo.url.absoluteString, "http://127.0.0.1:8787/")
+        XCTAssertEqual(WebSurface.diagnostics.url.absoluteString, "http://127.0.0.1:8787/?mode=diagnostics")
+        XCTAssertEqual(WebSurface.allCases, [.demo, .diagnostics])
+
+        let available = NativeVersionIdentity(infoDictionary: [
+            "CFBundleShortVersionString": "1.2",
+            "CFBundleVersion": "34"
+        ])
+        let unavailable = NativeVersionIdentity(infoDictionary: nil)
+        XCTAssertEqual(available.displayText, "Версия приложения 1.2 · сборка 34")
+        XCTAssertEqual(unavailable.displayText, "Версия приложения недоступна · сборка недоступна")
+    }
+
+    private func assertTypedLoadEventsDoNotFinishRevokedDocument() {
+        let executor = AdapterExecutor()
+        let adapter = makeAdapter(executor: executor)
+        let webView = WKWebView(frame: .zero, configuration: WKWebViewConfiguration())
+        var events: [WKBridgeLoadEvent] = []
+        adapter.install(on: webView) { events.append($0) }
+        let finishedNavigation = webView.load(URLRequest(url: trustedURL))!
+        webView.stopLoading()
+
+        XCTAssertEqual(adapter.navigationPolicy(for: trustedURL, targetIsMainFrame: true), .allow)
+        adapter.webView(webView, didStartProvisionalNavigation: finishedNavigation)
+        adapter.navigationDidCommit(url: trustedURL)
+        adapter.webView(webView, didFinish: finishedNavigation)
+        XCTAssertEqual(events, [.started, .finished])
+
+        let failedNavigation = webView.load(URLRequest(url: trustedURL))!
+        webView.stopLoading()
+        XCTAssertEqual(adapter.navigationPolicy(for: trustedURL, targetIsMainFrame: true), .allow)
+        adapter.webView(webView, didStartProvisionalNavigation: failedNavigation)
+        adapter.provisionalNavigationFailed()
+        XCTAssertEqual(events, [.started, .finished, .started, .failed(.contentUnavailable)])
+
+        adapter.webView(webView, didFinish: failedNavigation)
+        XCTAssertEqual(events, [.started, .finished, .started, .failed(.contentUnavailable)],
+                       "a revoked failed document cannot later publish finish")
+    }
+
+    private func assertSupersededFailureDoesNotRevokeReplacementDocument() async throws {
+        let executor = AdapterExecutor()
+        let adapter = makeAdapter(executor: executor)
+        let webView = WKWebView(frame: .zero, configuration: WKWebViewConfiguration())
+        var events: [WKBridgeLoadEvent] = []
+        adapter.install(on: webView) { events.append($0) }
+        let superseded = try XCTUnwrap(webView.load(URLRequest(url: trustedURL)))
+        let replacement = try XCTUnwrap(webView.load(URLRequest(url: trustedURL)))
+        webView.stopLoading()
+        let delegate = adapter as WKNavigationDelegate
+
+        XCTAssertFalse(superseded === replacement)
+        XCTAssertEqual(adapter.navigationPolicy(for: trustedURL, targetIsMainFrame: true), .allow)
+        delegate.webView?(webView, didStartProvisionalNavigation: superseded)
+        XCTAssertEqual(adapter.navigationPolicy(for: trustedURL, targetIsMainFrame: true), .allow)
+        delegate.webView?(webView, didStartProvisionalNavigation: replacement)
+        adapter.navigationDidCommit(url: trustedURL)
+
+        let cancellation = NSError(domain: NSURLErrorDomain, code: NSURLErrorCancelled)
+        adapter.webView(webView, didFailProvisionalNavigation: superseded, withError: cancellation)
+        adapter.webView(webView, didFinish: replacement)
+        let freshSession = await hello(adapter)
+
+        XCTAssertEqual(events, [.started, .started, .finished],
+                       "a superseded failure cannot fail or suppress the replacement document")
+        XCTAssertFalse(freshSession.isEmpty, "the replacement document remains bridge-active")
+        let cancelAllCount = await executor.cancelAllCount
+        XCTAssertEqual(cancelAllCount, 0, "the superseded callback cannot revoke the replacement")
+    }
+
+    func testLateSupersededHTTPErrorResponseCannotRevokeReplacementNavigation() async throws {
+        let executor = AdapterExecutor()
+        let adapter = makeAdapter(executor: executor)
+        let webView = WKWebView(frame: .zero, configuration: WKWebViewConfiguration())
+        var events: [WKBridgeLoadEvent] = []
+        adapter.install(on: webView) { events.append($0) }
+        let superseded = try XCTUnwrap(webView.load(URLRequest(url: trustedURL)))
+        let replacement = try XCTUnwrap(webView.load(URLRequest(url: trustedURL)))
+        webView.stopLoading()
+        let delegate = adapter as WKNavigationDelegate
+
+        XCTAssertFalse(superseded === replacement)
+        XCTAssertEqual(adapter.navigationPolicy(for: trustedURL, targetIsMainFrame: true), .allow)
+        delegate.webView?(webView, didStartProvisionalNavigation: superseded)
+        XCTAssertEqual(adapter.navigationPolicy(for: trustedURL, targetIsMainFrame: true), .allow)
+        delegate.webView?(webView, didStartProvisionalNavigation: replacement)
+        adapter.navigationDidCommit(url: trustedURL)
+        let replacementSession = await hello(adapter)
+        let cancelAllBeforeLateResponse = await executor.cancelAllCount
+        let response = try XCTUnwrap(HTTPURLResponse(
+            url: trustedURL,
+            statusCode: 503,
+            httpVersion: "HTTP/1.1",
+            headerFields: nil
+        ))
+
+        XCTAssertEqual(adapter.navigationResponsePolicy(for: response, isForMainFrame: true), .cancel)
+        let cancellation = NSError(domain: NSURLErrorDomain, code: NSURLErrorCancelled)
+        adapter.webView(webView, didFailProvisionalNavigation: superseded, withError: cancellation)
+        adapter.webView(webView, didFinish: replacement)
+        let repeatedHello = await reply(from: adapter, incoming: .trusted(helloJSON))
+        let request = await reply(
+            from: adapter,
+            incoming: .trusted(requestJSON(session: replacementSession, id: 1))
+        )
+        let cancelAllAfterLateResponse = await executor.cancelAllCount
+
+        XCTAssertEqual(events, [.started, .started, .finished],
+                       "a tokenless late response cannot fail or suppress the replacement")
+        XCTAssertEqual(repeatedHello["session"] as? String, replacementSession)
+        XCTAssertEqual(request["type"] as? String, "response")
+        XCTAssertEqual(cancelAllAfterLateResponse, cancelAllBeforeLateResponse,
+                       "a tokenless late response cannot revoke the replacement")
+    }
+
+    func testNilNavigationCallbacksCannotMutateActiveNavigation() async throws {
+        let executor = AdapterExecutor()
+        let adapter = makeAdapter(executor: executor)
+        let webView = WKWebView(frame: .zero, configuration: WKWebViewConfiguration())
+        var events: [WKBridgeLoadEvent] = []
+        adapter.install(on: webView) { events.append($0) }
+        let navigation = try XCTUnwrap(webView.load(URLRequest(url: trustedURL)))
+        webView.stopLoading()
+
+        XCTAssertEqual(adapter.navigationPolicy(for: trustedURL, targetIsMainFrame: true), .allow)
+        adapter.webView(webView, didStartProvisionalNavigation: navigation)
+        adapter.webView(webView, didCommit: nil)
+        adapter.webView(webView, didFinish: nil)
+        let error = NSError(domain: NSURLErrorDomain, code: NSURLErrorCancelled)
+        adapter.webView(webView, didFailProvisionalNavigation: nil, withError: error)
+        adapter.webView(webView, didFail: nil, withError: error)
+        let denied = await reply(from: adapter, incoming: .trusted(helloJSON))
+        let cancelAllCount = await executor.cancelAllCount
+
+        XCTAssertEqual(events, [.started])
+        XCTAssertEqual(denied["code"] as? String, "ORIGIN_DENIED")
+        XCTAssertEqual(cancelAllCount, 0)
+    }
+
+    private func assertShellSelectionFailureRetryReturnAndInteraction() {
+        var requests: [URLRequest] = []
+        let model = BridgeWebViewModel(requestLoader: { _, request in requests.append(request) })
+        defer { model.close() }
+
+        XCTAssertEqual(model.selectedSurface, .demo)
+        XCTAssertEqual(requests.map(\.url), [WebSurface.demo.url])
+        XCTAssertEqual(model.loadState, .loading)
+        XCTAssertFalse(model.webView.isUserInteractionEnabled)
+
+        model.handleLoadEvent(.finished)
+        XCTAssertEqual(model.loadState, .loaded)
+        XCTAssertTrue(model.webView.isUserInteractionEnabled)
+
+        model.openDiagnostics()
+        XCTAssertEqual(model.selectedSurface, .diagnostics)
+        XCTAssertEqual(requests.last?.url, WebSurface.diagnostics.url)
+        XCTAssertEqual(model.loadState, .loading)
+        XCTAssertFalse(model.webView.isUserInteractionEnabled)
+
+        model.handleLoadEvent(.failed(.contentUnavailable))
+        guard case .failed(let message) = model.loadState else {
+            return XCTFail("Expected failed load state")
+        }
+        XCTAssertEqual(message, "Не удалось загрузить веб-экран.")
+        XCTAssertFalse(model.webView.isUserInteractionEnabled)
+
+        model.reload()
+        XCTAssertEqual(requests.last?.url, WebSurface.diagnostics.url)
+        XCTAssertEqual(model.loadState, .loading)
+
+        model.openDemo()
+        XCTAssertEqual(model.selectedSurface, .demo)
+        XCTAssertEqual(requests.last?.url, WebSurface.demo.url)
+        XCTAssertTrue(requests.allSatisfy { $0.cachePolicy == .reloadIgnoringLocalCacheData })
+        XCTAssertTrue(requests.allSatisfy { $0.timeoutInterval == 10 })
     }
 
     func testCommittedNavigationFailureRevokesDocument() async {
@@ -68,6 +253,77 @@ final class WKBridgeAdapterTests: XCTestCase {
 
         XCTAssertEqual(denied["code"] as? String, "ORIGIN_DENIED")
         XCTAssertEqual(cancelAllCount, 1)
+    }
+
+    private func assertMainFrameHTTPResponseRequires2xxWhileSubframesRemainAllowed() async throws {
+        for status in [404, 503] {
+            let executor = AdapterExecutor()
+            let adapter = makeAdapter(executor: executor)
+            let webView = WKWebView(frame: .zero, configuration: WKWebViewConfiguration())
+            var events: [WKBridgeLoadEvent] = []
+            adapter.install(on: webView) { events.append($0) }
+            _ = await activate(adapter)
+            let navigation = try XCTUnwrap(webView.load(URLRequest(url: trustedURL)))
+            webView.stopLoading()
+            let response = try XCTUnwrap(HTTPURLResponse(
+                url: trustedURL,
+                statusCode: status,
+                httpVersion: "HTTP/1.1",
+                headerFields: nil
+            ))
+
+            XCTAssertEqual(adapter.navigationPolicy(for: trustedURL, targetIsMainFrame: true), .allow)
+            adapter.webView(webView, didStartProvisionalNavigation: navigation)
+            XCTAssertEqual(adapter.navigationResponsePolicy(for: response, isForMainFrame: true), .cancel)
+            let error = NSError(domain: NSURLErrorDomain, code: NSURLErrorCancelled)
+            adapter.webView(webView, didFailProvisionalNavigation: navigation, withError: error)
+            let denied = await reply(from: adapter, incoming: .trusted(helloJSON))
+            let cancelAllCount = await executor.cancelAllCount
+
+            XCTAssertEqual(events, [.started, .failed(.contentUnavailable)], "HTTP \(status) fails the shell load")
+            XCTAssertEqual(denied["code"] as? String, "ORIGIN_DENIED")
+            XCTAssertEqual(cancelAllCount, 1)
+        }
+
+        for status in [200, 204, 299] {
+            let adapter = makeAdapter(executor: AdapterExecutor())
+            let webView = WKWebView(frame: .zero, configuration: WKWebViewConfiguration())
+            var events: [WKBridgeLoadEvent] = []
+            adapter.install(on: webView) { events.append($0) }
+            let navigation = try XCTUnwrap(webView.load(URLRequest(url: trustedURL)))
+            webView.stopLoading()
+            let response = try XCTUnwrap(HTTPURLResponse(
+                url: trustedURL,
+                statusCode: status,
+                httpVersion: "HTTP/1.1",
+                headerFields: nil
+            ))
+
+            XCTAssertEqual(adapter.navigationPolicy(for: trustedURL, targetIsMainFrame: true), .allow)
+            adapter.webView(webView, didStartProvisionalNavigation: navigation)
+            XCTAssertEqual(adapter.navigationResponsePolicy(for: response, isForMainFrame: true), .allow)
+            adapter.navigationDidCommit(url: trustedURL)
+            adapter.webView(webView, didFinish: navigation)
+            XCTAssertEqual(events, [.started, .finished], "HTTP \(status) remains a successful shell load")
+        }
+
+        let adapter = makeAdapter(executor: AdapterExecutor())
+        _ = await activate(adapter)
+        let subframeError = try XCTUnwrap(HTTPURLResponse(
+            url: trustedURL,
+            statusCode: 503,
+            httpVersion: "HTTP/1.1",
+            headerFields: nil
+        ))
+        XCTAssertEqual(adapter.navigationResponsePolicy(for: subframeError, isForMainFrame: false), .allow)
+        XCTAssertEqual(adapter.navigationResponsePolicy(for: URLResponse(
+            url: trustedURL,
+            mimeType: "text/html",
+            expectedContentLength: 0,
+            textEncodingName: "utf-8"
+        ), isForMainFrame: true), .allow)
+        let activeSession = await hello(adapter)
+        XCTAssertFalse(activeSession.isEmpty, "allowed response controls preserve the active document")
     }
 
     func testWebContentProcessTerminationRevokesDocument() async {

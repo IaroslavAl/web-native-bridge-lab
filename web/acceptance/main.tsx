@@ -3,9 +3,12 @@
 import { useState } from "react";
 import ReactDOM from "react-dom/client";
 import { trustMatrix } from "./trust";
-import { BridgeClient, createWebKitNativeBoundary, TransportError, type BridgeResponse } from "../src/bridgeClient";
-import { buildFixtureRequest, buildQuoteRequest, interpretCatalog, interpretBusinessFixture,
-  interpretQuote, interpretDelay, ResponseInterpretationError } from "../src/scenarios";
+import { BridgeClient } from "../src/bridge/BridgeClient";
+import { createWebKitNativeBoundary } from "../src/bridge/WebKitNativeBoundary";
+import { TransportError, type BridgeResponse } from "../src/bridge/protocol";
+import { buildFixtureRequest, buildQuoteRequest } from "../src/demo/requestDefinitions";
+import { interpretBusinessFixture, interpretCatalog, interpretQuote, interpretDelay,
+  ResponseInterpretationError } from "../src/demo/responseInterpreters";
 
 const client = new BridgeClient(createWebKitNativeBoundary(window));
 client.attachPageLifecycle(window);

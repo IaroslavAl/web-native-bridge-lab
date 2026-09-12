@@ -11,10 +11,11 @@ final class WKBridgeAdapter: NSObject {
     private let policy: TrustedPagePolicy
     private weak var webView: WKWebView?
     private var proxy: WeakReplyMessageHandler?
+    private var activeNavigation: WKNavigation?
     private var committedURL: URL?
     private var documentIsActive = false
 
-    private var onLoadFailure: ((String?) -> Void)?
+    private var onLoadEvent: ((WKBridgeLoadEvent) -> Void)?
     private var didClose = false
 
     init(
@@ -36,10 +37,10 @@ final class WKBridgeAdapter: NSObject {
         close()
     }
 
-    func install(on webView: WKWebView, onLoadFailure: @escaping (String?) -> Void) {
+    func install(on webView: WKWebView, onLoadEvent: @escaping (WKBridgeLoadEvent) -> Void) {
         precondition(self.webView == nil && !didClose, "WKBridgeAdapter may only be installed once")
         self.webView = webView
-        self.onLoadFailure = onLoadFailure
+        self.onLoadEvent = onLoadEvent
         let proxy = WeakReplyMessageHandler(delegate: self)
         self.proxy = proxy
         webView.configuration.userContentController.addScriptMessageHandler(
@@ -52,6 +53,7 @@ final class WKBridgeAdapter: NSObject {
     func close() {
         guard !didClose else { return }
         didClose = true
+        activeNavigation = nil
         documentIsActive = false
         committedURL = nil
         if let webView {
@@ -65,21 +67,23 @@ final class WKBridgeAdapter: NSObject {
         }
         self.webView = nil
         proxy = nil
-        onLoadFailure = nil
+        onLoadEvent = nil
         lifecycle.revoke()
     }
 
     private func prepareForAllowedNavigation() {
         guard !didClose else { return }
+        activeNavigation = nil
         documentIsActive = false
         committedURL = nil
         lifecycle.revoke()
+        onLoadEvent?(.started)
     }
 
     private func activateCommittedDocument(_ url: URL?) {
         guard !didClose else { return }
         guard policy.allowsMainNavigation(to: url, targetIsMainFrame: true) else {
-            failDocumentLoad("Bridge origin denied")
+            failDocumentLoad(.originDenied)
             return
         }
         committedURL = url
@@ -87,15 +91,21 @@ final class WKBridgeAdapter: NSObject {
         lifecycle.commit()
     }
 
-    private func failDocumentLoad(_ message: String) {
+    private func failDocumentLoad(_ failure: WKBridgeLoadFailure) {
         guard !didClose else { return }
+        activeNavigation = nil
         documentIsActive = false
         committedURL = nil
         lifecycle.revoke()
-        onLoadFailure?(message)
+        onLoadEvent?(.failed(failure))
     }
 
-    fileprivate func receive(
+    private func isCurrentNavigation(_ navigation: WKNavigation?) -> Bool {
+        guard let navigation, let activeNavigation else { return false }
+        return navigation === activeNavigation
+    }
+
+    func receive(
         body: Any,
         frame: BridgeFrameOrigin,
         replyHandler: @escaping (Any?, String?) -> Void
@@ -135,20 +145,33 @@ final class WKBridgeAdapter: NSObject {
         return .allow
     }
 
+    func navigationResponsePolicy(
+        for response: URLResponse,
+        isForMainFrame: Bool
+    ) -> WKNavigationResponsePolicy {
+        guard isForMainFrame, let httpResponse = response as? HTTPURLResponse else {
+            return .allow
+        }
+        guard (200..<300).contains(httpResponse.statusCode) else {
+            return .cancel
+        }
+        return .allow
+    }
+
     func navigationDidCommit(url: URL?) {
         activateCommittedDocument(url)
     }
 
     func provisionalNavigationFailed() {
-        failDocumentLoad("Local web content is unavailable")
+        failDocumentLoad(.contentUnavailable)
     }
 
     func navigationFailed() {
-        failDocumentLoad("Local web content failed to load")
+        failDocumentLoad(.navigationFailed)
     }
 
     func webContentProcessTerminated() {
-        failDocumentLoad("Web content process terminated")
+        failDocumentLoad(.processTerminated)
     }
 
 }
@@ -163,12 +186,31 @@ extension WKBridgeAdapter: WKNavigationDelegate {
         decisionHandler(navigationPolicy(for: navigationAction.request.url, targetIsMainFrame: targetIsMainFrame))
     }
 
+    func webView(
+        _ webView: WKWebView,
+        decidePolicyFor navigationResponse: WKNavigationResponse,
+        decisionHandler: @escaping (WKNavigationResponsePolicy) -> Void
+    ) {
+        decisionHandler(navigationResponsePolicy(
+            for: navigationResponse.response,
+            isForMainFrame: navigationResponse.isForMainFrame
+        ))
+    }
+
+    func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+        guard !didClose, let navigation else { return }
+        activeNavigation = navigation
+    }
+
     func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
+        guard isCurrentNavigation(navigation) else { return }
         navigationDidCommit(url: webView.url)
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        onLoadFailure?(nil)
+        guard isCurrentNavigation(navigation), documentIsActive else { return }
+        activeNavigation = nil
+        onLoadEvent?(.finished)
     }
 
     func webView(
@@ -176,66 +218,16 @@ extension WKBridgeAdapter: WKNavigationDelegate {
         didFailProvisionalNavigation navigation: WKNavigation!,
         withError error: Error
     ) {
+        guard isCurrentNavigation(navigation) else { return }
         provisionalNavigationFailed()
     }
 
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+        guard isCurrentNavigation(navigation) else { return }
         navigationFailed()
     }
 
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
         webContentProcessTerminated()
-    }
-}
-
-@MainActor
-final class WeakReplyMessageHandler: NSObject, WKScriptMessageHandlerWithReply {
-    weak var delegate: WKBridgeAdapter?
-
-    init(delegate: WKBridgeAdapter) {
-        self.delegate = delegate
-    }
-
-    func userContentController(
-        _ userContentController: WKUserContentController,
-        didReceive message: WKScriptMessage,
-        replyHandler: @escaping (Any?, String?) -> Void
-    ) {
-        let origin = message.frameInfo.securityOrigin
-        forward(body: message.body, frame: BridgeFrameOrigin(
-            scheme: origin.protocol, host: origin.host, port: origin.port,
-            isMainFrame: message.frameInfo.isMainFrame
-        ), replyHandler: replyHandler)
-    }
-
-    // Shared synchronous ingress; tests supply provenance tuples, WebKit supplies
-    // actual securityOrigin/frameInfo above. Neither path inserts a Task hop.
-    func forward(body: Any, frame: BridgeFrameOrigin, replyHandler: @escaping (Any?, String?) -> Void) {
-        guard let delegate else {
-            replyHandler([
-                "v": 1,
-                "type": "error",
-                "id": NSNull(),
-                "code": "ORIGIN_DENIED",
-                "message": "Bridge origin denied"
-            ], nil)
-            return
-        }
-        delegate.receive(body: body, frame: frame, replyHandler: replyHandler)
-    }
-}
-
-@MainActor
-final class ReplyOnce {
-    private var handler: ((Any?, String?) -> Void)?
-
-    init(_ handler: @escaping (Any?, String?) -> Void) {
-        self.handler = handler
-    }
-
-    func call(_ value: Any?, _ error: String?) {
-        guard let handler else { return }
-        self.handler = nil
-        handler(value, error)
     }
 }
